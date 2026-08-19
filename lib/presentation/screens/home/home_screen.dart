@@ -12,6 +12,7 @@ import '../../../core/utils/formats.dart';
 import '../../../domain/enums/enums.dart';
 import '../../components/activity/activity_cards.dart';
 import '../../components/charts/macro_bar.dart';
+import '../../components/feedback/day_context_card.dart';
 import '../../components/feedback/feedback.dart';
 import '../../components/food/daily_summary_card.dart';
 import '../../components/food/food_widgets.dart';
@@ -19,14 +20,17 @@ import '../../components/sleep/sleep_card.dart';
 import '../../components/system/buttons.dart';
 import '../../components/system/overlays.dart';
 import '../../components/system/surfaces.dart';
+import '../../components/water/alcohol_card.dart';
 import '../../components/water/water_card.dart';
 import '../../providers/app_providers.dart';
 import '../profile/calorie_target_sheet.dart';
 import '../weight/weight_sheet.dart';
 import 'add_sheet.dart';
 import 'add_to_slot_sheet.dart';
+import 'alcohol_sheet.dart';
 import 'daily_breakdown_sheet.dart';
 import 'date_picker_sheet.dart';
+import 'sick_day_sheet.dart';
 
 /// S-06 · Inicio. ★ La pantalla principal.
 ///
@@ -144,6 +148,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             const SizedBox(height: NmSpace.s6),
                             WaterCard(date: date),
                             const SizedBox(height: NmSpace.s4),
+                            // Debajo del agua: es la otra mitad de "qué
+                            // tomaste", y juntas se leen de una.
+                            AlcoholCard(
+                              date: date,
+                              onTap: () =>
+                                  showAlcoholSheet(context, date: date),
+                            ),
+                            const SizedBox(height: NmSpace.s4),
                             SleepCard(date: date),
                             const SizedBox(height: NmSpace.s8),
 
@@ -210,13 +222,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             const SizedBox(height: NmSpace.s6),
 
                             // Actividad.
-                            NmSectionHeader(
-                              title: 'Actividad',
-                              action: summary.isRestDay
-                                  ? null
-                                  : 'Marcar descanso',
-                              onAction: () => showRestDaySheet(context, date),
-                            ),
+                            //
+                            // El "Marcar descanso" que vivía en este
+                            // encabezado se fue a "Cómo estuvo el día", abajo,
+                            // junto al día de enfermedad. Son la misma clase de
+                            // cosa —una marca sobre el día, que no suma ni
+                            // resta nada— y tenerlas en dos lugares distintos
+                            // de la misma pantalla obligaba a acordarse de cuál
+                            // estaba dónde. Acá quedó de cuando el descanso era
+                            // un asunto solo de actividad.
+                            const NmSectionHeader(title: 'Actividad'),
                             NmCard(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -331,6 +346,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                 ),
                               ),
                             ],
+
+                            // Abajo de todo: no es un registro del día, es lo
+                            // que lo explica. Arriba competiría por atención
+                            // con los números que sí son del día.
+                            const SizedBox(height: NmSpace.s8),
+                            const NmSectionHeader(title: 'Cómo estuvo el día'),
+                            DayContextCard(
+                              date: date,
+                              onTapSick: () =>
+                                  showSickDaySheet(context, date: date),
+                              onTapRest: () => showRestDaySheet(context, date),
+                            ),
                           ],
                         ),
                       ),

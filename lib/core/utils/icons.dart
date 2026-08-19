@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
+import '../../domain/calculations/alcohol.dart';
 import '../../domain/enums/enums.dart';
 
 /// Iconografía Phosphor, peso `regular`; `fill` solo para el estado activo del
@@ -24,6 +25,21 @@ abstract final class NmIcons {
     'Boat' => PhosphorIcons.boat(),
     'Stairs' => PhosphorIcons.stairs(),
     _ => PhosphorIcons.dotsThreeCircle(),
+  };
+
+  /// Cada bebida con su forma.
+  ///
+  /// Sirve para algo más que decorar: en la tarjeta del día se dibuja **un
+  /// ícono por consumo**, así que la silueta es lo que deja ver de un vistazo
+  /// que el sábado fueron dos copas de vino y una cerveza, y no "tres tragos"
+  /// a secas.
+  static IconData drink(DrinkType type) => switch (type) {
+    DrinkType.beer => PhosphorIcons.beerStein(),
+    DrinkType.wine => PhosphorIcons.wine(),
+    DrinkType.spirits => PhosphorIcons.brandy(),
+    DrinkType.cocktail => PhosphorIcons.martini(),
+    DrinkType.cider => PhosphorIcons.champagne(),
+    DrinkType.other => PhosphorIcons.beerBottle(),
   };
 
   static IconData mealSlot(MealSlot slot) => switch (slot) {
