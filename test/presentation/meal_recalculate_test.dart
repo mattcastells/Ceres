@@ -15,20 +15,20 @@
 // `providerUnavailable`— y eso es justo lo que hace comprobable el último
 // punto.
 
+import 'package:ceres/core/theme/app_theme.dart';
+import 'package:ceres/core/utils/dates.dart';
+import 'package:ceres/data/local/local_store.dart';
+import 'package:ceres/data/repositories/local_repository.dart';
+import 'package:ceres/domain/enums/enums.dart';
+import 'package:ceres/domain/models/meal.dart';
+import 'package:ceres/presentation/providers/app_providers.dart';
+import 'package:ceres/presentation/screens/meal/meal_draft.dart';
+import 'package:ceres/presentation/screens/meal/meal_form_screen.dart';
+import 'package:ceres/presentation/screens/meal/recalculate_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
-import 'package:nutrimat/core/theme/app_theme.dart';
-import 'package:nutrimat/core/utils/dates.dart';
-import 'package:nutrimat/data/local/local_store.dart';
-import 'package:nutrimat/data/repositories/local_repository.dart';
-import 'package:nutrimat/domain/enums/enums.dart';
-import 'package:nutrimat/domain/models/meal.dart';
-import 'package:nutrimat/presentation/providers/app_providers.dart';
-import 'package:nutrimat/presentation/screens/meal/meal_draft.dart';
-import 'package:nutrimat/presentation/screens/meal/meal_form_screen.dart';
-import 'package:nutrimat/presentation/screens/meal/recalculate_sheet.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 const _milanesa = MealItem(

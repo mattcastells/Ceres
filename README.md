@@ -1,6 +1,6 @@
-# Nutrimat
+# Ceres
 
-Nutrimat is an Android app for tracking food, activity, weight, water, and
+Ceres is an Android app for tracking food, activity, weight, water, and
 sleep — built to show the full picture of a day instead of a single number,
 and to never present an estimate as if it were a measurement.
 
@@ -54,10 +54,10 @@ credentials at all.
 
 ### On the emulator
 
-Boots the `nutrimat` AVD, waits for it, and installs the app on it:
+Boots the `ceres` AVD, waits for it, and installs the app on it:
 
 ```bash
-flutter emulators --launch nutrimat
+flutter emulators --launch ceres
 adb wait-for-device shell 'while [ "$(getprop sys.boot_completed)" != 1 ]; do sleep 2; done'
 flutter run -d emulator-5554                                       # demo mode
 flutter run -d emulator-5554 --dart-define-from-file=env/local.json  # your real account
@@ -68,7 +68,7 @@ Prefer the first one for poking at the app: no credentials, no login, and
 touches a real account. The seed only happens in a debug build compiled
 without a server (see [`docs/estado-de-la-app.md`](./docs/estado-de-la-app.md#datos-de-ejemplo)).
 
-If the AVD doesn't exist yet, `flutter emulators --create --name nutrimat`
+If the AVD doesn't exist yet, `flutter emulators --create --name ceres`
 makes it. `flutter emulators` lists what's available and `adb devices` shows
 whether it finished booting (`device`, not `offline`). Once `flutter run` is
 attached, `r` hot-reloads, `R` restarts, and `q` quits.

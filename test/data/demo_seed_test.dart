@@ -10,11 +10,11 @@
 // distinto: sembrar, arrancar con lo ya sembrado, y entrar a una cuenta desde
 // una sesión de prueba.
 
+import 'package:ceres/core/config/feature_flags.dart';
+import 'package:ceres/data/local/local_store.dart';
+import 'package:ceres/data/mock/seed.dart';
+import 'package:ceres/data/repositories/local_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nutrimat/core/config/feature_flags.dart';
-import 'package:nutrimat/data/local/local_store.dart';
-import 'package:nutrimat/data/mock/seed.dart';
-import 'package:nutrimat/data/repositories/local_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 Future<LocalRepository> _boot() async {
@@ -77,13 +77,13 @@ void main() {
       SharedPreferences.setMockInitialValues(<String, Object>{});
 
       final antes = await _boot();
-      await antes.signIn('yo@nutrimat.test');
+      await antes.signIn('yo@ceres.test');
       await antes.logWeight(weightKg: 72, date: DateTime.now());
 
       final despues = await _boot();
 
       expect(despues.hasSession, isTrue);
-      expect(despues.profile.email, 'yo@nutrimat.test');
+      expect(despues.profile.email, 'yo@ceres.test');
       expect(despues.weightLogs, hasLength(1));
     });
   });
@@ -98,9 +98,9 @@ void main() {
       expect(repo.allMeals, isNotEmpty, reason: 'la prueba parte de datos sembrados');
 
       // El camino que lo provocaba: probar sin cuenta y después entrar.
-      await repo.signIn('elias@nutrimat.test');
+      await repo.signIn('elias@ceres.test');
 
-      expect(repo.profile.email, 'elias@nutrimat.test');
+      expect(repo.profile.email, 'elias@ceres.test');
       expect(repo.profile.isDemo, isFalse);
       expect(repo.profile.displayName, isNull, reason: 'ni el nombre de la demo');
       expect(repo.allMeals, isEmpty);
@@ -114,10 +114,10 @@ void main() {
       SharedPreferences.setMockInitialValues(<String, Object>{});
 
       final repo = await _boot();
-      await repo.signIn('yo@nutrimat.test');
+      await repo.signIn('yo@ceres.test');
       await repo.logWeight(weightKg: 72, date: DateTime.now());
 
-      await repo.signIn('yo@nutrimat.test');
+      await repo.signIn('yo@ceres.test');
 
       expect(repo.weightLogs, hasLength(1));
     });
@@ -133,17 +133,17 @@ void main() {
       SharedPreferences.setMockInitialValues(<String, Object>{});
 
       final repo = await _boot();
-      await repo.signIn('ana@nutrimat.test', accountId: 'uuid-ana');
+      await repo.signIn('ana@ceres.test', accountId: 'uuid-ana');
       await repo.logWeight(weightKg: 72, date: DateTime.now());
       expect(repo.weightLogs, hasLength(1));
 
-      await repo.signIn('bruno@nutrimat.test', accountId: 'uuid-bruno');
+      await repo.signIn('bruno@ceres.test', accountId: 'uuid-bruno');
 
       // Lo que importa: el peso de Ana no queda dentro de la cuenta de Bruno,
       // porque desde ahí el push lo escribiría con **su** user_id.
       expect(repo.weightLogs, isEmpty);
       expect(repo.hasUserData, isFalse);
-      expect(repo.profile.email, 'bruno@nutrimat.test');
+      expect(repo.profile.email, 'bruno@ceres.test');
     });
 
     test('la misma cuenta conserva lo suyo', () async {
@@ -151,10 +151,10 @@ void main() {
       SharedPreferences.setMockInitialValues(<String, Object>{});
 
       final repo = await _boot();
-      await repo.signIn('ana@nutrimat.test', accountId: 'uuid-ana');
+      await repo.signIn('ana@ceres.test', accountId: 'uuid-ana');
       await repo.logWeight(weightKg: 72, date: DateTime.now());
 
-      await repo.signIn('ana@nutrimat.test', accountId: 'uuid-ana');
+      await repo.signIn('ana@ceres.test', accountId: 'uuid-ana');
 
       expect(repo.weightLogs, hasLength(1));
     });
@@ -167,10 +167,10 @@ void main() {
       SharedPreferences.setMockInitialValues(<String, Object>{});
 
       final repo = await _boot();
-      await repo.signIn('ana@nutrimat.test');
+      await repo.signIn('ana@ceres.test');
       await repo.logWeight(weightKg: 72, date: DateTime.now());
 
-      await repo.signIn('ana@nutrimat.test');
+      await repo.signIn('ana@ceres.test');
 
       expect(repo.weightLogs, hasLength(1));
     });

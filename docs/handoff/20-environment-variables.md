@@ -23,7 +23,7 @@ Leyenda de ámbito:
 | `GEMINI_MODEL` | E | no | Default `gemini-2.5-flash` |
 | `GEMINI_PROMPT_VERSION` | E | no | Default `v3`; se persiste en `ai_analyses` |
 | `USDA_API_KEY` | E | sí | FoodData Central |
-| `OPEN_FOOD_FACTS_USER_AGENT` | E | sí | `Nutrimat/1.0 (contacto@nutrimat.app)` — exigido por su política |
+| `OPEN_FOOD_FACTS_USER_AGENT` | E | sí | `Ceres/1.0 (contacto@ceres.app)` — exigido por su política |
 | `RESEND_API_KEY` | E | sí | Correos de exportación y de borrado de cuenta |
 | `SENTRY_DSN` | C, CI | sí | DSN del cliente (un DSN es público por diseño) |
 | `SENTRY_DSN_FUNCTIONS` | E | sí | DSN del servidor |
@@ -85,7 +85,7 @@ GEMINI_API_KEY=
 GEMINI_MODEL=gemini-2.5-flash
 GEMINI_PROMPT_VERSION=v3
 USDA_API_KEY=
-OPEN_FOOD_FACTS_USER_AGENT=Nutrimat/1.0 (contacto@nutrimat.app)
+OPEN_FOOD_FACTS_USER_AGENT=Ceres/1.0 (contacto@ceres.app)
 RESEND_API_KEY=
 SENTRY_DSN_FUNCTIONS=
 AI_DAILY_QUOTA=20

@@ -19,13 +19,13 @@ insert into auth.users (
 values
   ('11111111-1111-1111-1111-111111111111',
    '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
-   'a@nutrimat.test', crypt('secreto-a', gen_salt('bf')), now(), now(), now()),
+   'a@ceres.test', crypt('secreto-a', gen_salt('bf')), now(), now(), now()),
   ('22222222-2222-2222-2222-222222222222',
    '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
-   'b@nutrimat.test', crypt('secreto-b', gen_salt('bf')), now(), now(), now()),
+   'b@ceres.test', crypt('secreto-b', gen_salt('bf')), now(), now(), now()),
   ('33333333-3333-3333-3333-333333333333',
    '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
-   'c@nutrimat.test', crypt('secreto-c', gen_salt('bf')), now(), now(), now());
+   'c@ceres.test', crypt('secreto-c', gen_salt('bf')), now(), now(), now());
 
 -- ── Auditoría en profiles ────────────────────────────────────────────────
 -- La migración 13 resolvía el dueño con `new.user_id` dentro de un CASE, y

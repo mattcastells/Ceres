@@ -18,8 +18,8 @@ import '../../domain/services/update_service.dart';
 /// actualización se descargara sin instalarse nunca:
 ///
 /// 1. `REQUEST_INSTALL_PACKAGES` en el manifest. Solo habilita a **pedir**.
-/// 2. Que la persona haya marcado a Nutrimat como origen confiable en
-///    Ajustes → Apps → Nutrimat → Instalar apps desconocidas. Es por app
+/// 2. Que la persona haya marcado a Ceres como origen confiable en
+///    Ajustes → Apps → Ceres → Instalar apps desconocidas. Es por app
 ///    instaladora, no global: por eso otras apps sí pueden instalar y esta no.
 ///
 /// Sin el punto 2, lanzar el intent igual "funciona" —el sistema no devuelve
@@ -30,7 +30,7 @@ class AndroidApkInstaller implements ApkInstaller {
   const AndroidApkInstaller();
 
   static const MethodChannel _channel = MethodChannel(
-    'io.nutrimat.app/installer',
+    'io.ceres.app/installer',
   );
 
   @override
@@ -54,7 +54,7 @@ class AndroidApkInstaller implements ApkInstaller {
       throw const AppError(
         code: ApiErrorCode.server,
         message:
-            'No pudimos abrir Ajustes. Buscá Apps → Nutrimat → Instalar apps '
+            'No pudimos abrir Ajustes. Buscá Apps → Ceres → Instalar apps '
             'desconocidas y habilitalo a mano.',
       );
     }
@@ -72,14 +72,14 @@ class AndroidApkInstaller implements ApkInstaller {
       // Los APK de versiones anteriores también se van.
       //
       // Antes solo se borraba el archivo del **mismo nombre**, así que cada
-      // actualización dejaba el suyo: `nutrimat-1.9.0.apk`,
-      // `nutrimat-1.10.0.apk`… a 75 MB cada uno, en el directorio de soporte,
+      // actualización dejaba el suyo: `ceres-1.9.0.apk`,
+      // `ceres-1.10.0.apk`… a 75 MB cada uno, en el directorio de soporte,
       // que Android no limpia solo. Tres actualizaciones eran un cuarto de giga
       // ocupado por instaladores que ya se usaron.
       await for (final entry in dir.list()) {
         if (entry is! File) continue;
         final name = entry.path.split(Platform.pathSeparator).last;
-        if (name.startsWith('nutrimat-') && name.endsWith('.apk')) {
+        if (name.startsWith('ceres-') && name.endsWith('.apk')) {
           await entry.delete();
         }
       }
@@ -124,7 +124,7 @@ class AndroidApkInstaller implements ApkInstaller {
           : ApiErrorCode.server,
       message: switch (result) {
         'permission_required' =>
-          'Android necesita tu permiso para instalar apps desde Nutrimat.',
+          'Android necesita tu permiso para instalar apps desde Ceres.',
         'no_installer' =>
           'Este teléfono no puede abrir el instalador de paquetes. Descargá '
               'el APK desde GitHub e instalalo a mano.',

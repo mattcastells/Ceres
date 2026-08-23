@@ -4,13 +4,13 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:ceres/core/error/app_error.dart';
+import 'package:ceres/data/remote/github_releases_client.dart';
+import 'package:ceres/domain/models/app_release.dart';
+import 'package:ceres/domain/services/update_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-import 'package:nutrimat/core/error/app_error.dart';
-import 'package:nutrimat/data/remote/github_releases_client.dart';
-import 'package:nutrimat/domain/models/app_release.dart';
-import 'package:nutrimat/domain/services/update_service.dart';
 
 String _releaseJson({
   String tag = 'v1.1.0',
@@ -24,10 +24,10 @@ String _releaseJson({
       assets ??
       <Map<String, dynamic>>[
         <String, dynamic>{
-          'name': 'nutrimat-1.1.0-universal.apk',
+          'name': 'ceres-1.1.0-universal.apk',
           'size': 27262976,
           'browser_download_url':
-              'https://github.com/mattcastells/Nutrimat/releases/download/v1.1.0/nutrimat-1.1.0-universal.apk',
+              'https://github.com/mattcastells/Ceres/releases/download/v1.1.0/ceres-1.1.0-universal.apk',
         },
       ],
 });
@@ -89,12 +89,12 @@ void main() {
         _releaseJson(
           assets: <Map<String, dynamic>>[
             <String, dynamic>{
-              'name': 'nutrimat-1.1.0-arm64-v8a.apk',
+              'name': 'ceres-1.1.0-arm64-v8a.apk',
               'size': 9000000,
               'browser_download_url': 'https://example.test/arm64.apk',
             },
             <String, dynamic>{
-              'name': 'nutrimat-1.1.0-universal.apk',
+              'name': 'ceres-1.1.0-universal.apk',
               'size': 27262976,
               'browser_download_url': 'https://example.test/universal.apk',
             },
@@ -228,7 +228,7 @@ void main() {
         onProgress: progress.add,
       );
 
-      expect(installer.name, 'nutrimat-1.1.0.apk');
+      expect(installer.name, 'ceres-1.1.0.apk');
       expect(installer.installed, isNotNull);
       // Lo que se instala es el archivo escrito, con todos los bytes.
       final written = File(installer.installed!);

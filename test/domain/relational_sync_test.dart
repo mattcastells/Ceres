@@ -7,15 +7,15 @@
 // forma que `LocalStore` sabe leer. Esa forma es el punto de todo: si se
 // desalinea, los datos vuelven mutilados y nadie se entera.
 
+import 'package:ceres/core/error/app_error.dart';
+import 'package:ceres/data/local/local_store.dart';
+import 'package:ceres/data/remote/relational_sync_client.dart';
+import 'package:ceres/data/repositories/local_repository.dart';
+import 'package:ceres/domain/enums/enums.dart';
+import 'package:ceres/domain/models/meal.dart';
+import 'package:ceres/domain/repositories/auth_gateway.dart';
+import 'package:ceres/domain/services/relational_sync_service.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nutrimat/core/error/app_error.dart';
-import 'package:nutrimat/data/local/local_store.dart';
-import 'package:nutrimat/data/remote/relational_sync_client.dart';
-import 'package:nutrimat/data/repositories/local_repository.dart';
-import 'package:nutrimat/domain/enums/enums.dart';
-import 'package:nutrimat/domain/models/meal.dart';
-import 'package:nutrimat/domain/repositories/auth_gateway.dart';
-import 'package:nutrimat/domain/services/relational_sync_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class _FakeAuth implements AuthGateway {

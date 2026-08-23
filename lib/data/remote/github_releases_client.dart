@@ -29,7 +29,7 @@ class GithubReleasesClient {
   final String repo;
 
   static const String defaultOwner = 'mattcastells';
-  static const String defaultRepo = 'Nutrimat';
+  static const String defaultRepo = 'Ceres';
 
   static const String _host = 'api.github.com';
 
@@ -62,7 +62,7 @@ class GithubReleasesClient {
           .get(uri, headers: <String, String>{
             'Accept': 'application/vnd.github+json',
             'X-GitHub-Api-Version': '2022-11-28',
-            'User-Agent': 'Nutrimat',
+            'User-Agent': 'Ceres',
           })
           .timeout(timeout);
     } on Exception {
@@ -171,7 +171,7 @@ class GithubReleasesClient {
     void Function(double progress)? onProgress,
   }) async {
     final request = http.Request('GET', release.apkUrl)
-      ..headers['User-Agent'] = 'Nutrimat';
+      ..headers['User-Agent'] = 'Ceres';
 
     final http.StreamedResponse response;
     try {

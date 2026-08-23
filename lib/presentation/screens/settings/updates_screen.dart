@@ -16,7 +16,7 @@ import 'update_dialog.dart';
 
 /// Buscar actualizaciones (Configuración → Actualizaciones).
 ///
-/// Nutrimat se distribuye por fuera de Play Store, así que el aviso de versión
+/// Ceres se distribuye por fuera de Play Store, así que el aviso de versión
 /// nueva lo da la app: consulta los releases del repositorio, y si hay una
 /// posterior a la instalada ofrece bajarla e instalarla.
 ///
@@ -159,13 +159,13 @@ class _UpdatesScreenState extends ConsumerState<UpdatesScreen>
             const InfoNote(
               tone: NmNoteTone.caution,
               text:
-                  'Android todavía no tiene habilitada a Nutrimat para '
+                  'Android todavía no tiene habilitada a Ceres para '
                   'instalar apps. Sin ese permiso la actualización se descarga '
                   'pero el instalador se cierra solo.',
             ),
             const SizedBox(height: NmSpace.s3),
             NmButton.secondary(
-              label: 'Permitir instalar desde Nutrimat',
+              label: 'Permitir instalar desde Ceres',
               icon: PhosphorIcons.gear(),
               onPressed: _grant,
             ),
@@ -184,8 +184,8 @@ class _UpdatesScreenState extends ConsumerState<UpdatesScreen>
 
           const SizedBox(height: NmSpace.s6),
           Text(
-            'La primera vez hay que habilitar a Nutrimat en Ajustes → Apps → '
-            'Nutrimat → Instalar apps desconocidas. Después, Android pide '
+            'La primera vez hay que habilitar a Ceres en Ajustes → Apps → '
+            'Ceres → Instalar apps desconocidas. Después, Android pide '
             'confirmación en cada actualización.',
             style: NmTextStyles.from(NmType.bodySm, color: nm.textMuted),
           ),

@@ -23,7 +23,7 @@ insert into auth.users (
 )
 values ('77777777-7777-7777-7777-777777777777',
         '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
-        'g@nutrimat.test', crypt('secreto-g', gen_salt('bf')), now(), now(), now());
+        'g@ceres.test', crypt('secreto-g', gen_salt('bf')), now(), now(), now());
 
 insert into public.meals (id, user_id, slot, local_date, source, name)
 values ('eeee0001-0000-4000-8000-000000000001',
@@ -218,7 +218,7 @@ insert into auth.users (
 )
 values ('88888888-8888-8888-8888-888888888888',
         '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
-        't@nutrimat.test', crypt('secreto-t', gen_salt('bf')), now(), now(), now());
+        't@ceres.test', crypt('secreto-t', gen_salt('bf')), now(), now(), now());
 
 insert into public.sleep_logs (id, user_id, local_date, minutes)
 values ('eeee0006-0000-4000-8000-000000000006',

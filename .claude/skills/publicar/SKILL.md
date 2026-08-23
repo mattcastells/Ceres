@@ -1,11 +1,11 @@
 ---
 name: publicar
-description: Publicar una versión de Nutrimat y verificarla de verdad. Usar cuando haya que sacar un release, subir la versión, empujar un tag, aplicar migraciones a Supabase, desplegar Edge Functions, o cuando falle una actualización en el teléfono ("no se instaló la app", "no me deja actualizar"). Incluye las trampas que ya nos costaron versiones enteras.
+description: Publicar una versión de Ceres y verificarla de verdad. Usar cuando haya que sacar un release, subir la versión, empujar un tag, aplicar migraciones a Supabase, desplegar Edge Functions, o cuando falle una actualización en el teléfono ("no se instaló la app", "no me deja actualizar"). Incluye las trampas que ya nos costaron versiones enteras.
 ---
 
-# Publicar Nutrimat
+# Publicar Ceres
 
-Nutrimat se distribuye **fuera de Play Store**: cada versión es un release de
+Ceres se distribuye **fuera de Play Store**: cada versión es un release de
 GitHub con un APK firmado, y la app se actualiza sola desde Configuración →
 Actualizaciones.
 
@@ -55,7 +55,8 @@ y publica.
 Sobre el archivo que va a bajar el teléfono, no sobre el build local:
 
 ```bash
-curl -sL -o /tmp/nm.apk "https://github.com/mattcastells/Nutrimat/releases/download/v1.4.1/nutrimat-1.4.1-universal.apk"
+V=1.22.0   # la versión recién publicada; los releases anteriores al renombre se llaman nutrimat-<v>-universal.apk
+curl -sL -o /tmp/nm.apk "https://github.com/mattcastells/Ceres/releases/download/v$V/ceres-$V-universal.apk"
 AAPT=$(ls "$LOCALAPPDATA/Android/Sdk/build-tools"/*/aapt2.exe | tail -1)
 "$AAPT" dump badging /tmp/nm.apk | head -1   # versionCode y versionName
 APKSIGNER=$(ls "$LOCALAPPDATA/Android/Sdk/build-tools"/*/apksigner.bat | tail -1)

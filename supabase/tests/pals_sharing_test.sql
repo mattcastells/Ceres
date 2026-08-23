@@ -22,10 +22,10 @@ insert into auth.users (
 values
   ('55555555-5555-5555-5555-555555555555',
    '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
-   'e@nutrimat.test', crypt('secreto-e', gen_salt('bf')), now(), now(), now()),
+   'e@ceres.test', crypt('secreto-e', gen_salt('bf')), now(), now(), now()),
   ('66666666-6666-6666-6666-666666666666',
    '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
-   'f@nutrimat.test', crypt('secreto-f', gen_salt('bf')), now(), now(), now());
+   'f@ceres.test', crypt('secreto-f', gen_salt('bf')), now(), now(), now());
 
 insert into public.pals (requester_id, addressee_id, status, responded_at)
 values (

@@ -4,12 +4,12 @@
 // pantalla lo leía**: se podía marcar una comida con la estrella y esa estrella
 // no servía para nada. Estos tests cubren lo que ahora sí se muestra.
 
+import 'package:ceres/core/utils/dates.dart';
+import 'package:ceres/data/local/local_store.dart';
+import 'package:ceres/data/repositories/local_repository.dart';
+import 'package:ceres/domain/enums/enums.dart';
+import 'package:ceres/domain/models/meal.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nutrimat/core/utils/dates.dart';
-import 'package:nutrimat/data/local/local_store.dart';
-import 'package:nutrimat/data/repositories/local_repository.dart';
-import 'package:nutrimat/domain/enums/enums.dart';
-import 'package:nutrimat/domain/models/meal.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -51,7 +51,7 @@ void main() {
     SharedPreferences.setMockInitialValues(<String, Object>{});
     final store = await LocalStore.open();
     repo = LocalRepository(store, onChanged: () {});
-    await repo.signIn('yo@nutrimat.test');
+    await repo.signIn('yo@ceres.test');
   });
 
   test('sin nada registrado no hay nada que repetir', () {

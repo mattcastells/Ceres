@@ -10,17 +10,17 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:ceres/core/theme/app_theme.dart';
+import 'package:ceres/data/remote/github_releases_client.dart';
+import 'package:ceres/domain/models/app_release.dart';
+import 'package:ceres/domain/services/update_service.dart';
+import 'package:ceres/presentation/providers/update_providers.dart';
+import 'package:ceres/presentation/screens/settings/update_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-import 'package:nutrimat/core/theme/app_theme.dart';
-import 'package:nutrimat/data/remote/github_releases_client.dart';
-import 'package:nutrimat/domain/models/app_release.dart';
-import 'package:nutrimat/domain/services/update_service.dart';
-import 'package:nutrimat/presentation/providers/update_providers.dart';
-import 'package:nutrimat/presentation/screens/settings/update_dialog.dart';
 
 const String _notas = 'feat: recalcular con IA\nfix: el día manda, no el id';
 
@@ -37,9 +37,9 @@ String _releaseJson() => jsonEncode(<String, dynamic>{
   'published_at': '2026-08-05T15:04:05Z',
   'assets': <Map<String, dynamic>>[
     <String, dynamic>{
-      'name': 'nutrimat-1.16.0-universal.apk',
+      'name': 'ceres-1.16.0-universal.apk',
       'size': _apkBytes,
-      'browser_download_url': 'https://example.test/nutrimat-universal.apk',
+      'browser_download_url': 'https://example.test/ceres-universal.apk',
     },
   ],
 });

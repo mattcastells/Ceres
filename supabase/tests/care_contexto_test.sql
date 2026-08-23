@@ -32,13 +32,13 @@ insert into auth.users (
 values
   ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
    '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
-   'ana@nutrimat.test', crypt('secreto-ana', gen_salt('bf')), now(), now(), now()),
+   'ana@ceres.test', crypt('secreto-ana', gen_salt('bf')), now(), now(), now()),
   ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
    '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
-   'nutri@nutrimat.test', crypt('secreto-nutri', gen_salt('bf')), now(), now(), now()),
+   'nutri@ceres.test', crypt('secreto-nutri', gen_salt('bf')), now(), now(), now()),
   ('cccccccc-cccc-cccc-cccc-cccccccccccc',
    '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
-   'otra@nutrimat.test', crypt('secreto-otra', gen_salt('bf')), now(), now(), now());
+   'otra@ceres.test', crypt('secreto-otra', gen_salt('bf')), now(), now(), now());
 
 -- El día de Ana. La comida es de hace diez días y el peso de hace veinte: el
 -- orden importa para `tracking_since`, que tiene que devolver el más viejo de

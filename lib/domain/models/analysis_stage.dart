@@ -3,7 +3,7 @@
 /// Existen para que la pantalla de espera diga lo que **está pasando** en vez
 /// de animar algo decorativo. Los tres primeros son observables desde la app:
 /// se sabe con exactitud cuándo empieza y termina cada uno. El último no —
-/// cuánto tarda el modelo no lo decide Nutrimat— y por eso se trata distinto.
+/// cuánto tarda el modelo no lo decide Ceres— y por eso se trata distinto.
 enum AnalysisStage {
   /// Comprimiendo y dejando la foto lista para subir. Es instantáneo.
   preparing('Preparando la foto…'),
@@ -52,7 +52,7 @@ enum AnalysisStage {
 /// `tooLong`, que existían para decidir cuándo avisar que se demoraba; ese
 /// aviso se fue entero. Marcar el umbral obliga a elegir a partir de qué
 /// segundo una espera normal pasa a ser un problema, y no hay tal segundo:
-/// cuánto tarda el modelo no lo decide Nutrimat, así que anunciarlo solo pone
+/// cuánto tarda el modelo no lo decide Ceres, así que anunciarlo solo pone
 /// a mirar el reloj. La mediana sí se usa, pero para dibujar la barra.
 abstract final class AnalysisTiming {
   /// Mediana medida de la llamada al modelo.

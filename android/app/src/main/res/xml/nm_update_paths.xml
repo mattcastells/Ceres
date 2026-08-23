@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Lo único que Nutrimat comparte por este provider es el APK de la
+  Lo único que Ceres comparte por este provider es el APK de la
   actualización que acaba de descargar, y solo con el instalador de paquetes
   del sistema. `files-path` es el directorio privado de la app: nada de la
   galería, del almacenamiento compartido ni de la tarjeta SD queda expuesto.

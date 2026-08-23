@@ -10,7 +10,7 @@ implementar.
 
 ## 1. Qué es
 
-Un widget de la pantalla de inicio de Android para **Nutrimat**, una app de
+Un widget de la pantalla de inicio de Android para **Ceres**, una app de
 registro de comida, actividad y peso. Muestra el resumen del día.
 
 - Lo dibuja **el launcher, en su proceso, con la app cerrada**. No puede consultar
@@ -74,7 +74,7 @@ nada de historial. Traer eso implicaría trabajo de la app, no del widget.
 
 1. **El widget no miente.** El dato guardado lleva su fecha; si no es la de hoy no
    se muestra **nada** de él —ni el número, ni las gotas, ni las barras— y en su
-   lugar dice "abrí Nutrimat". Un widget con el número de ayer no se distingue de
+   lugar dice "abrí Ceres". Un widget con el número de ayer no se distingue de
    uno al día, y eso es peor que uno vacío. **Hay que diseñar ese estado**, y
    también el de "todavía sin datos" (app recién instalada), que es distinto.
 2. **Ningún número inventado.** Si no hay objetivo cargado, el widget lo dice; no
@@ -191,7 +191,7 @@ Para no repetirlas:
 
 - **Un cuadrado de 4×2.** El pedido original que lo desencadenó todo. El número
   queda perdido en el medio y sobra pantalla.
-- **El nombre "NUTRIMAT" en la primera fila.** Las ocho gotas no le dejaban lugar
+- **El nombre "CERES" en la primera fila.** Las ocho gotas no le dejaban lugar
   y se leía **"NUT"**. Además, el nombre sobra en una pantalla donde la persona
   puso el widget a propósito.
 - **Un "—" grande cuando no hay dato.** A 26 sp y en color de acento se leía como

@@ -20,7 +20,7 @@ class OpenFoodFactsClient {
 
   final http.Client _client;
 
-  static const String _userAgent = 'Nutrimat/1.0 (Android)';
+  static const String _userAgent = 'Ceres/1.0 (Android)';
 
   /// Búsqueda por texto: el servicio moderno de OFF. El `cgi/search.pl`
   /// clásico devuelve 503 con frecuencia y no sirve para una app.

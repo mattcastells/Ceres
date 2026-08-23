@@ -19,7 +19,7 @@ class GallerySaver {
   const GallerySaver();
 
   static const MethodChannel _channel = MethodChannel(
-    'io.nutrimat.app/gallery',
+    'io.ceres.app/gallery',
   );
 
   /// `false` antes de Android 10 y en cualquier plataforma sin el canal.

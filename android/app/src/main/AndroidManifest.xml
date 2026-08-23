@@ -5,7 +5,7 @@
          no, así que sin esta línea la app compila y no tiene red. -->
     <uses-permission android:name="android.permission.INTERNET"/>
 
-    <!-- Nutrimat se distribuye fuera de Play Store: Configuración →
+    <!-- Ceres se distribuye fuera de Play Store: Configuración →
          Actualizaciones descarga el APK del release de GitHub y se lo entrega
          al instalador de paquetes del sistema, que es quien pide la
          confirmación final. Sin este permiso el instalador ni se abre.
@@ -20,7 +20,7 @@
     <uses-permission android:name="android.permission.CAMERA"/>
 
     <!-- Dictado: contar en voz alta lo que se comió, en vez de escribirlo.
-         Lo transcribe el reconocedor del propio Android; Nutrimat recibe la
+         Lo transcribe el reconocedor del propio Android; Ceres recibe la
          frase ya en texto y **no guarda audio en ningún lado** — ni en el
          teléfono ni en el servidor. El permiso se pide al tocar el micrófono
          y no al abrir la pantalla, y negarlo solo esconde el botón: el campo
@@ -40,12 +40,12 @@
          · Sueño → lo mide el reloj, la persona lo estima.
 
          Lo que **no** se pide, a propósito:
-         · Calorías activas. El reloj las estima con su modelo y Nutrimat con
+         · Calorías activas. El reloj las estima con su modelo y Ceres con
            MET; traer el número ajeno como si fuera medición rompe RN-03. Se
-           trae la sesión y Nutrimat calcula, como ya hace.
-         · Pasos. En Nutrimat solo existen colgados de una actividad, así que
+           trae la sesión y Ceres calcula, como ya hace.
+         · Pasos. En Ceres solo existen colgados de una actividad, así que
            importarlos inventaría actividades y esas sí suman calorías.
-         · Nutrición. De la comida Nutrimat es la fuente de verdad.
+         · Nutrición. De la comida Ceres es la fuente de verdad.
          · Escritura de cualquier cosa. Todavía nada sale de acá. -->
     <uses-permission android:name="android.permission.health.READ_WEIGHT"/>
     <uses-permission android:name="android.permission.health.READ_BODY_FAT"/>
@@ -54,7 +54,7 @@
 
     <!-- Alguna dependencia puede declarar permisos de lectura de la galería
          porque su caso de uso general es abrir archivos del almacenamiento
-         compartido. Nutrimat no lee nada de ahí: el APK de la actualización lo
+         compartido. Ceres no lee nada de ahí: el APK de la actualización lo
          escribe en su propio directorio privado y las fotos las trae el
          selector del sistema, que no exige permiso.
 
@@ -67,7 +67,7 @@
     <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" tools:node="remove"/>
 
     <application
-        android:label="Nutrimat"
+        android:label="Ceres"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
         android:allowBackup="false">
@@ -100,7 +100,7 @@
                 <action android:name="android.intent.action.VIEW"/>
                 <category android:name="android.intent.category.DEFAULT"/>
                 <category android:name="android.intent.category.BROWSABLE"/>
-                <data android:scheme="nutrimat"/>
+                <data android:scheme="ceres"/>
             </intent-filter>
 
             <!-- Health Connect exige que la app pueda explicar **por qué** pide

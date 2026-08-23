@@ -1,19 +1,19 @@
-// Smoke test de la app completa: monta `NutrimatApp` con su router real y
+// Smoke test de la app completa: monta `CeresApp` con su router real y
 // recorre las decisiones de arranque de S-01 y S-02.
 
+import 'package:ceres/app.dart';
+import 'package:ceres/core/config/feature_flags.dart';
+import 'package:ceres/core/utils/dates.dart';
+import 'package:ceres/data/local/local_auth_gateway.dart';
+import 'package:ceres/data/local/local_store.dart';
+import 'package:ceres/data/repositories/local_repository.dart';
+import 'package:ceres/presentation/components/charts/calorie_ring.dart';
+import 'package:ceres/presentation/providers/app_providers.dart';
+import 'package:ceres/presentation/providers/auth_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
-import 'package:nutrimat/app.dart';
-import 'package:nutrimat/core/config/feature_flags.dart';
-import 'package:nutrimat/core/utils/dates.dart';
-import 'package:nutrimat/data/local/local_auth_gateway.dart';
-import 'package:nutrimat/data/local/local_store.dart';
-import 'package:nutrimat/data/repositories/local_repository.dart';
-import 'package:nutrimat/presentation/components/charts/calorie_ring.dart';
-import 'package:nutrimat/presentation/providers/app_providers.dart';
-import 'package:nutrimat/presentation/providers/auth_providers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 Future<ProviderContainer> _boot({required bool seeded}) async {
@@ -76,7 +76,7 @@ void main() {
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        child: const NutrimatApp(),
+        child: const CeresApp(),
       ),
     );
     await _settle(tester);
@@ -99,7 +99,7 @@ void main() {
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        child: const NutrimatApp(),
+        child: const CeresApp(),
       ),
     );
     await _settle(tester);
@@ -125,7 +125,7 @@ void main() {
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        child: const NutrimatApp(),
+        child: const CeresApp(),
       ),
     );
     await _settle(tester);
@@ -159,7 +159,7 @@ void main() {
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        child: const NutrimatApp(),
+        child: const CeresApp(),
       ),
     );
     await _settle(tester);
@@ -207,14 +207,14 @@ void main() {
     late ProviderContainer container;
     await tester.runAsync(() async {
       container = await _boot(seeded: false);
-      await container.read(repositoryProvider).signIn('elias@nutrimat.test');
+      await container.read(repositoryProvider).signIn('elias@ceres.test');
     });
     addTearDown(() => container.dispose());
 
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        child: const NutrimatApp(),
+        child: const CeresApp(),
       ),
     );
     await _settle(tester);
@@ -236,7 +236,7 @@ void main() {
     await tester.runAsync(() async {
       container = await _boot(seeded: false);
       final repo = container.read(repositoryProvider);
-      await repo.signIn('elias@nutrimat.test');
+      await repo.signIn('elias@ceres.test');
       await repo.updateProfile(
         repo.profile.copyWith(birthDate: DateTime(1990, 4, 12), heightCm: 178),
       );
@@ -247,7 +247,7 @@ void main() {
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        child: const NutrimatApp(),
+        child: const CeresApp(),
       ),
     );
     await _settle(tester);

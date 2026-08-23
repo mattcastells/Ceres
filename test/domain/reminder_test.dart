@@ -1,7 +1,7 @@
+import 'package:ceres/data/local/local_store.dart';
+import 'package:ceres/data/repositories/local_repository.dart';
+import 'package:ceres/domain/models/reminder.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nutrimat/data/local/local_store.dart';
-import 'package:nutrimat/data/repositories/local_repository.dart';
-import 'package:nutrimat/domain/models/reminder.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {

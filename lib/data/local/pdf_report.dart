@@ -17,7 +17,7 @@ import '../../domain/services/report_builder.dart';
 /// Se dibuja con los mismos tokens que la app —los colores salen de
 /// `NmColors`, la tipografía es la misma Inter que viaja en el APK— porque un
 /// informe que no se parece a la app se lee como si lo hubiera hecho otro. El
-/// tema es el que la persona tiene puesto: si usa Nutrimat en claro, su informe
+/// tema es el que la persona tiene puesto: si usa Ceres en claro, su informe
 /// sale en claro.
 ///
 /// Lo que **no** hay acá es una sola cifra que la app no pueda mostrar en
@@ -45,9 +45,9 @@ class PdfReport {
     final fonts = await _Fonts.load();
 
     final doc = pw.Document(
-      title: 'Informe de Nutrimat',
-      author: 'Nutrimat',
-      creator: 'Nutrimat',
+      title: 'Informe de Ceres',
+      author: 'Ceres',
+      creator: 'Ceres',
     );
 
     doc.addPage(
@@ -131,7 +131,7 @@ class PdfReport {
             // aparecería como un rectángulo negro en la esquina. Un texto se
             // adapta al tema por definición.
             pw.Text(
-              'Nutrimat',
+              'Ceres',
               style: pw.TextStyle(
                 font: f.medium,
                 fontSize: 13,
@@ -871,7 +871,7 @@ class PdfReport {
       mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
       children: <pw.Widget>[
         pw.Text(
-          'Nutrimat · generado el ${numericDate(report.generatedAt)}',
+          'Ceres · generado el ${numericDate(report.generatedAt)}',
           style: pw.TextStyle(font: f.regular, fontSize: 8, color: p.textMuted),
         ),
         pw.Text(
@@ -1378,7 +1378,7 @@ class _LegendMark {
 /// Los colores del informe, tomados de los tokens de la app.
 ///
 /// No hay una paleta propia del PDF: si el sistema de diseño cambia, el informe
-/// cambia con él. Es lo que hace que se vea como Nutrimat y no como el reporte
+/// cambia con él. Es lo que hace que se vea como Ceres y no como el reporte
 /// genérico de una librería.
 ///
 /// Cada sección tiene su tono, y eso no es decoración: es lo que permite
@@ -1428,7 +1428,7 @@ class _Palette {
 ///
 /// Sin esto el PDF sale en Helvetica y con los acentos rotos: las fuentes
 /// estándar del formato son Latin-1 y no tienen ni la ñ ni las comillas
-/// tipográficas que usa todo el texto de Nutrimat.
+/// tipográficas que usa todo el texto de Ceres.
 class _Fonts {
   const _Fonts({
     required this.regular,

@@ -397,7 +397,7 @@ class _PhotoAnalyzingScreenState extends ConsumerState<PhotoAnalyzingScreen>
   /// Y después, mientras siga sin llegar la respuesta, esto rota sin fin.
   ///
   /// **No hay "Terminando" ni "Está tardando más de lo normal", a propósito.**
-  /// Los dos prometían algo sobre el reloj que Nutrimat no puede prometer:
+  /// Los dos prometían algo sobre el reloj que Ceres no puede prometer:
   /// cuánto tarda el modelo no lo decidimos nosotros. "Terminando" a los 14 s
   /// era mentira la mitad de las veces, y el aviso de demora convertía una
   /// espera normal en un problema — la persona no puede hacer nada con ese

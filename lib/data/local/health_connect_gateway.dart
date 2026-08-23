@@ -52,22 +52,22 @@ class HealthConnectSnapshot {
 ///
 /// Trae tres cosas y ninguna más: peso, grasa corporal y sueño. Las tres las
 /// mide un aparato mejor que la memoria de una persona, y las tres son **una por
-/// día o por noche** en Nutrimat, que al reimportar actualiza en vez de duplicar
+/// día o por noche** en Ceres, que al reimportar actualiza en vez de duplicar
 /// (D-16). Lo que podría duplicar —las sesiones de ejercicio— no entra todavía:
 /// necesita la revisión de duplicados de por medio y merece su propio paso.
 ///
 /// Lo que **no** trae, a propósito:
 ///
-/// - **Calorías activas.** El reloj las estima con su modelo y Nutrimat con MET.
+/// - **Calorías activas.** El reloj las estima con su modelo y Ceres con MET.
 ///   Traer el número ajeno y mostrarlo como propio rompe RN-03; lo correcto es
-///   traer la sesión y que Nutrimat calcule, como ya hace.
-/// - **Pasos.** En Nutrimat solo existen colgados de una actividad, así que
+///   traer la sesión y que Ceres calcule, como ya hace.
+/// - **Pasos.** En Ceres solo existen colgados de una actividad, así que
 ///   importarlos obligaría a inventar actividades — y esas sí suman calorías.
-/// - **Nutrición.** De la comida Nutrimat es la fuente de verdad.
+/// - **Nutrición.** De la comida Ceres es la fuente de verdad.
 class HealthConnectGateway {
   const HealthConnectGateway();
 
-  static const MethodChannel _channel = MethodChannel('io.nutrimat.app/health');
+  static const MethodChannel _channel = MethodChannel('io.ceres.app/health');
 
   Future<HealthConnectAvailability> availability() async {
     try {

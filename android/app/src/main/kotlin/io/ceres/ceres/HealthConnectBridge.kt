@@ -1,4 +1,4 @@
-package io.nutrimat.nutrimat
+package io.ceres.ceres
 
 import android.content.Context
 import androidx.health.connect.client.HealthConnectClient
@@ -13,7 +13,7 @@ import java.time.Instant
 import java.time.ZoneId
 
 /**
- * Lee del almacén de salud del teléfono lo que Nutrimat no mide por sí sola.
+ * Lee del almacén de salud del teléfono lo que Ceres no mide por sí sola.
  *
  * Health Connect es el intermediario de Android entre apps de salud, y es la
  * única integración que hace falta: **Samsung Health escribe ahí**, y el Zepp
@@ -23,14 +23,14 @@ import java.time.ZoneId
  * sincronice.
  *
  * Solo tres tipos, y solo lectura: peso, grasa corporal y sueño. Los tres son
- * **uno por día o por noche** en Nutrimat y se sobreescriben al reimportar
+ * **uno por día o por noche** en Ceres y se sobreescriben al reimportar
  * (D-16), así que sincronizar dos veces no puede duplicar nada. Lo que sí podría
  * duplicar —las sesiones de ejercicio— queda para su propio paso, con la
  * revisión de duplicados que la app ya tiene prendida desde el primer día.
  */
 object HealthConnectBridge {
 
-    const val CHANNEL = "io.nutrimat.app/health"
+    const val CHANNEL = "io.ceres.app/health"
 
     /**
      * Health Connect limita la lectura a los 30 días previos al permiso, salvo

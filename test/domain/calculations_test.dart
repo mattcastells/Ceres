@@ -2,21 +2,21 @@
 // pide cada sección. Estos tests corren **antes** de escribir una pantalla
 // (decisions.md §4, paso 6).
 
+import 'package:ceres/core/error/app_error.dart';
+import 'package:ceres/domain/calculations/adherence.dart';
+import 'package:ceres/domain/calculations/bmr.dart';
+import 'package:ceres/domain/calculations/calorie_target.dart';
+import 'package:ceres/domain/calculations/daily_balance.dart';
+import 'package:ceres/domain/calculations/duplicate_score.dart';
+import 'package:ceres/domain/calculations/exercise_credit.dart';
+import 'package:ceres/domain/calculations/macros.dart';
+import 'package:ceres/domain/calculations/met_calories.dart';
+import 'package:ceres/domain/calculations/moving_average.dart';
+import 'package:ceres/domain/calculations/pace_met.dart';
+import 'package:ceres/domain/calculations/rounding.dart';
+import 'package:ceres/domain/calculations/tdee.dart';
+import 'package:ceres/domain/enums/enums.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nutrimat/core/error/app_error.dart';
-import 'package:nutrimat/domain/calculations/adherence.dart';
-import 'package:nutrimat/domain/calculations/bmr.dart';
-import 'package:nutrimat/domain/calculations/calorie_target.dart';
-import 'package:nutrimat/domain/calculations/daily_balance.dart';
-import 'package:nutrimat/domain/calculations/duplicate_score.dart';
-import 'package:nutrimat/domain/calculations/exercise_credit.dart';
-import 'package:nutrimat/domain/calculations/macros.dart';
-import 'package:nutrimat/domain/calculations/met_calories.dart';
-import 'package:nutrimat/domain/calculations/moving_average.dart';
-import 'package:nutrimat/domain/calculations/pace_met.dart';
-import 'package:nutrimat/domain/calculations/rounding.dart';
-import 'package:nutrimat/domain/calculations/tdee.dart';
-import 'package:nutrimat/domain/enums/enums.dart';
 
 void main() {
   group('§1 · BMR — Mifflin-St Jeor', () {

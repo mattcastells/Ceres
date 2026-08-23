@@ -1,14 +1,14 @@
+import 'package:ceres/core/utils/dates.dart';
+import 'package:ceres/data/local/local_store.dart';
+import 'package:ceres/data/repositories/local_repository.dart';
+import 'package:ceres/domain/calculations/calorie_target.dart';
+import 'package:ceres/domain/calculations/goal_presets.dart';
+import 'package:ceres/domain/calculations/macros.dart';
+import 'package:ceres/domain/enums/enums.dart';
+import 'package:ceres/domain/models/activity.dart';
+import 'package:ceres/domain/models/user_profile.dart';
+import 'package:ceres/domain/services/goal_planner.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nutrimat/core/utils/dates.dart';
-import 'package:nutrimat/data/local/local_store.dart';
-import 'package:nutrimat/data/repositories/local_repository.dart';
-import 'package:nutrimat/domain/calculations/calorie_target.dart';
-import 'package:nutrimat/domain/calculations/goal_presets.dart';
-import 'package:nutrimat/domain/calculations/macros.dart';
-import 'package:nutrimat/domain/enums/enums.dart';
-import 'package:nutrimat/domain/models/activity.dart';
-import 'package:nutrimat/domain/models/user_profile.dart';
-import 'package:nutrimat/domain/services/goal_planner.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Perfil con lo justo para que Mifflin-St Jeor tenga con qué trabajar.
@@ -437,7 +437,7 @@ void main() {
       SharedPreferences.setMockInitialValues(<String, Object>{});
       final store = await LocalStore.open();
       repo = LocalRepository(store, onChanged: () {});
-      await repo.signIn('yo@nutrimat.test');
+      await repo.signIn('yo@ceres.test');
     });
 
     test('cambiar de objetivo cierra el anterior y deja uno solo vigente',

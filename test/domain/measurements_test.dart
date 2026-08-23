@@ -1,8 +1,8 @@
+import 'package:ceres/core/utils/dates.dart';
+import 'package:ceres/data/local/local_store.dart';
+import 'package:ceres/data/repositories/local_repository.dart';
+import 'package:ceres/domain/enums/enums.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nutrimat/core/utils/dates.dart';
-import 'package:nutrimat/data/local/local_store.dart';
-import 'package:nutrimat/data/repositories/local_repository.dart';
-import 'package:nutrimat/domain/enums/enums.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {

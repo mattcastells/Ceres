@@ -1,5 +1,5 @@
+import 'package:ceres/core/utils/dates.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nutrimat/core/utils/dates.dart';
 
 void main() {
   test('se puede planificar hasta tres días adelante', () {

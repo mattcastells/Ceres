@@ -8,7 +8,7 @@ import 'update_dialog.dart';
 
 /// Busca si hay una versión nueva al abrir la app y, si la hay, avisa.
 ///
-/// Nutrimat se distribuye por fuera de Play Store: nadie le avisa a nadie que
+/// Ceres se distribuye por fuera de Play Store: nadie le avisa a nadie que
 /// salió una versión. Mientras la comprobación fue solo manual —Configuración →
 /// Actualizaciones, y había que acordarse de entrar— el resultado fue gente
 /// corriendo versiones de meses atrás sin enterarse, incluida la que tenía rota

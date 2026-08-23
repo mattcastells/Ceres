@@ -18,7 +18,7 @@ insert into auth.users (
 values
   ('44444444-4444-4444-4444-444444444444',
    '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
-   'd@nutrimat.test', crypt('secreto-d', gen_salt('bf')), now(), now(), now());
+   'd@ceres.test', crypt('secreto-d', gen_salt('bf')), now(), now(), now());
 
 set local role authenticated;
 select set_config('request.jwt.claims',

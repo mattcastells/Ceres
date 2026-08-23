@@ -133,7 +133,7 @@ class _UpdateDialogState extends ConsumerState<UpdateDialog> {
       if (!habilitado && !instalando)
         const InfoNote(
           tone: NmNoteTone.caution,
-          text: 'Android todavía no tiene habilitada a Nutrimat para instalar '
+          text: 'Android todavía no tiene habilitada a Ceres para instalar '
               'apps. Se habilita una sola vez.',
         ),
 

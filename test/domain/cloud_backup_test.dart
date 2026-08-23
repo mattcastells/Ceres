@@ -4,11 +4,11 @@
 
 import 'dart:async';
 
+import 'package:ceres/core/error/app_error.dart';
+import 'package:ceres/data/remote/cloud_backup_client.dart';
+import 'package:ceres/domain/repositories/auth_gateway.dart';
+import 'package:ceres/domain/services/cloud_backup_service.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nutrimat/core/error/app_error.dart';
-import 'package:nutrimat/data/remote/cloud_backup_client.dart';
-import 'package:nutrimat/domain/repositories/auth_gateway.dart';
-import 'package:nutrimat/domain/services/cloud_backup_service.dart';
 
 class _FakeAuth implements AuthGateway {
   AuthAccount? account = const AuthAccount(id: 'u1', email: 'yo@test');

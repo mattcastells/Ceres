@@ -9,9 +9,9 @@
 // de alguien. Duplicarla es a propósito: el servidor tiene que defenderse de un
 // cliente viejo, y el cliente de un servidor que cambió.
 
+import 'package:ceres/data/remote/meal_suggestions_client.dart';
+import 'package:ceres/domain/models/meal_suggestion.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nutrimat/data/remote/meal_suggestions_client.dart';
-import 'package:nutrimat/domain/models/meal_suggestion.dart';
 
 /// Un ingrediente que cierra por Atwater, para no pelear con esa validación
 /// cuando lo que se prueba es otra cosa.

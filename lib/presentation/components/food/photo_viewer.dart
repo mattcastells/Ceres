@@ -102,11 +102,11 @@ class _PhotoViewerState extends State<PhotoViewer> {
     return response.bodyBytes;
   }
 
-  /// `nutrimat-20260729-201005.jpg`: ordenable y sin pisar la anterior.
+  /// `ceres-20260729-201005.jpg`: ordenable y sin pisar la anterior.
   String get _fileName {
     final now = DateTime.now();
     String two(int n) => n.toString().padLeft(2, '0');
-    return 'nutrimat-${now.year}${two(now.month)}${two(now.day)}'
+    return 'ceres-${now.year}${two(now.month)}${two(now.day)}'
         '-${two(now.hour)}${two(now.minute)}${two(now.second)}.jpg';
   }
 
@@ -145,7 +145,7 @@ class _PhotoViewerState extends State<PhotoViewer> {
     await SharePlus.instance.share(
       ShareParams(
         files: <XFile>[XFile(path, mimeType: 'image/jpeg')],
-        subject: 'Foto de Nutrimat',
+        subject: 'Foto de Ceres',
       ),
     );
   });

@@ -402,7 +402,7 @@ class ActivityGoalsScreen extends ConsumerWidget {
           const SizedBox(height: NmSpace.s4),
           const InfoNote(
             text: 'Los objetivos de actividad nunca reducen tu objetivo '
-                'calórico ni bloquean nada. Podés usar Nutrimat sin '
+                'calórico ni bloquean nada. Podés usar Ceres sin '
                 'configurar ninguno.',
           ),
           const SizedBox(height: NmSpace.s6),
@@ -583,7 +583,7 @@ class _MeasurementsScreenState extends ConsumerState<MeasurementsScreen> {
   }
 
   /// La última medida cargada de esa métrica, cualquiera sea su fecha.
-  String _lastLabel(NutrimatRepositories repo, MeasurementMetric metric) {
+  String _lastLabel(CeresRepositories repo, MeasurementMetric metric) {
     final entries = repo.measurements(metric);
     if (entries.isEmpty) return 'Sin registros';
     final last = entries.last;

@@ -3,12 +3,12 @@
 
 import 'dart:convert';
 
+import 'package:ceres/core/error/app_error.dart';
+import 'package:ceres/data/remote/open_food_facts_client.dart';
+import 'package:ceres/domain/enums/enums.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-import 'package:nutrimat/core/error/app_error.dart';
-import 'package:nutrimat/data/remote/open_food_facts_client.dart';
-import 'package:nutrimat/domain/enums/enums.dart';
 
 String _product({
   required String code,

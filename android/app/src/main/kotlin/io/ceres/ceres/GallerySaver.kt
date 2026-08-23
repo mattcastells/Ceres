@@ -1,4 +1,4 @@
-package io.nutrimat.nutrimat
+package io.ceres.ceres
 
 import android.content.ContentValues
 import android.content.Context
@@ -24,10 +24,10 @@ import java.io.IOException
  */
 object GallerySaver {
 
-    const val CHANNEL = "io.nutrimat.app/gallery"
+    const val CHANNEL = "io.ceres.app/gallery"
 
     /** El álbum propio evita mezclar las fotos de comida con el carrete. */
-    private const val ALBUM = "Nutrimat"
+    private const val ALBUM = "Ceres"
     private const val JPEG = "image/jpeg"
 
     fun canSave(): Boolean = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q

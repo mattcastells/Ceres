@@ -1,5 +1,5 @@
-name: nutrimat
-description: "Nutrimat — registro de alimentación, actividad física y peso corporal."
+name: ceres
+description: "Ceres — registro de alimentación, actividad física y peso corporal."
 publish_to: 'none'
 # El build number (lo que va después del `+`) es el versionCode de Android y
 # **solo puede crecer**: si baja, el teléfono se niega a instalar encima.
@@ -61,7 +61,7 @@ dev_dependencies:
   flutter_lints: ^5.0.0
   flutter_launcher_icons: ^0.14.4
 
-# Ícono adaptativo de Android a partir de assets/brand/ (ver "Nutrimat Logo").
+# Ícono adaptativo de Android a partir de assets/brand/ (ver "Ceres Logo").
 # Regenerar con: dart run flutter_launcher_icons
 flutter_launcher_icons:
   android: ic_launcher

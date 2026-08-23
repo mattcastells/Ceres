@@ -260,7 +260,7 @@ crashes.
   puertas.
 - **Los APK descargados se acumulaban**: solo se borraba el del mismo nombre, así
   que quedaban 75 MB por versión en un directorio que Android no limpia. Ahora se
-  barren todos los `nutrimat-*.apk` antes de bajar.
+  barren todos los `ceres-*.apk` antes de bajar.
 - **El peso de Health Connect entraba como `'manual'`.** `logWeight` acepta
   `source` y la importación manda `'imported'`.
 - **`PalPublisher` perdía el cambio** que llegaba durante una publicación: salía

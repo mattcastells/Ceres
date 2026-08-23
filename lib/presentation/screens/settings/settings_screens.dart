@@ -117,7 +117,7 @@ class SettingsScreen extends ConsumerWidget {
                 ),
                 const NmDivider(indent: NmSpace.s6),
                 NmListRow(
-                  title: 'Acerca de Nutrimat',
+                  title: 'Acerca de Ceres',
                   leading: Icon(PhosphorIcons.info()),
                   onTap: () => context.push(Routes.about),
                 ),
@@ -349,7 +349,7 @@ class _IntegrationsScreenState extends ConsumerState<IntegrationsScreen> {
             ),
             const SizedBox(height: NmSpace.s6),
             const InfoNote(
-              text: 'Nutrimat funciona completo con registro manual: ninguna '
+              text: 'Ceres funciona completo con registro manual: ninguna '
                   'pantalla obligatoria depende de una integración externa.',
             ),
           ],
@@ -448,7 +448,7 @@ class _IntegrationsScreenState extends ConsumerState<IntegrationsScreen> {
                           body:
                               'Sesiones de ejercicio, calorías activas, pasos, '
                               'distancia y frecuencia cardíaca. Solo lectura: '
-                              'Nutrimat no escribe nada en tu historial de '
+                              'Ceres no escribe nada en tu historial de '
                               'salud.',
                           actions: <Widget>[
                             NmButton.ghost(
@@ -709,7 +709,7 @@ class _BackupActionsState extends ConsumerState<_BackupActions> {
       final repo = ref.read(repositoryProvider);
       final json = repo.exportJson();
       final directory = await getTemporaryDirectory();
-      final name = 'nutrimat-respaldo-${isoDate(DateTime.now())}.json';
+      final name = 'ceres-respaldo-${isoDate(DateTime.now())}.json';
       final file = File('${directory.path}/$name');
       await file.writeAsString(json);
 
@@ -718,7 +718,7 @@ class _BackupActionsState extends ConsumerState<_BackupActions> {
         ShareParams(
           files: <XFile>[XFile(file.path, mimeType: 'application/json')],
           fileNameOverrides: <String>[name],
-          subject: 'Respaldo de Nutrimat',
+          subject: 'Respaldo de Ceres',
         ),
       );
     } on Object {
@@ -731,7 +731,7 @@ class _BackupActionsState extends ConsumerState<_BackupActions> {
 
   Future<void> _import() async {
     const typeGroup = XTypeGroup(
-      label: 'Respaldo de Nutrimat',
+      label: 'Respaldo de Ceres',
       extensions: <String>['json'],
       mimeTypes: <String>['application/json'],
     );
@@ -930,7 +930,7 @@ class AboutScreen extends ConsumerWidget {
           const Center(child: BrandWordmark(markSize: 40)),
           const SizedBox(height: NmSpace.s6),
           Text(
-            'Nutrimat muestra el cálculo completo del día en vez de un único '
+            'Ceres muestra el cálculo completo del día en vez de un único '
             'número mágico, y nunca presenta una estimación como si fuera una '
             'medición.',
             style: NmTextStyles.from(NmType.bodySm, color: nm.textMuted),
@@ -957,7 +957,7 @@ class AboutScreen extends ConsumerWidget {
           ),
           // Acá había un "Buscar actualizaciones" que empujaba a la misma
           // pantalla que Configuración → Actualizaciones, la fila de arriba de
-          // "Acerca de Nutrimat". Dos puertas a lo mismo, a un toque de
+          // "Acerca de Ceres". Dos puertas a lo mismo, a un toque de
           // distancia, hacen dudar de si son lo mismo. Las actualizaciones
           // tienen su sección; esta pantalla dice qué versión hay instalada.
         ],

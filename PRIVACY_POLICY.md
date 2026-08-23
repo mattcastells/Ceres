@@ -2,14 +2,14 @@
 
 _Last updated: 2026-07-30_
 
-This document describes what Nutrimat ("the app") actually collects, stores,
+This document describes what Ceres ("the app") actually collects, stores,
 and shares, based on how it is built today. It is a starting point, not legal
 advice — see the note at the end before relying on it for a store listing or
 a specific jurisdiction's requirements.
 
 ## Who this covers
 
-Nutrimat is developed by [insert legal name / entity]. Contact for privacy
+Ceres is developed by [insert legal name / entity]. Contact for privacy
 questions: [insert contact email].
 
 ## What we collect
@@ -48,7 +48,7 @@ no ad or tracking SDKs.
 
 ## Sharing with other people ("Pals")
 
-Nutrimat lets you link your account with other people ("pals") by a short
+Ceres lets you link your account with other people ("pals") by a short
 code, so you can see each other's day. This is entirely opt-in and under your
 control:
 

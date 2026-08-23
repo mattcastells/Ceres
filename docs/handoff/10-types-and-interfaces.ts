@@ -1,5 +1,5 @@
 /**
- * Nutrimat — types & interfaces (contrato de referencia).
+ * Ceres — types & interfaces (contrato de referencia).
  *
  * Aunque la app final se desarrolle en Flutter, estos tipos son el contrato canónico:
  * los modelos Dart deben mapear 1:1 (mismos nombres de campo en camelCase, mismos

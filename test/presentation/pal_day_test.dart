@@ -5,16 +5,16 @@
 // de lugar según lo que haya cargado ese día, hay que volver a leer todo cada
 // vez que se abre la pantalla.
 
+import 'package:ceres/core/theme/app_theme.dart';
+import 'package:ceres/core/utils/dates.dart';
+import 'package:ceres/domain/enums/enums.dart';
+import 'package:ceres/domain/models/pal.dart';
+import 'package:ceres/domain/models/sleep.dart';
+import 'package:ceres/presentation/screens/pals/pal_day_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
-import 'package:nutrimat/core/theme/app_theme.dart';
-import 'package:nutrimat/core/utils/dates.dart';
-import 'package:nutrimat/domain/enums/enums.dart';
-import 'package:nutrimat/domain/models/pal.dart';
-import 'package:nutrimat/domain/models/sleep.dart';
-import 'package:nutrimat/presentation/screens/pals/pal_day_screen.dart';
 
 const String _userId = 'pal-1';
 

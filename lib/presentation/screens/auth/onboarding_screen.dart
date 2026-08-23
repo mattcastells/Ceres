@@ -49,7 +49,7 @@ import '../profile/goal_picker_screen.dart';
 /// se elige a qué ritmo, y se puede escribir otro: un objetivo que no se
 /// confirmó no es un objetivo, es una suposición con forma de cuenta.
 ///
-/// Quién queda adentro lo decide `NutrimatRepositories.needsOnboarding`, y lo
+/// Quién queda adentro lo decide `CeresRepositories.needsOnboarding`, y lo
 /// hace cumplir el `redirect` del router: no alcanza con mandar acá desde el
 /// alta, porque a Inicio también se llega desde el splash de un arranque
 /// posterior.
@@ -311,7 +311,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     });
   }
 
-  Future<void> _finish(NutrimatRepositories repo) async {
+  Future<void> _finish(CeresRepositories repo) async {
     final preset = GoalPreset.of(_goalType!);
     final target = _confirmedTarget!;
 
@@ -466,7 +466,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               onBirthDate: (v) => setState(() {
                 if (ageFromBirthDate(v) < 13) {
                   _birthError =
-                      'Necesitás tener al menos 13 años para usar Nutrimat.';
+                      'Necesitás tener al menos 13 años para usar Ceres.';
                   return;
                 }
                 _birthError = null;

@@ -6,10 +6,10 @@
 // contexto, y una que además corrija los cálculos sería la app opinando sobre
 // una semana que no vio. Ver `docs/contexto-diario.md`.
 
+import 'package:ceres/domain/calculations/alcohol.dart';
+import 'package:ceres/domain/models/alcohol.dart';
+import 'package:ceres/domain/models/day_marker.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nutrimat/domain/calculations/alcohol.dart';
-import 'package:nutrimat/domain/models/alcohol.dart';
-import 'package:nutrimat/domain/models/day_marker.dart';
 
 void main() {
   DateTime d(int y, int m, int day) => DateTime(y, m, day);

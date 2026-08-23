@@ -91,7 +91,7 @@ Edamam (licencia restrictiva). Si se cambia, se mantiene el shape de `Food`.
 Latinoamérica que USDA.
 
 **Autenticación.** Sin clave. **Obligatorio** enviar un `User-Agent` identificatorio:
-`Nutrimat/1.0 (contacto@nutrimat.app)`.
+`Ceres/1.0 (contacto@ceres.app)`.
 
 **Variables.** `OPEN_FOOD_FACTS_USER_AGENT`.
 

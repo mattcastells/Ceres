@@ -13,14 +13,14 @@
 
 import 'dart:convert';
 
+import 'package:ceres/core/error/app_error.dart';
+import 'package:ceres/core/utils/dates.dart';
+import 'package:ceres/data/remote/pals_client.dart';
+import 'package:ceres/domain/enums/enums.dart';
+import 'package:ceres/domain/models/pal.dart';
+import 'package:ceres/domain/repositories/auth_gateway.dart';
+import 'package:ceres/domain/services/pal_publisher.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nutrimat/core/error/app_error.dart';
-import 'package:nutrimat/core/utils/dates.dart';
-import 'package:nutrimat/data/remote/pals_client.dart';
-import 'package:nutrimat/domain/enums/enums.dart';
-import 'package:nutrimat/domain/models/pal.dart';
-import 'package:nutrimat/domain/repositories/auth_gateway.dart';
-import 'package:nutrimat/domain/services/pal_publisher.dart';
 
 class _FakeAuth implements AuthGateway {
   AuthAccount? account = const AuthAccount(id: 'u1', email: 'yo@test');

@@ -8,7 +8,7 @@ plugins {
 }
 
 // Firma de release. Las credenciales viven en android/key.properties, que está
-// fuera del control de versiones; el keystore es android/nutrimat-upload.jks.
+// fuera del control de versiones; el keystore es android/ceres-upload.jks.
 // Si el archivo no está, el release cae a la firma de debug para que
 // `flutter run --release` siga andando en una máquina sin las claves.
 val keystoreProperties = Properties().apply {
@@ -19,7 +19,7 @@ val hasReleaseSigning = keystoreProperties.getProperty("storeFile") != null &&
     rootProject.file(keystoreProperties.getProperty("storeFile") ?: "").exists()
 
 android {
-    namespace = "io.nutrimat.nutrimat"
+    namespace = "io.ceres.ceres"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -38,7 +38,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "io.nutrimat.app"
+        applicationId = "io.ceres.app"
         // 26 lo pide `androidx.health.connect:connect-client`, que es lo que
         // trae los datos de Samsung Health y de Zepp (D-21). Antes era 24; subir
         // deja afuera Android 7.0 y 7.1, que es de 2016 y no está en ningún

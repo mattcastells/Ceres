@@ -150,7 +150,7 @@ class _MeasurementSheetState extends ConsumerState<_MeasurementSheet> {
             ),
             const SizedBox(height: NmSpace.s3),
             Text(
-              'Nutrimat no convierte los pliegues a porcentaje de grasa: cada '
+              'Ceres no convierte los pliegues a porcentaje de grasa: cada '
               'ecuación pide un juego de pliegues distinto y da un número '
               'distinto. La suma sirve para compararte con vos mismo.',
               style: NmTextStyles.from(NmType.caption, color: nm.textMuted),

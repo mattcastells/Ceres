@@ -15,14 +15,14 @@ import 'presentation/providers/auth_providers.dart';
 ///
 /// Idioma inicial español rioplatense; la estructura de i18n está desde el día
 /// uno aunque se entregue un solo idioma (D-19, S-06 del PRD).
-class NutrimatApp extends ConsumerStatefulWidget {
-  const NutrimatApp({super.key});
+class CeresApp extends ConsumerStatefulWidget {
+  const CeresApp({super.key});
 
   @override
-  ConsumerState<NutrimatApp> createState() => _NutrimatAppState();
+  ConsumerState<CeresApp> createState() => _CeresAppState();
 }
 
-class _NutrimatAppState extends ConsumerState<NutrimatApp>
+class _CeresAppState extends ConsumerState<CeresApp>
     with WidgetsBindingObserver {
   static const HomeWidgetPublisher _homeWidget = HomeWidgetPublisher();
 
@@ -50,7 +50,7 @@ class _NutrimatAppState extends ConsumerState<NutrimatApp>
   ///
   /// El widget se actualiza solo cuando se registra algo (`onChanged` en
   /// `bootstrap`), y con eso alcanza salvo en un caso: **cambió el día**. Ahí el
-  /// dato guardado es de ayer, el widget lo detecta y muestra "Abrí Nutrimat
+  /// dato guardado es de ayer, el widget lo detecta y muestra "Abrí Ceres
   /// para hoy" — pero si no se publicara al volver a la app, seguiría diciendo
   /// eso justo después de que la persona la abrió, que es la peor versión de un
   /// aviso: el que sigue apareciendo cuando ya se hizo lo que pedía.
@@ -140,7 +140,7 @@ class _NutrimatAppState extends ConsumerState<NutrimatApp>
     final themeMode = ref.watch(themeModeProvider);
 
     return MaterialApp.router(
-      title: 'Nutrimat',
+      title: 'Ceres',
       debugShowCheckedModeBanner: false,
       routerConfig: router,
       themeMode: themeMode,

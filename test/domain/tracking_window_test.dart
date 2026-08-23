@@ -15,8 +15,8 @@
 // tenerla en un solo lugar es que se pruebe una sola vez.
 // Ver `docs/contexto-diario.md`.
 
+import 'package:ceres/domain/calculations/tracking_window.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nutrimat/domain/calculations/tracking_window.dart';
 
 void main() {
   DateTime d(int y, int m, int day) => DateTime(y, m, day);

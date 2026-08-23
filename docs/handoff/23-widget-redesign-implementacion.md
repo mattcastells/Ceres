@@ -4,7 +4,7 @@ Respuesta al brief `22-widget-redesign-brief.md`, con las variantes ya elegidas.
 Esto reemplaza al documento de decisiones anterior: acá está todo lo que hace
 falta para escribir el código, con las cajas en dp y sin nada por adivinar.
 
-Referencia visual: `Widget Nutrimat.dc.html` (mocks a 2×, cada uno con su tira de
+Referencia visual: `Widget Ceres.dc.html` (mocks a 2×, cada uno con su tira de
 medidas debajo).
 
 **Nada de esto necesita una vista, un layout ni una capacidad que RemoteViews no
@@ -331,14 +331,14 @@ del día y extras.
 
 | Caso | Título 13 sp / 500 | Detalle 11 sp / 400 muted |
 | --- | --- | --- |
-| Dato de otro día | Abrí Nutrimat para ver hoy | Lo último guardado es del miércoles |
+| Dato de otro día | Abrí Ceres para ver hoy | Lo último guardado es del miércoles |
 | Todavía sin datos | Registrá tu primera comida | Después el día aparece acá |
 
 El día viejo se nombra con palabra, no con fecha ISO: la app manda `staleLabel` ya
 formateado, como todo el resto. Si no llega, el detalle se esconde y queda solo el
 título.
 
-En 2×1 cae el detalle: ícono + "Abrí Nutrimat".
+En 2×1 cae el detalle: ícono + "Abrí Ceres".
 
 Los dos casos son distintos a propósito: "no hay nada todavía" y "hay algo pero es
 viejo" mandan a buscar el problema a lugares distintos.

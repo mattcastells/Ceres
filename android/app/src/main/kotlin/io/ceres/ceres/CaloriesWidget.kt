@@ -1,4 +1,4 @@
-package io.nutrimat.nutrimat
+package io.ceres.ceres
 
 import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
@@ -18,7 +18,7 @@ import java.util.Calendar
  *
  * Un widget lo dibuja el launcher, en su proceso y con la app cerrada, así que
  * no puede preguntarle nada a Dart: lo único que hay es un dato guardado. La
- * app lo escribe cuando cambia algo (canal `io.nutrimat.app/widget`) y acá se
+ * app lo escribe cuando cambia algo (canal `io.ceres.app/widget`) y acá se
  * lee.
  *
  * **La regla que manda es no mentir.** El dato guardado tiene la fecha del día
@@ -83,7 +83,7 @@ class CaloriesWidget : AppWidgetProvider() {
 
     companion object {
 
-        private const val ACTION_SET_WATER = "io.nutrimat.app.SET_WATER"
+        private const val ACTION_SET_WATER = "io.ceres.app.SET_WATER"
         private const val EXTRA_GLASSES = "glasses"
 
         /**
@@ -427,7 +427,7 @@ class CaloriesWidget : AppWidgetProvider() {
             val hadData = state != null
             views.setTextViewText(
                 R.id.nm_widget_empty_title,
-                if (hadData) "Abrí Nutrimat para ver hoy" else "Registrá tu primera comida",
+                if (hadData) "Abrí Ceres para ver hoy" else "Registrá tu primera comida",
             )
 
             // En 2×1 cae el detalle: entra el ícono y el título, nada más.

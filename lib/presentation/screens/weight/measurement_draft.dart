@@ -22,7 +22,7 @@ class MeasurementDraft {
   final Map<MeasurementMetric, String> errors = <MeasurementMetric, String>{};
 
   /// Trae lo que ya haya cargado en [date] para poder corregirlo.
-  void loadFrom(NutrimatRepositories repo, DateTime date) {
+  void loadFrom(CeresRepositories repo, DateTime date) {
     final existing = repo.measurementsOn(date);
     for (final metric in MeasurementMetric.values) {
       final text = existing[metric] == null
@@ -70,7 +70,7 @@ class MeasurementDraft {
 
   /// Valida y guarda. Devuelve cuántas medidas quedaron escritas, o `null` si
   /// no guardó nada: en ese caso [errors] dice por qué y de qué campo.
-  Future<int?> commit(NutrimatRepositories repo, DateTime date) async {
+  Future<int?> commit(CeresRepositories repo, DateTime date) async {
     final found = <MeasurementMetric, String>{};
     final toSave = <MeasurementMetric, double>{};
 

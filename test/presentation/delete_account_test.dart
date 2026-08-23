@@ -12,30 +12,30 @@
 
 import 'dart:async';
 
+import 'package:ceres/core/error/app_error.dart';
+import 'package:ceres/core/router/routes.dart';
+import 'package:ceres/core/theme/app_theme.dart';
+import 'package:ceres/core/utils/dates.dart';
+import 'package:ceres/data/local/local_store.dart';
+import 'package:ceres/data/repositories/local_repository.dart';
+import 'package:ceres/domain/enums/enums.dart';
+import 'package:ceres/domain/models/meal.dart';
+import 'package:ceres/domain/repositories/auth_gateway.dart';
+import 'package:ceres/presentation/providers/app_providers.dart';
+import 'package:ceres/presentation/providers/auth_providers.dart';
+import 'package:ceres/presentation/screens/settings/settings_screens.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/date_symbol_data_local.dart';
-import 'package:nutrimat/core/error/app_error.dart';
-import 'package:nutrimat/core/router/routes.dart';
-import 'package:nutrimat/core/theme/app_theme.dart';
-import 'package:nutrimat/core/utils/dates.dart';
-import 'package:nutrimat/data/local/local_store.dart';
-import 'package:nutrimat/data/repositories/local_repository.dart';
-import 'package:nutrimat/domain/enums/enums.dart';
-import 'package:nutrimat/domain/models/meal.dart';
-import 'package:nutrimat/domain/repositories/auth_gateway.dart';
-import 'package:nutrimat/presentation/providers/app_providers.dart';
-import 'package:nutrimat/presentation/providers/auth_providers.dart';
-import 'package:nutrimat/presentation/screens/settings/settings_screens.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Anota si le pidieron borrar y permite hacer fallar ese pedido.
 class _FakeGateway implements AuthGateway {
   AuthAccount? _account = const AuthAccount(
     id: 'uuid-1',
-    email: 'yo@nutrimat.test',
+    email: 'yo@ceres.test',
   );
   final StreamController<AuthAccount?> _changes =
       StreamController<AuthAccount?>.broadcast();
@@ -88,7 +88,7 @@ Future<(ProviderContainer, LocalRepository, _FakeGateway)> _boot() async {
   SharedPreferences.setMockInitialValues(<String, Object>{});
   final store = await LocalStore.open();
   final repository = LocalRepository(store, onChanged: () {});
-  await repository.signIn('yo@nutrimat.test');
+  await repository.signIn('yo@ceres.test');
   // Una comida cargada: es lo que no se puede perder si el servidor falla.
   final ahora = DateTime.now();
   await repository.saveMeal(

@@ -6,17 +6,17 @@
 // donde viven — acá, que el texto y la **fecha** salgan del cálculo del día; en
 // Kotlin, que un dato de otra fecha no se muestre.
 
+import 'package:ceres/core/utils/dates.dart';
+import 'package:ceres/data/local/home_widget_publisher.dart';
+import 'package:ceres/data/local/local_store.dart';
+import 'package:ceres/data/repositories/local_repository.dart';
+import 'package:ceres/domain/enums/enums.dart';
+import 'package:ceres/domain/models/activity.dart';
+import 'package:ceres/domain/models/goal.dart';
+import 'package:ceres/domain/models/meal.dart';
+import 'package:ceres/domain/models/summaries.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
-import 'package:nutrimat/core/utils/dates.dart';
-import 'package:nutrimat/data/local/home_widget_publisher.dart';
-import 'package:nutrimat/data/local/local_store.dart';
-import 'package:nutrimat/data/repositories/local_repository.dart';
-import 'package:nutrimat/domain/enums/enums.dart';
-import 'package:nutrimat/domain/models/activity.dart';
-import 'package:nutrimat/domain/models/goal.dart';
-import 'package:nutrimat/domain/models/meal.dart';
-import 'package:nutrimat/domain/models/summaries.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {

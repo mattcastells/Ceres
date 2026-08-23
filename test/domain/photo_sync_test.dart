@@ -1,5 +1,5 @@
+import 'package:ceres/domain/services/photo_sync_service.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nutrimat/domain/services/photo_sync_service.dart';
 
 void main() {
   group('isRemotePath', () {
@@ -15,7 +15,7 @@ void main() {
     test('una ruta de archivo de Android no es del bucket', () {
       expect(
         PhotoSyncService.isRemotePath(
-          '/data/user/0/io.nutrimat.app/cache/CAP123.jpg',
+          '/data/user/0/io.ceres.app/cache/CAP123.jpg',
         ),
         isFalse,
       );

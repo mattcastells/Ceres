@@ -22,7 +22,7 @@ class HomeWidgetPublisher {
   const HomeWidgetPublisher();
 
   static const MethodChannel _channel = MethodChannel(
-    'io.nutrimat.app/widget',
+    'io.ceres.app/widget',
   );
 
   /// Escribe el estado del día y le pide al sistema que redibuje el widget.

@@ -15,7 +15,7 @@ import '../../domain/repositories/repositories.dart';
 /// una mutación avisa por [appRevisionProvider].
 
 /// Se sobrescribe en `bootstrap.dart` con la implementación concreta.
-final repositoryProvider = Provider<NutrimatRepositories>(
+final repositoryProvider = Provider<CeresRepositories>(
   (ref) => throw UnimplementedError('repositoryProvider sin inicializar'),
 );
 

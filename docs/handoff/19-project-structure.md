@@ -20,7 +20,7 @@ Reglas duras:
 ## 1. Flutter
 
 ```
-nutrimat/
+ceres/
 ├─ lib/
 │  ├─ main.dart
 │  ├─ app.dart                          MaterialApp, tema, router, providers raíz
@@ -161,7 +161,7 @@ llama casos de uso, nunca repositorios directamente.
 ## 2. React Native (alternativa)
 
 ```
-nutrimat/
+ceres/
 ├─ src/
 │  ├─ app/                              expo-router: layouts y rutas espejo de la IA
 │  │  ├─ (auth)/                        sign-in, sign-up, forgot-password

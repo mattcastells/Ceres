@@ -9,18 +9,18 @@
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:ceres/core/error/app_error.dart';
+import 'package:ceres/core/utils/dates.dart';
+import 'package:ceres/data/local/local_store.dart';
+import 'package:ceres/data/local/photo_normalizer.dart';
+import 'package:ceres/data/remote/photo_storage_client.dart';
+import 'package:ceres/data/repositories/local_repository.dart';
+import 'package:ceres/domain/enums/enums.dart';
+import 'package:ceres/domain/models/meal.dart';
+import 'package:ceres/domain/repositories/auth_gateway.dart';
+import 'package:ceres/domain/services/photo_sync_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
-import 'package:nutrimat/core/error/app_error.dart';
-import 'package:nutrimat/core/utils/dates.dart';
-import 'package:nutrimat/data/local/local_store.dart';
-import 'package:nutrimat/data/local/photo_normalizer.dart';
-import 'package:nutrimat/data/remote/photo_storage_client.dart';
-import 'package:nutrimat/data/repositories/local_repository.dart';
-import 'package:nutrimat/domain/enums/enums.dart';
-import 'package:nutrimat/domain/models/meal.dart';
-import 'package:nutrimat/domain/repositories/auth_gateway.dart';
-import 'package:nutrimat/domain/services/photo_sync_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -192,7 +192,7 @@ void main() {
       repo.store.meals = <Meal>[
         _meal(
           id: 'm1',
-          photoPath: '/data/user/0/io.nutrimat/cache/foto.jpg',
+          photoPath: '/data/user/0/io.ceres/cache/foto.jpg',
           deletedAt: DateTime.now().subtract(const Duration(days: 3)),
         ),
       ];

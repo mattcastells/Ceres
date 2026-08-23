@@ -28,10 +28,10 @@ El SDK de Android quedó instalado en `%LOCALAPPDATA%\Android\Sdk` (command-line
 tools 19.0, platform-tools, `platforms;android-36`, `build-tools;36.0.0`,
 emulador y system image `android-36;google_apis;x86_64`), con las licencias
 aceptadas y `flutter config --android-sdk` ya apuntado. Hay un AVD llamado
-`nutrimat` (Pixel 7, API 36).
+`ceres` (Pixel 7, API 36).
 
 ```bash
-flutter emulators --launch nutrimat   # levanta el emulador
+flutter emulators --launch ceres   # levanta el emulador
 flutter run                           # instala y corre con hot reload
 
 flutter build apk --release --split-per-abi
@@ -126,7 +126,7 @@ ahí. Zepp no tiene API pública para que un tercero le lea nada, así que este 
 el único camino que existe para un Amazfit.
 
 Los tres tipos no se eligieron por facilidad sino por **doble conteo**: son una
-por día o por noche en Nutrimat, y volver a registrarlas actualiza el registro
+por día o por noche en Ceres, y volver a registrarlas actualiza el registro
 que ya estaba (D-16), así que sincronizar diez veces deja lo mismo que una — hay
 un test que lo verifica. Las sesiones de ejercicio son lo único que puede
 duplicar de verdad y quedan para su propio paso, con la revisión de duplicados
@@ -144,7 +144,7 @@ vasos de agua —que **se tocan** para sumar—, las calorías restantes y las t
 barras de macros. Vive en
 `android/app/src/main/kotlin/.../CaloriesWidget.kt` y lo dibuja el launcher, en
 su proceso, así que no puede preguntarle nada a Dart: la app le deja el dato
-escrito (`HomeWidgetPublisher`, canal `io.nutrimat.app/widget`) cada vez que se
+escrito (`HomeWidgetPublisher`, canal `io.ceres.app/widget`) cada vez que se
 registra algo y cada vez que se abre o se vuelve a ella.
 
 Cuatro decisiones que no son de comodidad:
@@ -157,7 +157,7 @@ Cuatro decisiones que no son de comodidad:
   decide *cuánto dibuja*, no cómo se escribe.
 - **El dato lleva su fecha y el widget la mira.** Si lo guardado no es de hoy no
   muestra **nada** de él —ni el número, ni las gotas, ni las barras—: dice
-  "Abrí Nutrimat para hoy". Un widget que no se actualizó desde ayer mostrando
+  "Abrí Ceres para hoy". Un widget que no se actualizó desde ayer mostrando
   "te quedan 1.234 kcal" es peor que uno vacío, porque no se distingue de uno al
   día — la misma regla por la que la app nunca presenta una estimación como si
   fuera una medición. Media pantalla con los macros de ayer al lado de un guion
@@ -279,7 +279,7 @@ el dispositivo.
 
 ## 6. Firma y distribución
 
-El release se firma con `android/nutrimat-upload.jks` y las credenciales de
+El release se firma con `android/ceres-upload.jks` y las credenciales de
 `android/key.properties`, **los dos fuera del control de versiones**. Si se
 pierde el keystore no se puede volver a publicar una actualización de la misma
 app: hay que respaldarlo junto con su contraseña.

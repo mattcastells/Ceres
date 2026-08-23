@@ -88,7 +88,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
 
           if (granted == false) ...<Widget>[
             InfoNote(
-              text: 'Android tiene bloqueadas las notificaciones de Nutrimat.',
+              text: 'Android tiene bloqueadas las notificaciones de Ceres.',
               tone: NmNoteTone.caution,
               action: 'Permitir',
               onAction: () async {

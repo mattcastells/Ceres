@@ -9,19 +9,19 @@
 // escrito llegue al análisis, y que **no escribir nada sea una respuesta
 // válida** — si el campo fuera obligatorio, el paso sería un peaje.
 
+import 'package:ceres/core/router/routes.dart';
+import 'package:ceres/core/theme/app_theme.dart';
+import 'package:ceres/core/utils/dates.dart';
+import 'package:ceres/data/local/local_store.dart';
+import 'package:ceres/data/repositories/local_repository.dart';
+import 'package:ceres/presentation/components/system/buttons.dart';
+import 'package:ceres/presentation/providers/app_providers.dart';
+import 'package:ceres/presentation/screens/photo/photo_screens.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/date_symbol_data_local.dart';
-import 'package:nutrimat/core/router/routes.dart';
-import 'package:nutrimat/core/theme/app_theme.dart';
-import 'package:nutrimat/core/utils/dates.dart';
-import 'package:nutrimat/data/local/local_store.dart';
-import 'package:nutrimat/data/repositories/local_repository.dart';
-import 'package:nutrimat/presentation/components/system/buttons.dart';
-import 'package:nutrimat/presentation/providers/app_providers.dart';
-import 'package:nutrimat/presentation/screens/photo/photo_screens.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 Future<ProviderContainer> _boot() async {

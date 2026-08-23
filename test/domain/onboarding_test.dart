@@ -9,12 +9,12 @@
 // El que decide es `needsOnboarding`, y el que lo hace cumplir es el `redirect`
 // del router. Acá se prueba el primero: es donde vive la regla.
 
+import 'package:ceres/core/config/feature_flags.dart';
+import 'package:ceres/core/utils/dates.dart';
+import 'package:ceres/data/local/local_store.dart';
+import 'package:ceres/data/repositories/local_repository.dart';
+import 'package:ceres/domain/enums/enums.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nutrimat/core/config/feature_flags.dart';
-import 'package:nutrimat/core/utils/dates.dart';
-import 'package:nutrimat/data/local/local_store.dart';
-import 'package:nutrimat/data/repositories/local_repository.dart';
-import 'package:nutrimat/domain/enums/enums.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 Future<LocalRepository> _boot() async {
@@ -37,7 +37,7 @@ void main() {
 
   test('una cuenta recién creada tiene que completar', () async {
     final repo = await _boot();
-    await repo.signIn('elias@nutrimat.test');
+    await repo.signIn('elias@ceres.test');
 
     expect(repo.hasSession, isTrue);
     expect(repo.needsOnboarding, isTrue);
@@ -45,7 +45,7 @@ void main() {
 
   test('los tres datos son necesarios, y ninguno alcanza solo', () async {
     final repo = await _boot();
-    await repo.signIn('elias@nutrimat.test');
+    await repo.signIn('elias@ceres.test');
 
     await repo.updateProfile(
       repo.profile.copyWith(birthDate: DateTime(1990, 4, 12)),
@@ -61,7 +61,7 @@ void main() {
 
   test('el sexo biológico no es un requisito: "Otro" es una respuesta', () async {
     final repo = await _boot();
-    await repo.signIn('elias@nutrimat.test');
+    await repo.signIn('elias@ceres.test');
     await repo.updateProfile(
       repo.profile.copyWith(
         birthDate: DateTime(1990, 4, 12),
@@ -78,7 +78,7 @@ void main() {
 
   test('borrar el último peso vuelve a pedir el dato', () async {
     final repo = await _boot();
-    await repo.signIn('elias@nutrimat.test');
+    await repo.signIn('elias@ceres.test');
     await repo.updateProfile(
       repo.profile.copyWith(birthDate: DateTime(1990, 4, 12), heightCm: 178),
     );
@@ -96,7 +96,7 @@ void main() {
   test('sobrevive a cerrar y volver a abrir la app', () async {
     SharedPreferences.setMockInitialValues(<String, Object>{});
     final antes = LocalRepository(await LocalStore.open(), onChanged: () {});
-    await antes.signIn('elias@nutrimat.test');
+    await antes.signIn('elias@ceres.test');
     await antes.updateProfile(
       antes.profile.copyWith(birthDate: DateTime(1990, 4, 12), heightCm: 178),
     );

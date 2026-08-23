@@ -1,8 +1,8 @@
 {
-  "name": "nutrimat-backoffice",
+  "name": "ceres-backoffice",
   "version": "0.1.0",
   "private": true,
-  "description": "Panel de seguimiento para el profesional que sigue a alguien en Nutrimat.",
+  "description": "Panel de seguimiento para el profesional que sigue a alguien en Ceres.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

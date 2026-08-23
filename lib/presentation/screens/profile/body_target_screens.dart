@@ -118,7 +118,7 @@ class _BodyProfileScreenState extends ConsumerState<BodyProfileScreen> {
               if (ageFromBirthDate(v) < 13) {
                 setState(
                   () => _error =
-                      'Necesitás tener al menos 13 años para usar Nutrimat.',
+                      'Necesitás tener al menos 13 años para usar Ceres.',
                 );
                 return;
               }

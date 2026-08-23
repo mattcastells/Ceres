@@ -1,11 +1,11 @@
 // El respaldo es hoy la única red de seguridad: si el archivo no vuelve a
 // entrar completo, se pierde el historial.
 
+import 'package:ceres/core/error/app_error.dart';
+import 'package:ceres/core/utils/dates.dart';
+import 'package:ceres/data/local/local_store.dart';
+import 'package:ceres/data/repositories/local_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nutrimat/core/error/app_error.dart';
-import 'package:nutrimat/core/utils/dates.dart';
-import 'package:nutrimat/data/local/local_store.dart';
-import 'package:nutrimat/data/repositories/local_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 Future<LocalRepository> _boot({required bool seeded}) async {
@@ -60,7 +60,7 @@ void main() {
         isA<AppError>().having(
           (e) => e.message,
           'message',
-          contains('no es un respaldo de Nutrimat'),
+          contains('no es un respaldo de Ceres'),
         ),
       ),
     );

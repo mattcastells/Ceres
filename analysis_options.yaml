@@ -1,4 +1,4 @@
-# Análisis estático de Nutrimat.
+# Análisis estático de Ceres.
 #
 # 19-project-structure.md pide además un lint de capas (`import_lint`) que
 # falle el build si `domain/` importa Flutter o si `presentation/` importa

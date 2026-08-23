@@ -1,6 +1,6 @@
 # Publicar una versión
 
-Nutrimat no está en Play Store. Cada versión es un **release de GitHub** con el
+Ceres no está en Play Store. Cada versión es un **release de GitHub** con el
 APK firmado adjunto, y la app se actualiza sola desde Configuración →
 Actualizaciones.
 
@@ -13,10 +13,10 @@ Antes del primer release hay que cargar cuatro secretos en el repositorio:
 
 | Secreto | Qué va |
 | --- | --- |
-| `KEYSTORE_BASE64` | El `android/nutrimat-upload.jks` codificado en base64 |
+| `KEYSTORE_BASE64` | El `android/ceres-upload.jks` codificado en base64 |
 | `KEYSTORE_PASSWORD` | `storePassword` de `android/key.properties` |
 | `KEY_PASSWORD` | `keyPassword` de `android/key.properties` |
-| `KEY_ALIAS` | `nutrimat` |
+| `KEY_ALIAS` | `ceres` |
 | `SUPABASE_URL` | `https://ifincvqdsotorvmwzpos.supabase.co` |
 | `SUPABASE_PUBLISHABLE_KEY` | La `sb_publishable_…` de `env/local.json` |
 
@@ -28,19 +28,19 @@ Para generar el base64 del keystore, desde la raíz del proyecto:
 
 ```powershell
 # PowerShell
-[Convert]::ToBase64String([IO.File]::ReadAllBytes("android\nutrimat-upload.jks")) | Set-Clipboard
+[Convert]::ToBase64String([IO.File]::ReadAllBytes("android\ceres-upload.jks")) | Set-Clipboard
 ```
 
 ```bash
 # bash
-base64 -w0 android/nutrimat-upload.jks
+base64 -w0 android/ceres-upload.jks
 ```
 
 > 🔑 **El keystore es irreemplazable.** Android exige que todas las versiones de
 > una app estén firmadas con la misma clave. Si se pierde, no se puede publicar
-> nunca más una actualización de Nutrimat: habría que sacar una app nueva, con
+> nunca más una actualización de Ceres: habría que sacar una app nueva, con
 > otro `applicationId`, y nadie podría actualizar desde la vieja. Guardá una
-> copia de `android/nutrimat-upload.jks` y `android/key.properties` fuera de
+> copia de `android/ceres-upload.jks` y `android/key.properties` fuera de
 > esta máquina — gestor de contraseñas o un Drive privado.
 
 Subirlo como secreto de GitHub **no cuenta como respaldo**: los secretos se
@@ -99,7 +99,7 @@ comparación de versiones del updater.
 
 | Archivo | Para qué |
 | --- | --- |
-| `nutrimat-<v>-universal.apk` | **El único.** Anda en cualquier teléfono |
+| `ceres-<v>-universal.apk` | **El único.** Anda en cualquier teléfono |
 
 ⚠️ El nombre es un contrato con la app: `GithubReleasesClient` busca el asset
 que termina en `-universal.apk`. Si se cambia, el updater deja de encontrar la
@@ -145,7 +145,7 @@ de todo lo que publica y falla si no coincide con `pubspec.yaml`.
 ## Cómo actualiza la app
 
 `Configuración → Actualizaciones` consulta
-`api.github.com/repos/mattcastells/Nutrimat/releases/latest`, compara con la
+`api.github.com/repos/mattcastells/Ceres/releases/latest`, compara con la
 versión instalada y, si hay una posterior, ofrece bajar el APK universal y
 abrirlo con el instalador de Android.
 
@@ -165,8 +165,8 @@ Tres decisiones detrás de eso:
 - **La app no instala nada.** Escribe el archivo y se lo pasa al instalador de
   paquetes; el diálogo de confirmación lo muestra Android.
 
-La primera vez, Android pide habilitar a Nutrimat como origen de instalación
-(`Ajustes → Apps → Nutrimat → Instalar apps desconocidas`). Eso lo concede la
+La primera vez, Android pide habilitar a Ceres como origen de instalación
+(`Ajustes → Apps → Ceres → Instalar apps desconocidas`). Eso lo concede la
 persona, una sola vez, y no se puede evitar.
 
 ⚠️ **`REQUEST_INSTALL_PACKAGES` en el manifest no alcanza**: solo habilita a

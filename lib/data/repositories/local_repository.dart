@@ -53,7 +53,7 @@ const _uuid = Uuid();
 /// inmediato (escritura optimista, D-08).
 class LocalRepository
     implements
-        NutrimatRepositories,
+        CeresRepositories,
         ProfileRepository,
         GoalRepository,
         MealRepository,
@@ -255,6 +255,11 @@ class LocalRepository
   /// El perfil ya tiene un id propio, distinto en cada instalación, así que
   /// sirve de identidad mientras no haya cuenta. `'local'` queda solo para el
   /// caso imposible de no tener ni perfil.
+  ///
+  /// El prefijo `nutrimat:` es el nombre viejo de la app y **se queda así**:
+  /// es la semilla de los ids que ya están guardados en el servidor. Con otra
+  /// semilla, el mismo día daría otro id y el upsert crearía una segunda fila
+  /// en vez de actualizar la que existe. No es un texto que alguien lea.
   String _dailyId(String coleccion, DateTime date, [String extra = '']) =>
       _uuid.v5(
         Namespace.url.value,
@@ -1861,7 +1866,7 @@ class LocalRepository
   /// últimos 30 días.
   ///
   /// **No puede duplicar nada**, y eso no es suerte: las tres cosas son una por
-  /// día o por noche en Nutrimat, y volver a registrarlas actualiza el registro
+  /// día o por noche en Ceres, y volver a registrarlas actualiza el registro
   /// que ya estaba (D-16). Sincronizar diez veces deja lo mismo que una.
   ///
   /// Tampoco toca las calorías: lo que mide el reloj es la estimación de otro
@@ -2331,7 +2336,7 @@ class LocalRepository
   String exportJson() {
     final document = store.toDocument();
     return const JsonEncoder.withIndent('  ').convert(<String, dynamic>{
-      'app': 'Nutrimat',
+      'app': 'Ceres',
       'exportedAt': DateTime.now().toIso8601String(),
       ...document,
     });
@@ -2377,7 +2382,7 @@ class LocalRepository
     } on Object {
       throw const AppError(
         code: ApiErrorCode.validation,
-        message: 'Ese archivo no es un respaldo de Nutrimat.',
+        message: 'Ese archivo no es un respaldo de Ceres.',
       );
     }
 
@@ -2386,7 +2391,7 @@ class LocalRepository
     if (!document.containsKey('profile')) {
       throw const AppError(
         code: ApiErrorCode.validation,
-        message: 'Ese archivo no es un respaldo de Nutrimat.',
+        message: 'Ese archivo no es un respaldo de Ceres.',
       );
     }
 
@@ -2395,7 +2400,7 @@ class LocalRepository
       throw const AppError(
         code: ApiErrorCode.validation,
         message: 'Ese respaldo viene de una versión más nueva de la app. '
-            'Actualizá Nutrimat antes de importarlo.',
+            'Actualizá Ceres antes de importarlo.',
       );
     }
     return document;

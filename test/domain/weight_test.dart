@@ -6,10 +6,10 @@
 // es lo que hay que dejar probado para que no vuelva a regresionar en la capa
 // de datos, sea cual sea la pantalla que la use.
 
+import 'package:ceres/core/utils/dates.dart';
+import 'package:ceres/data/local/local_store.dart';
+import 'package:ceres/data/repositories/local_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nutrimat/core/utils/dates.dart';
-import 'package:nutrimat/data/local/local_store.dart';
-import 'package:nutrimat/data/repositories/local_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -84,7 +84,7 @@ void main() {
     Future<LocalRepository> dispositivoDe(String cuenta) async {
       SharedPreferences.setMockInitialValues(<String, Object>{});
       final repo = LocalRepository(await LocalStore.open(), onChanged: () {});
-      await repo.signIn('ana@nutrimat.test', accountId: cuenta);
+      await repo.signIn('ana@ceres.test', accountId: cuenta);
       return repo;
     }
 

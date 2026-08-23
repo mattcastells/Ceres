@@ -11,9 +11,9 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:ceres/domain/enums/enums.dart';
+import 'package:ceres/domain/models/food.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nutrimat/domain/enums/enums.dart';
-import 'package:nutrimat/domain/models/food.dart';
 
 List<Food> _cargar() {
   final raw = File('assets/data/argenfoods.json').readAsStringSync();

@@ -14,14 +14,14 @@ particularidad): `loading` (skeleton, nunca spinner de pantalla completa),
 ## S-01 · Splash
 
 - **Ruta:** `/splash` · **Objetivo:** decidir el destino inicial sin parpadeos.
-- **Muestra:** logotipo Nutrimat centrado sobre `--color-bg`.
+- **Muestra:** logotipo Ceres centrado sobre `--color-bg`.
 - **Acciones:** ninguna.
 - **Componentes:** `BrandMark`.
 - **Datos:** sesión en almacenamiento seguro, `profiles.profile_completed`.
 - **Estados:** `checking` (≤ 1500 ms; si excede, se navega igual con datos locales).
 - **Errores:** si falla la lectura de sesión → `/welcome`.
 - **Salida:** `/welcome` · `/onboarding/goal` · `/home`.
-- **Accesibilidad:** `Semantics(label: 'Nutrimat, cargando')`, sin animación si
+- **Accesibilidad:** `Semantics(label: 'Ceres, cargando')`, sin animación si
   `reduce motion` está activo.
 
 ## S-02 · Bienvenida
@@ -417,7 +417,7 @@ cabecera → tarjeta → macros → comidas → actividad → peso → FAB → t
 - **Acciones:** crear, editar, activar/desactivar, eliminar objetivo.
 - **Reglas:** RN-09 — nunca alteran el objetivo calórico ni bloquean nada; el progreso se
   muestra separado del bloque calórico.
-- **Estados:** `empty` ("Los objetivos de actividad son opcionales. Podés usar Nutrimat sin
+- **Estados:** `empty` ("Los objetivos de actividad son opcionales. Podés usar Ceres sin
   configurar ninguno.").
 
 ## S-26 · Medidas corporales

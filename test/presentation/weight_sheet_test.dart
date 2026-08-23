@@ -10,20 +10,20 @@
 // Estos tests fijan el contrato: un toque en "Guardar" guarda, o pregunta con
 // un botón que confirma al lado. Nunca no hace nada.
 
+import 'package:ceres/core/theme/app_theme.dart';
+import 'package:ceres/core/utils/dates.dart';
+import 'package:ceres/data/local/local_store.dart';
+import 'package:ceres/data/repositories/local_repository.dart';
+import 'package:ceres/domain/repositories/repositories.dart';
+import 'package:ceres/presentation/providers/app_providers.dart';
+import 'package:ceres/presentation/screens/weight/weight_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
-import 'package:nutrimat/core/theme/app_theme.dart';
-import 'package:nutrimat/core/utils/dates.dart';
-import 'package:nutrimat/data/local/local_store.dart';
-import 'package:nutrimat/data/repositories/local_repository.dart';
-import 'package:nutrimat/domain/repositories/repositories.dart';
-import 'package:nutrimat/presentation/providers/app_providers.dart';
-import 'package:nutrimat/presentation/screens/weight/weight_sheet.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-Future<(ProviderContainer, NutrimatRepositories)> _boot({
+Future<(ProviderContainer, CeresRepositories)> _boot({
   double? pesoPrevio,
 }) async {
   SharedPreferences.setMockInitialValues(<String, Object>{});
@@ -98,7 +98,7 @@ void main() {
     tester,
   ) async {
     late ProviderContainer container;
-    late NutrimatRepositories repo;
+    late CeresRepositories repo;
     await tester.runAsync(() async {
       final booted = await _boot();
       container = booted.$1;
@@ -119,7 +119,7 @@ void main() {
     tester,
   ) async {
     late ProviderContainer container;
-    late NutrimatRepositories repo;
+    late CeresRepositories repo;
     await tester.runAsync(() async {
       final booted = await _boot(pesoPrevio: 100);
       container = booted.$1;
@@ -145,7 +145,7 @@ void main() {
 
   testWidgets('un cambio grande se puede corregir sin guardar', (tester) async {
     late ProviderContainer container;
-    late NutrimatRepositories repo;
+    late CeresRepositories repo;
     await tester.runAsync(() async {
       final booted = await _boot(pesoPrevio: 100);
       container = booted.$1;

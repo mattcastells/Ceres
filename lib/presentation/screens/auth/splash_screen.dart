@@ -79,7 +79,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
   }
 
   /// Lo que se trae al arrancar: primero las tablas, después el respaldo.
-  Future<void> _abrirRemoto(NutrimatRepositories repo) async {
+  Future<void> _abrirRemoto(CeresRepositories repo) async {
     final desdeTablas = await ref
         .read(relationalSyncProvider)
         ?.openAfterPull(apply: repo.importDocument);
@@ -102,7 +102,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
       backgroundColor: nm.bg,
       body: Center(
         child: Semantics(
-          label: 'Nutrimat, cargando',
+          label: 'Ceres, cargando',
           child: TweenAnimationBuilder<double>(
             tween: Tween<double>(begin: context.motion.reduced ? 1 : 0, end: 1),
             duration: context.motion.fade(NmMotion.base),

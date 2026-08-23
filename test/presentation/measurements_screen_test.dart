@@ -5,22 +5,22 @@
 // sheet aparte. Ahora cada métrica del grupo es un campo con la última medida
 // abajo, y se guardan todas juntas desde la misma pantalla.
 
+import 'package:ceres/core/theme/app_theme.dart';
+import 'package:ceres/core/utils/dates.dart';
+import 'package:ceres/data/local/local_store.dart';
+import 'package:ceres/data/repositories/local_repository.dart';
+import 'package:ceres/domain/enums/enums.dart';
+import 'package:ceres/domain/repositories/repositories.dart';
+import 'package:ceres/presentation/components/system/inputs.dart';
+import 'package:ceres/presentation/providers/app_providers.dart';
+import 'package:ceres/presentation/screens/progress/progress_detail_screens.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
-import 'package:nutrimat/core/theme/app_theme.dart';
-import 'package:nutrimat/core/utils/dates.dart';
-import 'package:nutrimat/data/local/local_store.dart';
-import 'package:nutrimat/data/repositories/local_repository.dart';
-import 'package:nutrimat/domain/enums/enums.dart';
-import 'package:nutrimat/domain/repositories/repositories.dart';
-import 'package:nutrimat/presentation/components/system/inputs.dart';
-import 'package:nutrimat/presentation/providers/app_providers.dart';
-import 'package:nutrimat/presentation/screens/progress/progress_detail_screens.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-Future<(ProviderContainer, NutrimatRepositories)> _boot() async {
+Future<(ProviderContainer, CeresRepositories)> _boot() async {
   SharedPreferences.setMockInitialValues(<String, Object>{});
   final store = await LocalStore.open();
   void Function() notify = () {};
@@ -91,7 +91,7 @@ void main() {
 
   testWidgets('el campo muestra la última medida cargada', (tester) async {
     late ProviderContainer container;
-    late NutrimatRepositories repo;
+    late CeresRepositories repo;
     await tester.runAsync(() async {
       final booted = await _boot();
       container = booted.$1;
@@ -114,7 +114,7 @@ void main() {
     tester,
   ) async {
     late ProviderContainer container;
-    late NutrimatRepositories repo;
+    late CeresRepositories repo;
     await tester.runAsync(() async {
       final booted = await _boot();
       container = booted.$1;
@@ -142,7 +142,7 @@ void main() {
 
   testWidgets('un valor imposible se marca en su propio campo', (tester) async {
     late ProviderContainer container;
-    late NutrimatRepositories repo;
+    late CeresRepositories repo;
     await tester.runAsync(() async {
       final booted = await _boot();
       container = booted.$1;

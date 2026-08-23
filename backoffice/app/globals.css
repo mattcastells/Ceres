@@ -1,4 +1,4 @@
-/* Los tokens de Nutrimat, portados de docs/handoff/design-tokens.json.
+/* Los tokens de Ceres, portados de docs/handoff/design-tokens.json.
  *
  * Se copian en vez de importarse porque el JSON vive en el repo de la app y
  * este proyecto se despliega solo: una build de Vercel no puede leer un archivo

@@ -262,7 +262,7 @@ Future<void> bootstrap() async {
   runApp(
     UncontrolledProviderScope(
       container: container,
-      child: const NutrimatApp(),
+      child: const CeresApp(),
     ),
   );
 }

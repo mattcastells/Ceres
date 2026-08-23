@@ -294,8 +294,8 @@ class ProfileScreen extends ConsumerWidget {
                   ref
                       .watch(installedVersionLabelProvider)
                       .maybeWhen(
-                        data: (v) => 'Nutrimat $v',
-                        orElse: () => 'Nutrimat',
+                        data: (v) => 'Ceres $v',
+                        orElse: () => 'Ceres',
                       ),
                   style: NmTextStyles.from(NmType.micro, color: nm.textMuted),
                 ),

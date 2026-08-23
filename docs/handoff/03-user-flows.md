@@ -14,7 +14,7 @@ estado persistido**. Los códigos de error (`ERR_*`) están definidos en
 1. `/auth/sign-up`: email, contraseña, checkbox de términos.
 2. Submit → `AuthService.signUp({ email, password })` → Supabase Auth `signUp`.
 3. Éxito → `/auth/check-email` (confirmación por correo activada).
-4. El usuario abre el enlace → la app recibe el deep link `nutrimat://auth/callback` →
+4. El usuario abre el enlace → la app recibe el deep link `ceres://auth/callback` →
    sesión activa → `/onboarding/goal`. `[onboarding_started]`
 
 **Validaciones**
@@ -61,7 +61,7 @@ creada por trigger con `profile_completed = false`.
 **Validaciones**
 | Campo | Regla | Error |
 | --- | --- | --- |
-| Fecha de nacimiento | edad 13–100 | "Necesitás tener al menos 13 años para usar Nutrimat." |
+| Fecha de nacimiento | edad 13–100 | "Necesitás tener al menos 13 años para usar Ceres." |
 | Altura | 90–250 cm | "Ingresá una altura entre 90 y 250 cm." |
 | Peso | 25–400 kg | "Ingresá un peso entre 25 y 400 kg." |
 | Objetivo manual | 800–6000 kcal | "Ingresá un objetivo entre 800 y 6000 kcal." |

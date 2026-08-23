@@ -3,11 +3,11 @@
 // "Puré de papa" si el puré había entrado primero — y dos comidas distintas
 // quedaban con el mismo nombre por compartir el primer ingrediente.
 
+import 'package:ceres/core/utils/dates.dart';
+import 'package:ceres/domain/calculations/meal_title.dart';
+import 'package:ceres/domain/enums/enums.dart';
+import 'package:ceres/domain/models/meal.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nutrimat/core/utils/dates.dart';
-import 'package:nutrimat/domain/calculations/meal_title.dart';
-import 'package:nutrimat/domain/enums/enums.dart';
-import 'package:nutrimat/domain/models/meal.dart';
 
 MealItem _item(String name) => MealItem(
   id: name,

@@ -405,7 +405,7 @@ activos. Con 100 GB, al ritmo de hoy, el límite deja de existir.
 
 ### Distribución
 
-Repositorio en [github.com/mattcastells/Nutrimat](https://github.com/mattcastells/Nutrimat),
+Repositorio en [github.com/mattcastells/Ceres](https://github.com/mattcastells/Ceres),
 público. CI en cada push y pull request: `analyze`, tests y la suite de RLS
 contra un Postgres limpio. Última publicada: **v1.11.0**.
 
@@ -439,14 +439,14 @@ Todo esto quedó instalado y configurado; no hay que rehacerlo.
 | Herramienta | Dónde |
 | --- | --- |
 | Android SDK | `%LOCALAPPDATA%\Android\Sdk` (platform-tools, android-36, build-tools 36) |
-| Emulador | AVD `nutrimat` (Pixel 7, API 36) — `flutter emulators --launch nutrimat` |
-| Keystore de release | `android/nutrimat-upload.jks` + `android/key.properties` |
+| Emulador | AVD `ceres` (Pixel 7, API 36) — `flutter emulators --launch ceres` |
+| Keystore de release | `android/ceres-upload.jks` + `android/key.properties` |
 | Supabase CLI | 2.110.0 (scoop) |
 | Stack local | quedó **corriendo** en Docker — se apaga con `supabase stop` |
 
 ### 🔑 Respaldar antes que nada
 
-`android/nutrimat-upload.jks` y `android/key.properties` están fuera de git a
+`android/ceres-upload.jks` y `android/key.properties` están fuera de git a
 propósito. **Si se pierde el keystore no se puede volver a publicar una
 actualización de la app nunca más.** Copialos a un lugar seguro (gestor de
 contraseñas, Drive privado) antes de seguir.
@@ -532,7 +532,7 @@ Para no volver a perder tiempo con lo mismo:
     por arquitectura.
 12. **`REQUEST_INSTALL_PACKAGES` en el manifest no alcanza para instalar.**
    Desde Android 8 el permiso solo habilita a *pedir*; quien autoriza es la
-   persona, **por app instaladora**, en Ajustes → Apps → Nutrimat → Instalar
+   persona, **por app instaladora**, en Ajustes → Apps → Ceres → Instalar
    apps desconocidas. Sin eso `startActivity` con el APK devuelve éxito y el
    sistema descarta la instalación sin decir nada: la app mostraba "Android
    está instalando" y el teléfono no instalaba nada. Ahora se consulta
@@ -679,21 +679,21 @@ consumido contra el objetivo y las tres barras de macros. Detalle en
 [`docs/estado-de-la-app.md`](docs/estado-de-la-app.md) §3; lo que importa acá es
 que **el dato lleva su fecha y el widget la mira**: si lo guardado no es de hoy
 no muestra nada de él —ni el número, ni las gotas, ni las barras—, dice "Abrí
-Nutrimat para hoy". Un widget con el número de ayer no se distingue de uno al
+Ceres para hoy". Un widget con el número de ayer no se distingue de uno al
 día, y eso es la misma clase de mentira que la app no se permite en ningún otro
 lado.
 
 Verificado **puesto en la pantalla de inicio del emulador**, con captura de los
 cuatro estados: con datos en tema claro y en oscuro, en cero, y con el dato de
 otro día. Dos cosas que solo aparecieron ahí y que ningún test hubiera
-atrapado: el título "NUTRIMAT" se leía **"NUT"** —las ocho gotas no le dejaban
+atrapado: el título "CERES" se leía **"NUT"** —las ocho gotas no le dejaban
 lugar, y el nombre de la app sobra en una pantalla de inicio donde la persona
 puso el widget a propósito—, y el guion del estado sin datos, a 26 sp y en color
 de acento, se leía como una raya de la interfaz en vez de como "acá iba un
 número". Los dos se fueron.
 
 Queda anotado que el widget **no se puede probar de verdad sin ponerlo**: se
-agrega con un toque largo en la pantalla de inicio → Widgets → Nutrimat.
+agrega con un toque largo en la pantalla de inicio → Widgets → Ceres.
 
 Desde la 1.9.0 los vasos de agua **se tocan**: la gota N deja el día en N vasos y
 tocar la que ya está última baja a N−1, así el último toque se desanda sin abrir
@@ -772,7 +772,7 @@ capturas en [`docs/handoff/widget-actual/`](docs/handoff/widget-actual/)
 
 ```bash
 # La app  (sin --dart-define-from-file arranca en modo local, sin servidor)
-flutter emulators --launch nutrimat
+flutter emulators --launch ceres
 flutter run  --dart-define-from-file=env/local.json
 flutter test                              # 376 tests
 flutter build apk --release --dart-define-from-file=env/local.json
@@ -818,9 +818,9 @@ Lo que sigue afuera y por qué:
   banner de "necesitan tu confirmación", todo construido para esta importación y
   nunca encendido—, así que es un paso concreto y no una incógnita. Pero es su
   propio paso.
-- **Calorías activas.** El reloj las estima con su modelo y Nutrimat con MET;
+- **Calorías activas.** El reloj las estima con su modelo y Ceres con MET;
   traer el número ajeno y mostrarlo como propio rompe RN-03.
-- **Pasos.** En Nutrimat solo existen colgados de una actividad, así que
+- **Pasos.** En Ceres solo existen colgados de una actividad, así que
   importarlos obligaría a inventar actividades — y esas sí suman calorías.
 
 **Zepp / Amazfit entra por el mismo camino, sin código nuestro.** No hay API

@@ -153,7 +153,7 @@ históricos, en cambio, no se reescriben (D-05 y §F-13).
 
 ## 2. Funcionalidades simuladas en el prototipo
 
-`Nutrimat.dc.html` es un prototipo navegable de alta fidelidad. Lo que **simula**:
+`Ceres.dc.html` es un prototipo navegable de alta fidelidad. Lo que **simula**:
 
 | Área | Cómo está simulado | Qué es real en el prototipo |
 | --- | --- | --- |
@@ -178,14 +178,14 @@ históricos, en cambio, no se reescriben (D-05 y §F-13).
 - Notificaciones push y recordatorios.
 - Web app, widgets de pantalla de inicio, complicaciones de reloj.
 - Multi-idioma (solo `es` entregado).
-- Universal Links / App Links verificados (esquema `nutrimat://` sí resuelto).
+- Universal Links / App Links verificados (esquema `ceres://` sí resuelto).
 - Sincronización en segundo plano (D-14).
 
 ## 4. Pasos exactos para empezar el desarrollo
 
 1. **Leer** `00-index.md`, luego `01-product-requirements.md` y este documento. Las
    decisiones D-02, D-05, D-06, D-07 y D-12 son las que más fácil se implementan mal.
-2. **Crear el proyecto Supabase** `nutrimat-dev` en la región `sa-east-1`. Guardar
+2. **Crear el proyecto Supabase** `ceres-dev` en la región `sa-east-1`. Guardar
    `SUPABASE_URL`, `ANON_KEY` y `SERVICE_ROLE_KEY` en el gestor de secretos.
 3. **Aplicar las migraciones** en el orden de `08-supabase-plan.md` §1. Verificar que el
    seed de `activity_types` cargó los 15 tipos de `met-catalog.json`.

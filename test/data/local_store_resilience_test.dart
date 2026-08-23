@@ -7,12 +7,12 @@
 
 import 'dart:convert';
 
+import 'package:ceres/data/local/local_store.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nutrimat/data/local/local_store.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-const String _key = 'nutrimat.local_store.v1';
-const String _quarantineKey = 'nutrimat.local_store.v1.quarantine';
+const String _key = 'ceres.local_store.v1';
+const String _quarantineKey = 'ceres.local_store.v1.quarantine';
 
 /// Un documento con lo mínimo para parecerse a uno real.
 Map<String, dynamic> _documento() => <String, dynamic>{

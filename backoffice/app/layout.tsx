@@ -2,8 +2,8 @@ import type { Metadata } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Nutrimat · Panel',
-  description: 'Seguimiento de pacientes en Nutrimat.',
+  title: 'Ceres · Panel',
+  description: 'Seguimiento de pacientes en Ceres.',
   robots: { index: false, follow: false },
 };
 

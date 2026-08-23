@@ -16,10 +16,10 @@
 // Estos tests fijan la mitad que vive en el cliente: que los dos códigos del
 // proveedor lleguen enteros y que la espera se lea cuando viene.
 
+import 'package:ceres/core/error/app_error.dart';
+import 'package:ceres/data/remote/gemini_analysis_client.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
-import 'package:nutrimat/core/error/app_error.dart';
-import 'package:nutrimat/data/remote/gemini_analysis_client.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Un `FunctionsClient` que no llama a nadie: tira el error que le pasen.

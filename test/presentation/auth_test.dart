@@ -8,28 +8,28 @@
 
 import 'dart:async';
 
+import 'package:ceres/core/error/app_error.dart';
+import 'package:ceres/core/router/routes.dart';
+import 'package:ceres/core/theme/app_theme.dart';
+import 'package:ceres/core/utils/dates.dart';
+import 'package:ceres/data/local/local_store.dart';
+import 'package:ceres/data/repositories/local_repository.dart';
+import 'package:ceres/domain/repositories/auth_gateway.dart';
+import 'package:ceres/presentation/providers/app_providers.dart';
+import 'package:ceres/presentation/providers/auth_providers.dart';
+import 'package:ceres/presentation/screens/auth/auth_screens.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/date_symbol_data_local.dart';
-import 'package:nutrimat/core/error/app_error.dart';
-import 'package:nutrimat/core/router/routes.dart';
-import 'package:nutrimat/core/theme/app_theme.dart';
-import 'package:nutrimat/core/utils/dates.dart';
-import 'package:nutrimat/data/local/local_store.dart';
-import 'package:nutrimat/data/repositories/local_repository.dart';
-import 'package:nutrimat/domain/repositories/auth_gateway.dart';
-import 'package:nutrimat/presentation/providers/app_providers.dart';
-import 'package:nutrimat/presentation/providers/auth_providers.dart';
-import 'package:nutrimat/presentation/screens/auth/auth_screens.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Acepta un único par de credenciales y rechaza el resto, como haría Supabase.
 class _FakeGateway implements AuthGateway {
   _FakeGateway();
 
-  static const String validEmail = 'yo@nutrimat.test';
+  static const String validEmail = 'yo@ceres.test';
   static const String validPassword = 'clave1234';
 
   AuthAccount? _account;
@@ -259,7 +259,7 @@ void main() {
     await _settle(tester);
     await _signInWith(
       tester,
-      email: '  YO@Nutrimat.TEST ',
+      email: '  YO@Ceres.TEST ',
       password: _FakeGateway.validPassword,
     );
 

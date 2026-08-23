@@ -203,16 +203,16 @@ Regla: un bottom sheet nunca abre otro bottom sheet en el mismo nivel — `sheet
 
 ## 6. Deep links futuros
 
-Esquema reservado: `nutrimat://` y `https://app.nutrimat.io/`.
+Esquema reservado: `ceres://` y `https://app.ceres.io/`.
 
 | Deep link | Destino |
 | --- | --- |
-| `nutrimat://home?date=2026-07-27` | Inicio en una fecha |
-| `nutrimat://add/meal?slot=lunch` | Nueva comida |
-| `nutrimat://add/activity?type=walking` | Registro rápido de actividad |
-| `nutrimat://activity/:id` | Detalle de actividad |
-| `nutrimat://progress?range=30d` | Progreso |
-| `nutrimat://settings/integrations/:provider` | Integración de salud |
+| `ceres://home?date=2026-07-27` | Inicio en una fecha |
+| `ceres://add/meal?slot=lunch` | Nueva comida |
+| `ceres://add/activity?type=walking` | Registro rápido de actividad |
+| `ceres://activity/:id` | Detalle de actividad |
+| `ceres://progress?range=30d` | Progreso |
+| `ceres://settings/integrations/:provider` | Integración de salud |
 
 El MVP registra el esquema y resuelve las rutas, pero no publica Universal Links /
 App Links (requiere dominio verificado, ver `18-implementation-roadmap.md`, fase 15).

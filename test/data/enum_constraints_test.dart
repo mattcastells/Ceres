@@ -26,11 +26,11 @@
 
 import 'dart:io';
 
+import 'package:ceres/domain/calculations/alcohol.dart';
+import 'package:ceres/domain/enums/enums.dart';
+import 'package:ceres/domain/models/day_marker.dart';
+import 'package:ceres/domain/models/sleep.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nutrimat/domain/calculations/alcohol.dart';
-import 'package:nutrimat/domain/enums/enums.dart';
-import 'package:nutrimat/domain/models/day_marker.dart';
-import 'package:nutrimat/domain/models/sleep.dart';
 
 /// Las restricciones de valores fijos sobre columnas que **sube el cliente**
 /// (`RelationalSyncClient.push`), con el enum de Dart que las alimenta.

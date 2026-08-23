@@ -1,5 +1,5 @@
 /**
- * Nutrimat — design tokens (React Native / TypeScript).
+ * Ceres — design tokens (React Native / TypeScript).
  * Generado desde design-tokens.json. No editar a mano: editar el JSON y regenerar.
  */
 
@@ -142,4 +142,4 @@ export const theme = (mode: ThemeMode) => ({
         },
 });
 
-export type NutrimatTheme = ReturnType<typeof theme>;
+export type CeresTheme = ReturnType<typeof theme>;

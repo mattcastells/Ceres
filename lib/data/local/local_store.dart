@@ -34,7 +34,7 @@ import '../mock/seed.dart';
 class LocalStore {
   LocalStore._();
 
-  static const String _prefsKey = 'nutrimat.local_store.v1';
+  static const String _prefsKey = 'ceres.local_store.v1';
 
   static Future<LocalStore> open() async {
     final store = LocalStore._();
@@ -260,7 +260,7 @@ class LocalStore {
   /// no había podido interpretar: un solo registro raro y se borraba **todo**,
   /// sin copia y sin aviso. Ahora nunca se borra nada; lo que no se entiende se
   /// aparta acá y se puede recuperar a mano.
-  static const String _quarantineKey = 'nutrimat.local_store.v1.quarantine';
+  static const String _quarantineKey = 'ceres.local_store.v1.quarantine';
 
   /// Cómo salió la última lectura. La UI lo usa para avisar en vez de fingir
   /// que el teléfono estaba vacío.

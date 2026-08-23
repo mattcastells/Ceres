@@ -16,7 +16,7 @@ class AndroidReminderScheduler implements ReminderScheduler {
 
   final FlutterLocalNotificationsPlugin _plugin;
 
-  static const String _channelId = 'nutrimat_recordatorios';
+  static const String _channelId = 'ceres_recordatorios';
 
   /// Se inicializa una vez en el arranque. Devuelve `null` si la plataforma no
   /// soporta notificaciones, para que el resto de la app lo trate como

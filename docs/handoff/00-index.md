@@ -1,6 +1,6 @@
-# Nutrimat — Handoff de desarrollo
+# Ceres — Handoff de desarrollo
 
-Este directorio es la **especificación completa** de Nutrimat: una aplicación móvil de
+Este directorio es la **especificación completa** de Ceres: una aplicación móvil de
 registro de alimentación, actividad física y peso corporal.
 
 Está escrito para que un equipo — humano o una IA desarrolladora — pueda implementar la
@@ -66,7 +66,7 @@ Anexos:
 
 ## Prototipo de referencia
 
-`Nutrimat.dc.html` en la raíz del proyecto es un **prototipo navegable de alta fidelidad**
+`Ceres.dc.html` en la raíz del proyecto es un **prototipo navegable de alta fidelidad**
 que muestra las pantallas principales con datos simulados. Es la fuente de verdad visual;
 esta carpeta es la fuente de verdad funcional. Ante una discrepancia, gana la
 documentación (y hay que corregir el prototipo).

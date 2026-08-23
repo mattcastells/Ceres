@@ -9,7 +9,7 @@ import '../../../core/theme/tokens.dart';
 /// La marca: un anillo que se cierra y tres barras que suben.
 ///
 /// El anillo es el presupuesto del día — el mismo que la app dibuja en Inicio.
-/// Geometría exacta de `Nutrimat Logo.dc.html`: círculo r=36 sobre una caja de
+/// Geometría exacta de `Ceres Logo.dc.html`: círculo r=36 sobre una caja de
 /// 100, trazo 9, apertura de 270° arrancando arriba, y tres barras de 7 de
 /// ancho con radio completo.
 ///
@@ -33,7 +33,7 @@ class BrandMark extends StatelessWidget {
   Widget build(BuildContext context) {
     final nm = context.nm;
     return Semantics(
-      label: 'Nutrimat',
+      label: 'Ceres',
       child: CustomPaint(
         size: Size.square(size),
         painter: _BrandPainter(
@@ -122,7 +122,7 @@ class BrandWordmark extends StatelessWidget {
   Widget build(BuildContext context) {
     final nm = context.nm;
     return Semantics(
-      label: 'Nutrimat',
+      label: 'Ceres',
       child: ExcludeSemantics(
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -130,7 +130,7 @@ class BrandWordmark extends StatelessWidget {
             BrandMark(size: markSize),
             SizedBox(width: markSize / 2),
             Text(
-              'Nutrimat',
+              'Ceres',
               style: NmTextStyles.from(NmType.h1, color: nm.text).copyWith(
                 fontSize: markSize * 0.75,
                 letterSpacing: markSize * 0.75 * -0.022,

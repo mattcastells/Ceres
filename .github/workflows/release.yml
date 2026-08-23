@@ -6,7 +6,7 @@ name: Release
 #     # 2. git tag v1.1.0 && git push origin v1.1.0
 #
 # Este workflow compila el APK firmado y crea el release de GitHub. El
-# `nutrimat-<version>-universal.apk` es el que descarga Configuración →
+# `ceres-<version>-universal.apk` es el que descarga Configuración →
 # Actualizaciones dentro de la app: si cambia ese nombre, el updater deja de
 # encontrarlo.
 on:
@@ -108,12 +108,12 @@ jobs:
             echo "::error::Falta el secreto KEYSTORE_BASE64. Ver docs/releases.md."
             exit 1
           fi
-          echo "$KEYSTORE_BASE64" | base64 -d > android/nutrimat-upload.jks
+          echo "$KEYSTORE_BASE64" | base64 -d > android/ceres-upload.jks
           cat > android/key.properties <<PROPS
           storePassword=$KEYSTORE_PASSWORD
           keyPassword=$KEY_PASSWORD
           keyAlias=$KEY_ALIAS
-          storeFile=nutrimat-upload.jks
+          storeFile=ceres-upload.jks
           PROPS
 
       # La conexión a Supabase se compila dentro del APK. Sin estos valores la
@@ -157,7 +157,7 @@ jobs:
         run: |
           mkdir -p dist
           cp build/app/outputs/flutter-apk/app-release.apk \
-            "dist/nutrimat-$VERSION-universal.apk"
+            "dist/ceres-$VERSION-universal.apk"
           ls -lh dist
 
       # Todos los APK del release tienen que declarar el MISMO versionCode, y
@@ -203,11 +203,11 @@ jobs:
         run: |
           apksigner=$(ls "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -1)
           echo "Usando $apksigner"
-          "$apksigner" verify --print-certs "dist/nutrimat-$VERSION-universal.apk"
+          "$apksigner" verify --print-certs "dist/ceres-$VERSION-universal.apk"
 
       - name: Borrar las credenciales del runner
         if: always()
-        run: rm -f android/nutrimat-upload.jks android/key.properties env/ci.json
+        run: rm -f android/ceres-upload.jks android/key.properties env/ci.json
 
       # `--notes` se antepone a lo que genera `--generate-notes`, así que la
       # explicación de qué archivo bajar queda arriba del changelog.
@@ -216,12 +216,12 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           cat > notes.md <<NOTES
-          **nutrimat-$VERSION-universal.apk** anda en cualquier teléfono.
+          **ceres-$VERSION-universal.apk** anda en cualquier teléfono.
 
           Desde una versión ya instalada no hace falta bajar nada a mano:
           **Configuración → Actualizaciones**.
           NOTES
           gh release create "$GITHUB_REF_NAME" dist/*.apk \
-            --title "Nutrimat $VERSION" \
+            --title "Ceres $VERSION" \
             --generate-notes \
             --notes-file notes.md

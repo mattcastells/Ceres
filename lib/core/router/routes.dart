@@ -1,6 +1,6 @@
 /// Constantes de ruta tipadas (02-information-architecture.md §2).
 ///
-/// Kebab en la URL, constante en código. El esquema `nutrimat://` resuelve
+/// Kebab en la URL, constante en código. El esquema `ceres://` resuelve
 /// estas mismas rutas (§6); los App Links verificados quedan para la fase 15.
 abstract final class Routes {
   static const String splash = '/splash';

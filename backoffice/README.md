@@ -370,7 +370,7 @@ mismo archivo y **no inventa ningún color**: lo que necesita sale de los tokens
 con `color-mix`, así que un token que cambia lo arrastra solo y no hay una
 segunda paleta que mantener sincronizada a mano.
 
-**Una cosa sobre los gráficos.** La paleta de Nutrimat es pastel y toda en una
+**Una cosa sobre los gráficos.** La paleta de Ceres es pastel y toda en una
 banda de luminosidad estrecha: los tres colores de macros (`#9184d9`, `#7fa8d9`,
 `#d9b46a`) no se distinguen lo suficiente entre sí ni siquiera con visión de
 color normal —ΔE 9.6 entre proteínas y carbohidratos, cuando el piso es 15—.

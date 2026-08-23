@@ -20,7 +20,7 @@ enum DictationState {
 /// Dictado: lo que se dice al micrófono, convertido en texto.
 ///
 /// Lo hace el reconocedor del propio teléfono (`SpeechRecognizer` de Android),
-/// no un servicio nuestro: el audio no pasa por Nutrimat, no se guarda en
+/// no un servicio nuestro: el audio no pasa por Ceres, no se guarda en
 /// ningún lado y no hay un archivo que subir. Lo único que llega a la app es la
 /// frase ya transcripta, que es exactamente lo que la persona habría escrito.
 ///

@@ -5,16 +5,16 @@
 // existía en el informe en PDF desde hacía meses y ninguna otra métrica la
 // miraba. Ver `docs/contexto-diario.md`.
 
+import 'package:ceres/domain/calculations/alcohol.dart';
+import 'package:ceres/domain/enums/enums.dart';
+import 'package:ceres/domain/models/activity.dart';
+import 'package:ceres/domain/models/alcohol.dart';
+import 'package:ceres/domain/models/body.dart';
+import 'package:ceres/domain/models/day_marker.dart';
+import 'package:ceres/domain/models/goal.dart';
+import 'package:ceres/domain/models/meal.dart';
+import 'package:ceres/domain/services/summary_builder.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nutrimat/domain/calculations/alcohol.dart';
-import 'package:nutrimat/domain/enums/enums.dart';
-import 'package:nutrimat/domain/models/activity.dart';
-import 'package:nutrimat/domain/models/alcohol.dart';
-import 'package:nutrimat/domain/models/body.dart';
-import 'package:nutrimat/domain/models/day_marker.dart';
-import 'package:nutrimat/domain/models/goal.dart';
-import 'package:nutrimat/domain/models/meal.dart';
-import 'package:nutrimat/domain/services/summary_builder.dart';
 
 void main() {
   DateTime d(int y, int m, int day) => DateTime(y, m, day);

@@ -2,15 +2,15 @@
 
 _Last updated: 2026-07-30_
 
-These terms govern your use of Nutrimat ("the app"). By creating an account
+These terms govern your use of Ceres ("the app"). By creating an account
 or using the app, you agree to them.
 
-## What Nutrimat is
+## What Ceres is
 
-Nutrimat is a personal tool for logging food, activity, weight, body
+Ceres is a personal tool for logging food, activity, weight, body
 measurements, water, and sleep, and for seeing trends over time.
 
-**It is not medical advice.** Nutrimat does not diagnose, treat, or provide
+**It is not medical advice.** Ceres does not diagnose, treat, or provide
 medical or nutritional guidance tailored to your health. Calorie, macro, and
 activity estimates are calculations based on what you enter and on general
 formulas (like MET tables) — they are not measurements, and they are not a
@@ -21,7 +21,7 @@ app shows you.
 **AI-estimated content is a starting point, not a fact.** When you use a
 photo or a text description to log a meal, an AI model estimates what's in
 it. You are always shown the estimate before it's saved and are responsible
-for correcting it if it's wrong. Nutrimat is not responsible for decisions
+for correcting it if it's wrong. Ceres is not responsible for decisions
 made based on an estimate that was saved without being corrected.
 
 ## Accounts
@@ -29,7 +29,7 @@ made based on an estimate that was saved without being corrected.
 - You need to provide a valid email to create an account. You're responsible
   for keeping your credentials secure and for what happens under your
   account.
-- You must be at least 16 years old to use Nutrimat. If you're younger than
+- You must be at least 16 years old to use Ceres. If you're younger than
   that, don't create an account.
 - You can delete your account at any time from Settings → Privacy. See the
   [Privacy Policy](./PRIVACY_POLICY.md) for exactly what that removes and the
@@ -44,7 +44,7 @@ accounts that use it that way.
 
 ## Distribution
 
-Nutrimat is not distributed through the Play Store. Releases are published
+Ceres is not distributed through the Play Store. Releases are published
 on GitHub, and the app checks for and installs updates on its own from
 Settings → Updates. You're responsible for only installing releases from the
 project's official repository.
@@ -59,7 +59,7 @@ back it up.
 
 ## No warranty
 
-Nutrimat is provided as-is. We don't guarantee it will be error-free,
+Ceres is provided as-is. We don't guarantee it will be error-free,
 available at all times, or that any calculation, estimate, or imported
 figure is perfectly accurate. To the extent the law allows, we're not liable
 for damages arising from your use of the app, including decisions made based

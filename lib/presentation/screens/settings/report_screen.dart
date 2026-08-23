@@ -67,7 +67,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
       );
 
       // El tema del informe es el de la app, con `system` resuelto contra el
-      // teléfono: alguien que usa Nutrimat en claro no espera abrir un PDF
+      // teléfono: alguien que usa Ceres en claro no espera abrir un PDF
       // negro.
       final mode = repo.profile.themeMode;
       final dark = switch (mode) {
@@ -80,7 +80,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
       final bytes = await PdfReport(report: report, dark: dark).build();
 
       final directory = await getTemporaryDirectory();
-      final name = 'nutrimat-informe-${isoDate(to)}.pdf';
+      final name = 'ceres-informe-${isoDate(to)}.pdf';
       final file = File('${directory.path}/$name');
       await file.writeAsBytes(bytes);
 
@@ -89,7 +89,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
         ShareParams(
           files: <XFile>[XFile(file.path, mimeType: 'application/pdf')],
           fileNameOverrides: <String>[name],
-          subject: 'Mi informe de Nutrimat',
+          subject: 'Mi informe de Ceres',
         ),
       );
     } on Object {

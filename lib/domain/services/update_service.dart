@@ -69,7 +69,7 @@ class UpdateService {
     return UpToDate(current);
   }
 
-  /// Si Android ya tiene a Nutrimat habilitada como origen de instalación.
+  /// Si Android ya tiene a Ceres habilitada como origen de instalación.
   Future<bool> canInstall() => _installer.canInstall();
 
   /// Lleva a la pantalla de Ajustes donde se habilita.
@@ -85,7 +85,7 @@ class UpdateService {
     void Function(double progress)? onProgress,
   }) async {
     final path = await _installer.stagingPath(
-      'nutrimat-${release.version}.apk',
+      'ceres-${release.version}.apk',
     );
     await _client.downloadApkTo(release, path, onProgress: onProgress);
     await _installer.install(path);

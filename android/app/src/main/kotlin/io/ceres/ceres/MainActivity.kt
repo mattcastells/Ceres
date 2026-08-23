@@ -1,4 +1,4 @@
-package io.nutrimat.nutrimat
+package io.ceres.ceres
 
 import android.content.ActivityNotFoundException
 import android.content.Intent
@@ -33,8 +33,8 @@ import kotlinx.coroutines.launch
 class MainActivity : FlutterActivity() {
 
     private companion object {
-        const val CHANNEL = "io.nutrimat.app/installer"
-        const val WIDGET_CHANNEL = "io.nutrimat.app/widget"
+        const val CHANNEL = "io.ceres.app/installer"
+        const val WIDGET_CHANNEL = "io.ceres.app/widget"
         const val APK_MIME = "application/vnd.android.package-archive"
         const val REQ_HEALTH_PERMISSIONS = 7301
     }
@@ -303,7 +303,7 @@ class MainActivity : FlutterActivity() {
 
     /**
      * La pantalla de "Instalar apps desconocidas" es por app: se abre ya
-     * filtrada en Nutrimat para que no haya que buscarla en una lista larga.
+     * filtrada en Ceres para que no haya que buscarla en una lista larga.
      */
     private fun openInstallSettings(): Boolean {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return false

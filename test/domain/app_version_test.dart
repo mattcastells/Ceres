@@ -1,5 +1,5 @@
+import 'package:ceres/domain/models/app_release.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nutrimat/domain/models/app_release.dart';
 
 void main() {
   group('AppVersion.tryParse', () {

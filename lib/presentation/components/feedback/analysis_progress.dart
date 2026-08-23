@@ -20,7 +20,7 @@ import '../../../domain/models/analysis_stage.dart';
 ///   app sabe con exactitud cuándo empieza y termina cada uno, y la barra
 ///   salta de verdad al cambiar de paso.
 /// - **Dentro del último paso se estima**, porque cuánto tarda el modelo no lo
-///   decide Nutrimat. Ahí la barra avanza contra la mediana **medida** (12,3 s)
+///   decide Ceres. Ahí la barra avanza contra la mediana **medida** (12,3 s)
 ///   y se **frena asintóticamente** en 92 %: nunca completa sola.
 /// - **El 100 % solo llega con la respuesta.** Si el modelo se demora, la
 ///   barra desacelera y se queda esperando, que es exactamente lo que pasa.

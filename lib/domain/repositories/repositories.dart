@@ -96,7 +96,7 @@ enum DuplicateResolution { keepIncoming, keepExisting, keepBoth, defer }
 
 /// Todas las superficies de datos juntas. Existe para que la presentación
 /// pueda inyectar un único objeto sin conocer la implementación concreta.
-abstract interface class NutrimatRepositories
+abstract interface class CeresRepositories
     implements
         ProfileRepository,
         GoalRepository,

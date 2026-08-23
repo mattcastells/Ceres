@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { browserClient } from '@/lib/supabase-browser';
 
 /**
- * Entrar con la misma cuenta de Nutrimat.
+ * Entrar con la misma cuenta de Ceres.
  *
  * No hay alta desde acá a propósito: la cuenta se crea en la app, que es donde
  * están los términos y la política de privacidad. Un alta en el panel sería un
@@ -44,7 +44,7 @@ export default function LoginPage() {
   return (
     <main className="login">
       <div className="card" style={{ width: '100%', maxWidth: 380 }}>
-        <h1>Nutrimat</h1>
+        <h1>Ceres</h1>
         <p className="muted" style={{ marginTop: 'var(--s2)' }}>
           Panel de seguimiento
         </p>

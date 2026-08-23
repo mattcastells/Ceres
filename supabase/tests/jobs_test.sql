@@ -26,7 +26,7 @@ insert into auth.users (
 values
   ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
    '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
-   'jobs-a@nutrimat.test', crypt('secreto-a', gen_salt('bf')),
+   'jobs-a@ceres.test', crypt('secreto-a', gen_salt('bf')),
    now(), now(), now());
 
 -- ── shared_days ──────────────────────────────────────────────────────────

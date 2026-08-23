@@ -2,7 +2,7 @@
 
 ## 1. Objetivo del producto
 
-Nutrimat permite a una persona **registrar lo que come, lo que se mueve y cuánto pesa**, y
+Ceres permite a una persona **registrar lo que come, lo que se mueve y cuánto pesa**, y
 ver en una sola pantalla si ese día está dentro de su objetivo calórico — con la honestidad
 de mostrar el cálculo completo en vez de un único número mágico.
 
@@ -29,7 +29,7 @@ El diferencial no es tener más funciones que un contador de calorías clásico,
 
 ## 3. Problemas que resuelve
 
-| Problema | Cómo lo resuelve Nutrimat |
+| Problema | Cómo lo resuelve Ceres |
 | --- | --- |
 | Registrar comida es lento y tedioso | Foto + IA, buscador con recientes/favoritos, duplicar comida anterior |
 | No se entiende de dónde sale "te quedan X calorías" | Desglose permanente: base + ejercicio aplicado − consumido |

@@ -8,29 +8,29 @@
 // `onboarding_test.dart` prueba la regla (quién tiene que completar); esto
 // prueba que se pueda.
 
+import 'package:ceres/core/error/app_error.dart';
+import 'package:ceres/core/router/routes.dart';
+import 'package:ceres/core/theme/app_theme.dart';
+import 'package:ceres/core/utils/dates.dart';
+import 'package:ceres/core/utils/formats.dart';
+import 'package:ceres/data/local/local_auth_gateway.dart';
+import 'package:ceres/data/local/local_store.dart';
+import 'package:ceres/data/remote/calorie_target_client.dart';
+import 'package:ceres/data/repositories/local_repository.dart';
+import 'package:ceres/domain/calculations/bmr.dart';
+import 'package:ceres/domain/calculations/calorie_target.dart';
+import 'package:ceres/domain/calculations/goal_presets.dart';
+import 'package:ceres/domain/calculations/tdee.dart';
+import 'package:ceres/domain/enums/enums.dart';
+import 'package:ceres/domain/models/ai_calorie_target.dart';
+import 'package:ceres/presentation/providers/app_providers.dart';
+import 'package:ceres/presentation/providers/auth_providers.dart';
+import 'package:ceres/presentation/screens/auth/onboarding_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/date_symbol_data_local.dart';
-import 'package:nutrimat/core/error/app_error.dart';
-import 'package:nutrimat/core/router/routes.dart';
-import 'package:nutrimat/core/theme/app_theme.dart';
-import 'package:nutrimat/core/utils/dates.dart';
-import 'package:nutrimat/core/utils/formats.dart';
-import 'package:nutrimat/data/local/local_auth_gateway.dart';
-import 'package:nutrimat/data/local/local_store.dart';
-import 'package:nutrimat/data/remote/calorie_target_client.dart';
-import 'package:nutrimat/data/repositories/local_repository.dart';
-import 'package:nutrimat/domain/calculations/bmr.dart';
-import 'package:nutrimat/domain/calculations/calorie_target.dart';
-import 'package:nutrimat/domain/calculations/goal_presets.dart';
-import 'package:nutrimat/domain/calculations/tdee.dart';
-import 'package:nutrimat/domain/enums/enums.dart';
-import 'package:nutrimat/domain/models/ai_calorie_target.dart';
-import 'package:nutrimat/presentation/providers/app_providers.dart';
-import 'package:nutrimat/presentation/providers/auth_providers.dart';
-import 'package:nutrimat/presentation/screens/auth/onboarding_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Un cliente de propuestas que no sale a la red.
@@ -83,7 +83,7 @@ Future<(ProviderContainer, LocalRepository)> _boot({
     calorieTargets: calorieTargets,
     onChanged: () => notify(),
   );
-  await repo.signIn('elias@nutrimat.test');
+  await repo.signIn('elias@ceres.test');
   if (birthDate != null) {
     await repo.updateProfile(repo.profile.copyWith(birthDate: birthDate));
   }
