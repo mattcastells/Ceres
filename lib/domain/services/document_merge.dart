@@ -151,8 +151,24 @@ Map<String, dynamic> mergeDocuments({
 /// Se mira el contenido y no las claves: un documento recién creado trae todas
 /// las listas, vacías, y tratarlo como "tiene datos" haría que la reconciliación
 /// conservara la nada.
+///
+/// **`goals` no cuenta**, y es la parte que faltaba. La app siembra un objetivo
+/// por defecto apenas hay sesión (`_ensureUsableProfile`), así que su presencia
+/// no dice que la persona haya cargado nada: dice que la app se abrió. Contarlo
+/// hacía que un teléfono recién instalado pareciera "con datos" y la
+/// reconciliación entrara por el camino de abajo, donde **el perfil no se
+/// reconcilia y gana el local**. Al entrar después de reinstalar, el perfil que
+/// ganaba era el recién creado: la app volvía a pedir fecha de nacimiento,
+/// altura y peso —y de paso devolvía a sus valores por defecto el sexo, el
+/// nivel de actividad, las unidades, el tema, el crédito de ejercicio y la meta
+/// de agua, que en un perfil nuevo **no son nulos**—. Completar esa alta
+/// recalculaba el objetivo y pisaba el que la persona había escrito.
+///
+/// Es la misma definición que usa `LocalStore.hasUserData`, que ya excluía los
+/// objetivos por este mismo motivo.
 bool _isEmpty(Map<String, dynamic> document) {
   for (final key in _timestampFields.keys) {
+    if (key == 'goals') continue;
     if (_rows(document[key]).isNotEmpty) return false;
   }
   return true;

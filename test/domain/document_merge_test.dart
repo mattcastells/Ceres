@@ -287,6 +287,56 @@ void main() {
       // Pero la comida del otro dispositivo sí entra.
       expect((merged['meals']! as List).length, 2);
     });
+
+    test('el objetivo que siembra la app no lo hace pasar por "con datos"', () {
+      // El teléfono recién instalado que entra a una cuenta que ya existe, que
+      // es lo que pasó cuando las dos personas que usan la app tuvieron que
+      // instalarla de cero tras el renombre.
+      //
+      // `_ensureUsableProfile` siembra un objetivo por defecto apenas hay
+      // sesión, y eso alcanzaba para que el documento local no pareciera vacío:
+      // se conservaba el perfil recién creado, la app volvía a pedir el alta
+      // entera y lo configurado —sexo, nivel de actividad, unidades, tema,
+      // crédito de ejercicio, meta de agua— volvía a sus valores por defecto,
+      // que en un perfil nuevo **no son nulos** y por eso no se veían como
+      // faltantes. Completar esa alta recalculaba el objetivo y pisaba el que
+      // la persona había escrito a mano.
+      final local = doc(
+        goals: <Map<String, dynamic>>[
+          <String, dynamic>{'id': 'sembrado', 'updatedAt': '2026-08-23T12:00:00Z'},
+        ],
+        profile: <String, dynamic>{
+          'id': 'recien-creado',
+          'birthDate': null,
+          'heightCm': null,
+          'activityLevel': 'moderate',
+        },
+      );
+      final remote = doc(
+        meals: <Map<String, dynamic>>[meal('a', '2026-08-01T10:00:00Z')],
+        goals: <Map<String, dynamic>>[
+          <String, dynamic>{'id': 'real', 'updatedAt': '2026-08-04T12:00:00Z'},
+        ],
+        profile: <String, dynamic>{
+          'id': 'u1',
+          'birthDate': '1996-09-25T00:00:00.000',
+          'heightCm': 171,
+          'activityLevel': 'high',
+        },
+      );
+
+      final merged = mergeDocuments(local: local, remote: remote);
+      final profile = merged['profile']! as Map<String, dynamic>;
+
+      expect(profile['birthDate'], '1996-09-25T00:00:00.000');
+      expect(profile['heightCm'], 171);
+      expect(profile['activityLevel'], 'high');
+
+      // Y el sembrado no le sobrevive al de verdad.
+      final goals = merged['goals']! as List;
+      expect(goals, hasLength(1));
+      expect((goals.single as Map<String, dynamic>)['id'], 'real');
+    });
   });
 
   group('listas sin id', () {
@@ -459,6 +509,14 @@ void main() {
   });
 
   group('objetivos', () {
+    // Los dos de acá llevan una comida local aunque no la miren: sin ella el
+    // documento local sería solo el objetivo que la app siembra sola, o sea un
+    // teléfono recién instalado, y entraría el remoto entero sin llegar nunca a
+    // la regla de desempate que estos tests fijan.
+    final comidaLocal = <Map<String, dynamic>>[
+      meal('a', '2026-07-31T10:00:00Z'),
+    ];
+
     test('cerrar uno le gana al dispositivo que lo tiene abierto', () {
       // Los objetivos se unían por id **sin desempate**, así que ganaba siempre
       // el local: el dispositivo que todavía tenía el objetivo viejo abierto le
@@ -466,6 +524,7 @@ void main() {
       // servidor. Quedaban dos vigentes para hoy y `goalForDate` devuelve el
       // primero de la lista, que puede ser el que ya no rige.
       final local = doc(
+        meals: comidaLocal,
         goals: <Map<String, dynamic>>[
           <String, dynamic>{
             'id': 'g1',
@@ -494,6 +553,7 @@ void main() {
 
     test('sin marca de tiempo sigue ganando lo local', () {
       final local = doc(
+        meals: comidaLocal,
         goals: <Map<String, dynamic>>[
           <String, dynamic>{'id': 'g1', 'endsOn': null},
         ],
@@ -516,4 +576,5 @@ void main() {
       expect(goal['endsOn'], isNull);
     });
   });
+
 }
