@@ -57,6 +57,10 @@ class Goal {
   bool get isCurrent => endsOn == null;
 
   Goal copyWith({
+    /// Solo lo usa `saveGoal` cuando el objetivo nuevo reemplaza a uno que
+    /// empezó hoy: es la misma fila del servidor y tiene que conservar su id.
+    /// Cambiar el id de un objetivo ya cerrado partiría el historial en dos.
+    String? id,
     GoalType? goalType,
     double? rateKgPerWeek,
     double? targetWeightKg,
@@ -72,7 +76,7 @@ class Goal {
     DateTime? endsOn,
     DateTime? updatedAt,
   }) => Goal(
-    id: id,
+    id: id ?? this.id,
     goalType: goalType ?? this.goalType,
     rateKgPerWeek: rateKgPerWeek ?? this.rateKgPerWeek,
     targetWeightKg: targetWeightKg ?? this.targetWeightKg,

@@ -1034,7 +1034,6 @@ details[open] > summary .chev {
 }
 
 .macro-over {
-  flex: none;
   color: var(--caution);
 }
 

@@ -6,6 +6,7 @@ import 'package:ceres/domain/calculations/goal_presets.dart';
 import 'package:ceres/domain/calculations/macros.dart';
 import 'package:ceres/domain/enums/enums.dart';
 import 'package:ceres/domain/models/activity.dart';
+import 'package:ceres/domain/models/goal.dart';
 import 'package:ceres/domain/models/user_profile.dart';
 import 'package:ceres/domain/services/goal_planner.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -461,6 +462,84 @@ void main() {
 
       expect(repo.currentGoalOrNull?.goalType, GoalType.gainMuscle);
       expect(repo.goalFor(today()).goalType, GoalType.gainMuscle);
+    });
+
+    // Este es el que rompía la cuenta entera, y en el teléfono no se veía: los
+    // dos cambios del mismo día quedaban bien acá y el que se descartaba seguía
+    // vivo en el servidor. Desde entonces `goals_no_overlap` rechazaba **toda**
+    // subida de objetivos, con un error que no dice qué lo causó. Reusar el id
+    // es lo que hace que el upsert actualice esa fila en vez de duplicarla.
+    test('reemplazar el objetivo el mismo día reusa el id, no crea otra fila',
+        () async {
+      await repo.saveGoal(
+        GoalPlanner.build(
+          preset: GoalPreset.lose,
+          profile: _profileConDatos(),
+          weightKg: 82,
+          current: repo.currentGoalOrNull,
+        ),
+      );
+      final primero = repo.currentGoalOrNull!;
+
+      await repo.saveGoal(
+        GoalPlanner.build(
+          preset: GoalPreset.maintain,
+          profile: _profileConDatos(),
+          weightKg: 82,
+          current: repo.currentGoalOrNull,
+          manualTarget: 2000,
+        ),
+      );
+
+      final vigentes = repo.store.goals.where((g) => g.isCurrent).toList();
+      expect(vigentes, hasLength(1),
+          reason: 'dos objetivos abiertos el mismo día es lo que el servidor '
+              'rechaza con goals_no_overlap');
+      expect(
+        vigentes.single.id,
+        primero.id,
+        reason: 'sin reusar el id, la fila del servidor queda huérfana y '
+            'bloquea todas las subidas siguientes',
+      );
+      expect(vigentes.single.baseCalorieTarget, 2000);
+
+      // Y el que empezó hoy no se convierte en historial: no gobernó ni un día.
+      expect(repo.store.goals, hasLength(1));
+    });
+
+    test('cambiar el objetivo un día distinto sí abre una fila nueva', () async {
+      await repo.saveGoal(
+        GoalPlanner.build(
+          preset: GoalPreset.lose,
+          profile: _profileConDatos(),
+          weightKg: 82,
+          current: repo.currentGoalOrNull,
+        ),
+      );
+      final primero = repo.currentGoalOrNull!;
+
+      // Un objetivo que ya venía de ayer sí se cierra y conserva su id: es
+      // historial, y reusarlo borraría el objetivo que gobernó ayer.
+      repo.store.goals = <Goal>[
+        primero.copyWith(startsOn: today().subtract(const Duration(days: 3))),
+      ];
+
+      await repo.saveGoal(
+        GoalPlanner.build(
+          preset: GoalPreset.maintain,
+          profile: _profileConDatos(),
+          weightKg: 82,
+          current: repo.currentGoalOrNull,
+          manualTarget: 2100,
+        ),
+      );
+
+      expect(repo.store.goals, hasLength(2));
+      final cerrado = repo.store.goals.firstWhere((g) => !g.isCurrent);
+      expect(cerrado.id, primero.id);
+      expect(cerrado.endsOn, today().subtract(const Duration(days: 1)));
+      expect(repo.currentGoalOrNull!.id, isNot(primero.id));
+      expect(repo.currentGoalOrNull!.baseCalorieTarget, 2100);
     });
   });
 }

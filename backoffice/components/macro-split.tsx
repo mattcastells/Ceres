@@ -92,19 +92,12 @@ export function MacroSplit({
 
             <div className="macro-bar">
               {cumple !== null ? (
-                <>
-                  <div className="split-track">
-                    <div
-                      className="split-fill"
-                      style={{ width: `${Math.min(cumple, 100)}%` }}
-                    />
-                  </div>
-                  {cumple > 105 && (
-                    <span className="macro-over caption tnum">
-                      {Math.round(cumple)} % del objetivo
-                    </span>
-                  )}
-                </>
+                <div className="split-track">
+                  <div
+                    className="split-fill"
+                    style={{ width: `${Math.min(cumple, 100)}%` }}
+                  />
+                </div>
               ) : (
                 <span className="caption muted">sin objetivo cargado</span>
               )}
@@ -115,9 +108,19 @@ export function MacroSplit({
               <span className="muted">{porDia ? ' g/día' : ' g'}</span>
             </span>
 
+            {/* El aviso de que se pasó va acá y no al lado de la barra: ahí era
+                un hermano flex y le comía el ancho justo al macro que más
+                interesa mirar, así que la barra más larga se dibujaba más
+                corta que las otras. */}
             <span className="macro-goal caption tnum">
               {m.objetivo ? `de ${miles(m.objetivo)} g · ` : ''}
               {pctKcal} % de las kcal
+              {cumple !== null && cumple > 105 && (
+                <span className="macro-over">
+                  {' · '}
+                  {Math.round(cumple)} % del objetivo
+                </span>
+              )}
             </span>
           </div>
         );

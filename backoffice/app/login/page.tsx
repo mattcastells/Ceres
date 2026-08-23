@@ -45,9 +45,6 @@ export default function LoginPage() {
     <main className="login">
       <div className="card" style={{ width: '100%', maxWidth: 380 }}>
         <h1>Ceres</h1>
-        <p className="muted" style={{ marginTop: 'var(--s2)' }}>
-          Panel de seguimiento
-        </p>
 
         <form onSubmit={onSubmit} style={{ marginTop: 'var(--s7)' }}>
           <label className="grid" style={{ gap: 'var(--s2)' }}>
@@ -90,10 +87,6 @@ export default function LoginPage() {
             {busy ? 'Entrando…' : 'Entrar'}
           </button>
         </form>
-
-        <p className="caption" style={{ marginTop: 'var(--s6)' }}>
-          La cuenta se crea desde la app. Acá solo se entra.
-        </p>
       </div>
     </main>
   );

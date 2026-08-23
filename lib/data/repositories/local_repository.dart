@@ -501,16 +501,38 @@ class LocalRepository
   /// Descartarlo y no cerrarlo el mismo día es lo correcto por dos motivos: no
   /// gobernó ni un día, así que no es historial que preservar; y cerrarlo con
   /// `ends_on = hoy` lo dejaría **vigente**, con dos objetivos activos a la vez.
+  ///
+  /// Pero descartarlo **no alcanza**: el que se descarta ya está subido, y la
+  /// subida manda solo lo que hay en el teléfono, así que nada lo borra de allá.
+  /// Con un id nuevo quedaban dos objetivos abiertos el mismo día en el
+  /// servidor, y desde ese momento `goals_no_overlap` rechazaba **todas** las
+  /// subidas de objetivos —para siempre, y con un error que no dice qué lo
+  /// causó ("conflicting key value violates exclusion constraint")—. Alcanzaba
+  /// con cambiar el objetivo dos veces en un día, que es exactamente lo que
+  /// hace quien completa el alta y después ajusta su número.
+  ///
+  /// Por eso el que reemplaza **se queda con el id del que reemplaza**: es la
+  /// misma fila del servidor y el upsert la actualiza en vez de duplicarla. No
+  /// hace falta borrar nada ni una columna de bajas.
   @override
   Future<void> saveGoal(Goal goal) async {
     final yesterday = today().subtract(const Duration(days: 1));
+
+    String? idQueSeReemplaza;
+    for (final g in store.goals) {
+      if (g.isCurrent && yesterday.isBefore(g.startsOn)) {
+        idQueSeReemplaza = g.id;
+        break;
+      }
+    }
+
     store.goals = <Goal>[
       for (final g in store.goals)
         if (!g.isCurrent)
           g
         else if (!yesterday.isBefore(g.startsOn))
           g.copyWith(endsOn: yesterday),
-      goal,
+      if (idQueSeReemplaza == null) goal else goal.copyWith(id: idQueSeReemplaza),
     ];
     await _commit();
   }
