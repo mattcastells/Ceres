@@ -36,6 +36,54 @@ export function Stat({
   );
 }
 
+/**
+ * La tarjeta del tablero: un número grande, una línea que lo pone en contexto
+ * y, abajo, una mini-visual —una pista contra el objetivo, una sparkline, los
+ * puntos de los últimos días—.
+ *
+ * Es la evolución de `Stat` para el Resumen. Dieciséis fichas de un número
+ * cada una eran una pared: había que leerlas todas para armarse la imagen.
+ * Acá son menos tarjetas y cada una dice tres cosas, y la visual es la que
+ * contesta "¿y cómo viene?" sin un gráfico entero.
+ */
+export function Kpi({
+  label,
+  value,
+  unit,
+  sub,
+  tone,
+  children,
+}: {
+  label: string;
+  value: string;
+  unit?: string;
+  /** La línea de contexto, debajo del número. */
+  sub?: string;
+  tone?: 'estimate';
+  /** La mini-visual. Opcional: sin ella la tarjeta es número y línea. */
+  children?: React.ReactNode;
+}) {
+  return (
+    <div className="card kpi">
+      <div className="caption">{label}</div>
+      <div
+        className="tnum kpi-value"
+        style={tone === 'estimate' ? { color: 'var(--caution)' } : undefined}
+      >
+        {value}
+        {unit && <span className="kpi-unit">{unit}</span>}
+      </div>
+      <div className="caption kpi-sub">{sub ?? ' '}</div>
+      {children && <div className="kpi-visual">{children}</div>}
+    </div>
+  );
+}
+
+/** Las tarjetas del tablero en fila: cuatro por línea donde entran. */
+export function KpiRow({ children }: { children: React.ReactNode }) {
+  return <div className="kpi-grid">{children}</div>;
+}
+
 /** Las fichas en fila, hasta cuatro por línea.
  *
  *  El tope de cuatro es lo que evita la huérfana: con `auto-fit` y un mínimo

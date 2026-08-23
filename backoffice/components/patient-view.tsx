@@ -4,7 +4,6 @@ import {
   QUALITY_LABEL,
   type Activity,
   type AlcoholLog,
-  type CareNote,
   type DayMarker,
   type Goal,
   type Meal,
@@ -22,19 +21,19 @@ import {
   num,
   rangoDeFechas,
 } from '@/lib/format';
-import { notaDeRecorte, type Ventana } from '@/lib/tracking';
-import { DayContext } from '@/components/day-context';
-import { Notes } from '@/components/notes';
+import type { Ventana } from '@/lib/tracking';
 import { WeightChart } from '@/components/weight-chart';
 import { CaloriesChart } from '@/components/calories-chart';
 import { BarChart, type Point } from '@/components/bar-chart';
-import { DayCard } from '@/components/day-card';
-import { Adherence } from '@/components/adherence';
+import { DayCalendar } from '@/components/day-calendar';
+import { DayModalProvider } from '@/components/day-modal';
+import { VASOS_META, type DayBundle } from '@/components/day-detail';
 import { SlotSplit } from '@/components/slot-split';
 import { MacroSplit } from '@/components/macro-split';
 import { PhotoGallery } from '@/components/photo-gallery';
 import { MeasureCard } from '@/components/measure-card';
-import { Stat, StatRow, Section } from '@/components/stat';
+import { Kpi, KpiRow, Stat, StatRow, Section } from '@/components/stat';
+import { Spark } from '@/components/spark';
 import { RangePicker } from '@/components/range-picker';
 import { SignOut } from '@/components/sign-out';
 import { Tabs, type Tab } from '@/components/tabs';
@@ -67,21 +66,20 @@ export type PatientData = {
   measurements: Measurement[];
   markers: DayMarker[];
   alcohol: AlcoholLog[];
-  notes: CareNote[];
   goal: Goal | null;
   photoUrls: Record<string, string>;
 };
 
 /**
- * La ficha de un paciente, en cinco pestañas.
+ * La ficha de un paciente, en seis pestañas.
  *
  * Es una función pura de los datos: no consulta nada. Quien la usa —la página—
  * es quien pide, y por eso esta vista se puede renderizar con datos de ejemplo
  * para mirar el diseño sin una sesión. Lo que se mira ahí es el componente que
  * se despliega, no una maqueta parecida que se desincroniza al primer cambio.
  *
- * Las pestañas son las tres categorías que el paciente concede —comidas,
- * cuerpo, hábitos— más el resumen y el día a día. No es una división de
+ * Las pestañas son las cuatro categorías que el paciente concede —comidas,
+ * fotos, cuerpo, hábitos— más el resumen y el día a día. No es una división de
  * diseño: es la misma división con la que se dio el permiso, así que "esta
  * pestaña está apagada" y "esto no me lo compartieron" son la misma frase.
  */
@@ -100,7 +98,6 @@ export function PatientView({ data, tab }: { data: PatientData; tab?: string }) 
     measurements,
     markers,
     alcohol,
-    notes,
     goal,
     photoUrls,
   } = data;
@@ -109,13 +106,12 @@ export function PatientView({ data, tab }: { data: PatientData; tab?: string }) 
 
   // ⚠️ Dos listas de fechas, y la diferencia importa.
   //
-  // `fechas` es el **calendario**: el eje X de los gráficos sale de acá y
-  // arranca en `from` siempre, porque recortarlo movería las barras de lugar y
-  // el gráfico contradiría al calendario de adherencia de al lado.
+  // `fechas` es el **calendario** del período pedido, del más viejo al más
+  // nuevo: de acá sale el orden de las series de los gráficos.
   //
-  // `ventana.fechas` es lo que **se cuenta**: todo denominador, racha, hueco y
-  // porcentaje sale de ahí. Alguien que empezó el 18 registró 13 de 13 días, no
-  // 13 de 30. Ver `docs/contexto-diario.md`.
+  // `ventana.fechas` es lo que **se cuenta**: todo denominador sale de ahí.
+  // Alguien que empezó el 18 registró 13 de 13 días, no 13 de 30. Ver
+  // `docs/contexto-diario.md`.
   const fechas = rangoDeFechas(from, to);
   const diasEfectivos = ventana.dias;
   const porDia = new Map<string, Meal[]>();
@@ -203,15 +199,6 @@ export function PatientView({ data, tab }: { data: PatientData; tab?: string }) 
     ]);
   }
 
-  const notasPorDia = new Map<string, CareNote[]>();
-  for (const n of notes) {
-    if (!n.local_date) continue;
-    notasPorDia.set(n.local_date, [
-      ...(notasPorDia.get(n.local_date) ?? []),
-      n,
-    ]);
-  }
-
   const enfermos = markers.filter((m) => m.kind === 'sick');
   const descansos = markers.filter((m) => m.kind === 'rest');
 
@@ -228,21 +215,43 @@ export function PatientView({ data, tab }: { data: PatientData; tab?: string }) 
   // período elegido y no se puede comparar con nada.
   const semanas = diasEfectivos > 0 ? diasEfectivos / 7 : 0;
   const ubePorSemana = semanas > 0 ? ubeTotal / semanas : 0;
-  const diasConAlgo = [...fechas]
-    .reverse()
+
+  /* ── Cada día con algo, en una bolsa ─────────────────────────────────────
+     Es lo que viaja al calendario del día a día. Se indexa todo una vez y
+     se arma una bolsa por día con registro; los días vacíos no viajan, los
+     dibuja el calendario a partir del período. Un día marcado como enfermedad,
+     o con alcohol, **es** un día con algo: si no entrara acá, el día que la
+     persona estuvo en cama y no registró nada no se podría abrir, que es justo
+     el día que hay que poder abrir para entender la semana. */
+  const actividadPorDia = new Map<string, Activity[]>();
+  for (const a of activities) {
+    actividadPorDia.set(a.local_date, [
+      ...(actividadPorDia.get(a.local_date) ?? []),
+      a,
+    ]);
+  }
+  const aguaPorFecha = new Map(water.map((w) => [w.local_date, w]));
+  const suenoPorFecha = new Map(sleep.map((s) => [s.local_date, s]));
+
+  const bolsas: DayBundle[] = fechas
     .filter(
       (d) =>
         porDia.has(d) ||
-        activities.some((a) => a.local_date === d) ||
-        water.some((w) => w.local_date === d) ||
-        sleep.some((s) => s.local_date === d) ||
-        // Un día marcado como enfermedad, o con alcohol, **es** un día con
-        // algo: si no entrara acá, el día que la persona estuvo en cama y no
-        // registró nada desaparecería del día a día, que es justo el día que
-        // hay que poder abrir para entender la semana.
+        actividadPorDia.has(d) ||
+        aguaPorFecha.has(d) ||
+        suenoPorFecha.has(d) ||
         marcasPorDia.has(d) ||
         alcoholPorDia.has(d),
-    );
+    )
+    .map((d) => ({
+      date: d,
+      meals: porDia.get(d) ?? [],
+      activities: actividadPorDia.get(d) ?? [],
+      water: aguaPorFecha.get(d) ?? null,
+      sleep: suenoPorFecha.get(d) ?? null,
+      markers: marcasPorDia.get(d) ?? [],
+      alcohol: alcoholPorDia.get(d) ?? [],
+    }));
 
 
   const apagadas = [
@@ -278,144 +287,253 @@ export function PatientView({ data, tab }: { data: PatientData; tab?: string }) 
     </div>
   );
 
+  /* ── Los números que comparten el resumen y las pestañas ──────────── */
+  const minutosTotales = activities.reduce((a, x) => a + x.duration_minutes, 0);
+  const kcalActividad = activities.reduce(
+    (a, x) => a + (x.estimated_calories ?? 0),
+    0,
+  );
+  const minutosPorSemana = semanas > 0 ? minutosTotales / semanas : 0;
+  const proteinaPromedio = diasConComida
+    ? meals.reduce((a, m) => a + Number(m.total_protein_g), 0) / diasConComida
+    : 0;
+  const aguaPromedio = water.length
+    ? water.reduce((a, w) => a + w.glasses, 0) / water.length
+    : 0;
+  const diasConOchoVasos = water.filter((w) => w.glasses >= VASOS_META).length;
+  const suenoPromedioMin = sleep.length
+    ? Math.round(sleep.reduce((a, s) => a + s.minutes, 0) / sleep.length)
+    : 0;
+  const nochesCortas = sleep.filter((s) => s.minutes < 6 * 60).length;
+
   /* ── Resumen ────────────────────────────────────────────────────────── */
+  // El tablero. Pocas tarjetas y cada una dice tres cosas: el número, una línea
+  // de contexto y una mini-visual. Antes eran dieciséis fichas de un número en
+  // cuatro grupos, y había que leerlas todas para armarse la imagen; acá la
+  // forma —si sube, si baja, si está salteado— está al lado del número. El
+  // detalle de cada cosa sigue en su pestaña.
+  //
+  // Los números de contexto —enfermedad, alcohol— están siempre, también en
+  // cero: una semana limpia tiene que distinguirse de una semana sin compartir.
+  // Ver `docs/contexto-diario.md`.
+  const ultimosCatorce = ventana.fechas.slice(-14);
+  const pctObjetivo =
+    target && promedioKcal ? Math.round((promedioKcal / target) * 100) : null;
+
   const resumen = (
     <>
       <Section
         title="Resumen del período"
         hint={`Últimos ${days} días · del ${fechaCorta(from)} al ${fechaCorta(to)}`}
       >
-        {/* El recorte se **dice**, no solo se aplica: "13 de 13" sin la
-            aclaración parece un período de trece días elegido a mano, y la
-            profesional necesita saber que pidió treinta. */}
-        {notaDeRecorte(ventana) && (
-          <div className="card" style={{ marginBottom: 'var(--s3)' }}>
-            <p className="muted" style={{ margin: 0 }}>
-              {notaDeRecorte(ventana)}
-            </p>
-          </div>
-        )}
-        <StatRow>
-          {p.share_meals && (
-            <>
-              <Stat
-                label="Promedio diario"
-                value={promedioKcal ? miles(promedioKcal) : '—'}
-                unit="kcal"
-                caption={
-                  target ? `objetivo ${miles(target)}` : 'sin objetivo cargado'
-                }
-              />
-              {/* El denominador es la ventana efectiva y no `days`: alguien
-                  que empezó el 18 registró 13 de 13, no 13 de 30. Los otros 17
-                  no son huecos, son días sin la app. */}
-              <Stat
-                label="Días con comidas"
-                value={`${diasConComida}`}
-                unit={diasEfectivos > 0 ? `de ${diasEfectivos}` : undefined}
-                caption={
-                  diasEfectivos === 0
-                    ? 'sin registros todavía'
-                    : diasConComida < diasEfectivos
-                      ? `${diasEfectivos - diasConComida} sin registrar`
-                      : 'completo'
-                }
-              />
-              {target !== null && target > 0 && (
-                <Stat
-                  label="Días dentro del objetivo"
-                  value={`${dentro}`}
-                  unit={`de ${diasConComida}`}
-                  caption={
-                    diasConComida
-                      ? `${Math.round((dentro / diasConComida) * 100)} % de los registrados`
-                      : undefined
+        {(p.share_meals || p.share_body) && (
+          <KpiRow>
+            {p.share_meals && (
+              <>
+                <Kpi
+                  label="Calorías por día"
+                  value={promedioKcal ? miles(promedioKcal) : '—'}
+                  unit="kcal"
+                  sub={
+                    target
+                      ? `objetivo ${miles(target)} · ${dentro} de ${diasConComida} días dentro`
+                      : 'sin objetivo cargado'
                   }
-                />
-              )}
-            </>
-          )}
-          {p.share_body && (
-            <>
-              <Stat
-                label="Variación de peso"
-                value={deltaPeso === null ? '—' : conSigno(deltaPeso)}
-                unit="kg"
-                caption={
-                  ultimoPeso !== null
-                    ? `último ${dec(ultimoPeso)} kg`
-                    : 'sin registros'
-                }
-              />
-              <Stat
-                label="IMC"
-                value={indice === null ? '—' : dec(indice)}
-                caption={
-                  indice === null
-                    ? p.height_cm
-                      ? 'sin peso cargado'
-                      : 'falta la altura'
-                    : categoriaIMC(indice)
-                }
-              />
-            </>
-          )}
-          {p.share_wellbeing && (
-            <>
-              <Stat
-                label="Actividad"
-                value={miles(
-                  activities.reduce((a, x) => a + x.duration_minutes, 0),
-                )}
-                unit="min"
-                caption={`${activities.length} ${activities.length === 1 ? 'sesión' : 'sesiones'}`}
-              />
-              <Stat
-                label="Sueño promedio"
-                value={
-                  sleep.length
-                    ? horas(
-                        Math.round(
-                          sleep.reduce((a, s) => a + s.minutes, 0) /
-                            sleep.length,
-                        ),
-                      )
-                    : '—'
-                }
-                caption={`${sleep.length} ${sleep.length === 1 ? 'noche' : 'noches'} registradas`}
-              />
-              <Stat
-                label="Agua promedio"
-                value={
-                  water.length
-                    ? dec(
-                        water.reduce((a, w) => a + w.glasses, 0) / water.length,
-                      )
-                    : '—'
-                }
-                unit="vasos"
-                caption={`${water.length} ${water.length === 1 ? 'día' : 'días'} registrados`}
-              />
-            </>
-          )}
-        </StatRow>
-      </Section>
+                >
+                  {/* La pista contra el objetivo: ámbar si el promedio lo pasa,
+                      el mismo ámbar del gráfico. */}
+                  {target && pctObjetivo !== null ? (
+                    <div className="kpi-track">
+                      <div className="split-track" aria-hidden>
+                        <div
+                          className="split-fill"
+                          style={{
+                            width: `${Math.min(pctObjetivo, 100)}%`,
+                            background:
+                              pctObjetivo > 100
+                                ? 'var(--chart-over)'
+                                : 'var(--chart-intake)',
+                          }}
+                        />
+                      </div>
+                      <span
+                        className="caption tnum"
+                        style={
+                          pctObjetivo > 100
+                            ? { color: 'var(--caution)' }
+                            : undefined
+                        }
+                      >
+                        {pctObjetivo} %
+                      </span>
+                    </div>
+                  ) : (
+                    <Spark values={serieKcal.map((x) => x.value)} />
+                  )}
+                </Kpi>
 
-      {/* En 7 días el calendario serían dos columnas de cuadraditos, que es
-          menos claro que la ficha de arriba: "5 de 7 · 2 sin registrar" ya lo
-          dice. Aparece cuando hay suficiente período como para ver una forma. */}
-      {p.share_meals && days > 7 && (
-        <Section
-          title="Registro"
-          hint="Qué días quedaron cargados. Un promedio alto sobre seis días no es lo mismo que sobre treinta."
-        >
-          <Adherence fechas={fechas} kcalPorDia={kcalPorDia} ventana={ventana} />
-        </Section>
-      )}
+                {/* El denominador es la ventana efectiva y no `days`: alguien
+                    que empezó el 18 registró 13 de 13, no 13 de 30. Los puntos
+                    son las dos últimas semanas, que es lo que se pregunta en la
+                    consulta: "¿y estos días?". */}
+                <Kpi
+                  label="Días con comidas"
+                  value={`${diasConComida}`}
+                  unit={diasEfectivos > 0 ? `de ${diasEfectivos}` : undefined}
+                  sub={
+                    diasEfectivos === 0
+                      ? 'sin registros todavía'
+                      : diasConComida < diasEfectivos
+                        ? `${diasEfectivos - diasConComida} sin registrar`
+                        : 'completo'
+                  }
+                >
+                  {ultimosCatorce.length > 0 && (
+                    <div>
+                      <div className="week-dots kpi-dots" aria-hidden>
+                        {ultimosCatorce.map((d) => (
+                          <span
+                            key={d}
+                            className="week-dot"
+                            data-on={kcalPorDia.has(d) ? '1' : '0'}
+                            title={`${fechaCorta(d)} · ${kcalPorDia.has(d) ? 'con comidas' : 'sin registro'}`}
+                          />
+                        ))}
+                      </div>
+                      <div className="caption tnum" style={{ marginTop: 4 }}>
+                        últimos {ultimosCatorce.length} días
+                      </div>
+                    </div>
+                  )}
+                </Kpi>
+
+                <Kpi
+                  label="Proteínas por día"
+                  value={diasConComida ? miles(proteinaPromedio) : '—'}
+                  unit="g"
+                  sub={
+                    goal?.protein_g
+                      ? `objetivo ${miles(goal.protein_g)} g · ${
+                          proteinaPromedio
+                            ? Math.round((proteinaPromedio / goal.protein_g) * 100)
+                            : 0
+                        } % del objetivo`
+                      : 'sin objetivo cargado'
+                  }
+                >
+                  <Spark
+                    values={proteinaPorDia.map((x) => x.value)}
+                    color="var(--chart-protein)"
+                  />
+                </Kpi>
+              </>
+            )}
+
+            {p.share_body && (
+              <Kpi
+                label="Peso"
+                value={ultimoPeso === null ? '—' : dec(ultimoPeso)}
+                unit="kg"
+                sub={
+                  ultimoPeso === null
+                    ? 'sin registros'
+                    : [
+                        deltaPeso !== null
+                          ? `${conSigno(deltaPeso)} kg en el período`
+                          : `${weights.length} pesaje`,
+                        indice !== null
+                          ? `IMC ${dec(indice)} · ${categoriaIMC(indice)}`
+                          : null,
+                      ]
+                        .filter(Boolean)
+                        .join(' · ')
+                }
+              >
+                <Spark
+                  values={weights.map((w) => Number(w.weight_kg))}
+                  kind="line"
+                  color="var(--chart-weight)"
+                />
+              </Kpi>
+            )}
+          </KpiRow>
+        )}
+
+        {p.share_wellbeing && (
+          <KpiRow>
+            <Kpi
+              label="Actividad"
+              value={miles(minutosPorSemana)}
+              unit="min/sem"
+              sub={`${actPorDia.length} de ${diasEfectivos} días · ${activities.length} ${activities.length === 1 ? 'sesión' : 'sesiones'} · ≈ ${miles(kcalActividad)} kcal`}
+            >
+              <Spark
+                values={actPorDia.map((x) => x.value)}
+                color="var(--chart-walking)"
+              />
+            </Kpi>
+            <Kpi
+              label="Agua"
+              value={water.length ? dec(aguaPromedio) : '—'}
+              unit="vasos/día"
+              sub={
+                water.length
+                  ? `${water.length} ${water.length === 1 ? 'día' : 'días'} · llegó a ${VASOS_META} en ${diasConOchoVasos}`
+                  : 'sin registros'
+              }
+            >
+              <Spark
+                values={aguaPorDia.map((x) => x.value)}
+                color="var(--info)"
+              />
+            </Kpi>
+            <Kpi
+              label="Sueño"
+              value={sleep.length ? horas(suenoPromedioMin) : '—'}
+              sub={
+                sleep.length
+                  ? `${sleep.length} ${sleep.length === 1 ? 'noche' : 'noches'} · ${nochesCortas} de menos de 6 h`
+                  : 'sin registros'
+              }
+            >
+              <Spark
+                values={suenoPorDia.map((x) => x.value)}
+                color="var(--chart-weight)"
+              />
+            </Kpi>
+            {/* Por semana y no el total: el umbral de las guías está escrito
+                por semana, y un total crece con el período elegido y no se
+                puede comparar con nada. Sin semáforo: la pantalla muestra
+                distancias, no notas. */}
+            <Kpi
+              label="Alcohol y enfermedad"
+              value={num(ubePorSemana)}
+              unit="tragos/sem"
+              sub={[
+                `${diasConAlcohol} ${diasConAlcohol === 1 ? 'día' : 'días'} con alcohol`,
+                `${enfermos.length} de enfermedad`,
+                descansos.length
+                  ? `${descansos.length} ${descansos.length === 1 ? 'descanso' : 'descansos'}`
+                  : null,
+              ]
+                .filter(Boolean)
+                .join(' · ')}
+            >
+              <Spark
+                values={[...ubePorDia.entries()]
+                  .sort((a, b) => a[0].localeCompare(b[0]))
+                  .map(([, v]) => v)}
+                color="var(--info)"
+              />
+            </Kpi>
+          </KpiRow>
+        )}
+      </Section>
 
       {/* Las dos curvas que se miran primero, sin cambiar de pestaña. El
           detalle —macros, reparto, medidas— sigue estando en la suya: acá van
-          las dos que contestan "¿cómo viene?" de un vistazo. */}
+          las dos que contestan "¿cómo viene?" de un vistazo. Qué días quedaron
+          cargados lo muestra el calendario del día a día. */}
       {(p.share_meals || p.share_body) && (
         <Section
           title="Cómo viene"
@@ -432,8 +550,6 @@ export function PatientView({ data, tab }: { data: PatientData; tab?: string }) 
                       kcal: x.value,
                     }))}
                     target={target}
-                    desde={from}
-                    hasta={to}
                   />
                 </div>
               </div>
@@ -442,71 +558,11 @@ export function PatientView({ data, tab }: { data: PatientData; tab?: string }) 
               <div className="card">
                 <h3>Peso</h3>
                 <div style={{ marginTop: 'var(--s3)' }}>
-                  <WeightChart logs={weights} desde={from} hasta={to} />
+                  <WeightChart logs={weights} />
                 </div>
               </div>
             )}
           </div>
-        </Section>
-      )}
-
-      {/* ── Qué más pasó en el período ──────────────────────────────────
-          Va al final del resumen y **solo si hay algo**: es lo que explica a
-          los números de arriba, no una métrica más. Una sección permanente que
-          diga "0 días de enfermedad · 0 tragos" convierte en ruido de todas las
-          semanas lo que tiene que saltar la semana que pasó algo.
-          Ver `docs/contexto-diario.md`. */}
-      {p.share_wellbeing &&
-        (enfermos.length > 0 || diasConAlcohol > 0 || descansos.length > 0) && (
-        <Section
-          title="Qué más pasó"
-          hint="No cambia ningún número de arriba: los promedios y la adherencia se calculan igual. Está para poder leerlos."
-        >
-          <StatRow>
-            {enfermos.length > 0 && (
-              <Stat
-                label="Días de enfermedad"
-                value={`${enfermos.length}`}
-                unit={diasEfectivos > 0 ? `de ${diasEfectivos}` : undefined}
-                caption={resumenEnfermedad(enfermos)}
-              />
-            )}
-            {/* El descanso planificado y el día sin actividad se ven igual en
-                el gráfico, y no son lo mismo: uno es el plan y el otro es lo
-                que no pasó. */}
-            {descansos.length > 0 && (
-              <Stat
-                label="Descansos planificados"
-                value={`${descansos.length}`}
-                caption="marcados como descanso, no como día sin moverse"
-              />
-            )}
-            {diasConAlcohol > 0 && (
-              <>
-                <Stat
-                  label="Días con alcohol"
-                  value={`${diasConAlcohol}`}
-                  unit={diasEfectivos > 0 ? `de ${diasEfectivos}` : undefined}
-                  caption={`${num(ubeTotal)} tragos en el período`}
-                />
-                {/* Por semana y no el total: el umbral de las guías está escrito
-                    por semana, y un total crece con el período elegido y no se
-                    puede comparar con nada. Sin semáforo: la pantalla muestra
-                    distancias, no notas. */}
-                <Stat
-                  label="Tragos por semana"
-                  value={num(ubePorSemana)}
-                  caption="referencia de bajo riesgo: hasta 9–14 según sexo"
-                />
-                <Stat
-                  label="Calorías del alcohol"
-                  value={miles(kcalAlcohol)}
-                  unit="kcal"
-                  caption="aparte de las comidas, no suman al promedio"
-                />
-              </>
-            )}
-          </StatRow>
         </Section>
       )}
 
@@ -531,14 +587,12 @@ export function PatientView({ data, tab }: { data: PatientData; tab?: string }) 
     <>
       <Section
         title="Calorías por día"
-        hint="La línea punteada es el objetivo. El día en ámbar es el que lo pasó."
+        hint="Solo los días con comidas cargadas. La línea punteada es el objetivo; el día en ámbar es el que lo pasó."
       >
         <div className="card">
           <CaloriesChart
             days={serieKcal.map((x) => ({ date: x.date, kcal: x.value }))}
             target={target}
-            desde={from}
-            hasta={to}
           />
         </div>
       </Section>
@@ -547,7 +601,7 @@ export function PatientView({ data, tab }: { data: PatientData; tab?: string }) 
         title="Cómo se compone el día"
         hint={`Promedios sobre los ${diasConComida} días con comidas cargadas.`}
       >
-        <div className="grid grid--auto">
+        <div className="grid grid--auto grid--parejo">
           <div>
             <div className="section-header" style={{ marginTop: 0 }}>
               Macros
@@ -572,16 +626,13 @@ export function PatientView({ data, tab }: { data: PatientData; tab?: string }) 
         hint="El promedio esconde la variación: es el macro donde un día flojo se compensa mal con el siguiente."
       >
         <div className="card">
+          {/* Sin la raya del objetivo: el objetivo de proteína ya está en el
+              cuadro de macros de arriba, y acá la raya quedaba muy por encima
+              de todas las barras y aplastaba el gráfico contra el piso. */}
           <BarChart
             points={proteinaPorDia}
             unit="g"
-            desde={from}
-            hasta={to}
             color="var(--chart-protein)"
-            target={goal?.protein_g ?? null}
-            targetLabel={
-              goal?.protein_g ? `objetivo ${miles(goal.protein_g)} g` : undefined
-            }
             height={180}
           />
         </div>
@@ -677,7 +728,7 @@ export function PatientView({ data, tab }: { data: PatientData; tab?: string }) 
         hint="Los puntos son cada pesaje; la línea es la media móvil de 7 días, que es la que muestra la tendencia."
       >
         <div className="card">
-          <WeightChart logs={weights} desde={from} hasta={to} />
+          <WeightChart logs={weights} />
         </div>
       </Section>
 
@@ -698,8 +749,6 @@ export function PatientView({ data, tab }: { data: PatientData; tab?: string }) 
                 key={metric}
                 title={METRIC_LABEL[metric] ?? metric}
                 unit={serie[0].unit === 'pct' ? '%' : 'cm'}
-                desde={from}
-                hasta={to}
                 points={serie.map((s) => ({
                   date: s.local_date,
                   value: Number(s.value),
@@ -724,7 +773,8 @@ export function PatientView({ data, tab }: { data: PatientData; tab?: string }) 
         <div className="card habito">
           <h3>Actividad</h3>
           <p className="caption">
-            {actPorDia.length} de {diasEfectivos} días con movimiento
+            {actPorDia.length} de {diasEfectivos} días con movimiento ·{' '}
+            {miles(minutosPorSemana)} min por semana
           </p>
           {/* Acá es donde el contexto vale más: el hueco de actividad es el que
               más se parece a abandono y el que más seguido tiene una
@@ -734,8 +784,6 @@ export function PatientView({ data, tab }: { data: PatientData; tab?: string }) 
           <BarChart
             points={actPorDia}
             unit="min"
-            desde={from}
-            hasta={to}
             color="var(--chart-walking)"
             height={150}
             sickDays={enfermos.map((m) => m.local_date)}
@@ -762,38 +810,48 @@ export function PatientView({ data, tab }: { data: PatientData; tab?: string }) 
             </div>
             <div>
               <dt className="caption">Total</dt>
+              <dd className="tnum">{miles(minutosTotales)} min</dd>
+            </div>
+            <div>
+              <dt className="caption">Por sesión</dt>
               <dd className="tnum">
-                {miles(activities.reduce((a, x) => a + x.duration_minutes, 0))}{' '}
-                min
+                {activities.length
+                  ? `${miles(minutosTotales / activities.length)} min`
+                  : '—'}
               </dd>
             </div>
             <div>
               <dt className="caption">Gasto estimado</dt>
               {/* En ámbar y con el "≈", como en la app: una estimación por MET
                   no se presenta con la misma cara que una medición. */}
-              <dd className="tnum estimate">
-                ≈{' '}
-                {miles(
-                  activities.reduce((a, x) => a + (x.estimated_calories ?? 0), 0),
-                )}{' '}
-                kcal
-              </dd>
+              <dd className="tnum estimate">≈ {miles(kcalActividad)} kcal</dd>
             </div>
           </dl>
+          {/* La intensidad se guardaba por sesión y no se veía en ningún lado:
+              veinte caminatas y veinte sesiones intensas suman los mismos
+              minutos y no son el mismo plan. */}
+          {activities.length > 0 && (
+            <div className="habito-chips">
+              <div className="caption">Intensidad</div>
+              <div className="chips" style={{ marginTop: 'var(--s2)' }}>
+                {intensidades(activities).map(([k, n]) => (
+                  <span key={k} className="chip chip--on tnum">
+                    {INTENSIDAD[k] ?? k} · {n}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="card habito">
           <h3>Agua</h3>
           <p className="caption">
-            {water.length
-              ? `${dec(water.reduce((a, w) => a + w.glasses, 0) / water.length)} vasos por día`
-              : 'sin registros'}
+            {water.length ? `${dec(aguaPromedio)} vasos por día` : 'sin registros'}
           </p>
           <BarChart
             points={aguaPorDia}
             unit="vasos"
-            desde={from}
-            hasta={to}
             color="var(--info)"
             height={150}
           />
@@ -805,9 +863,21 @@ export function PatientView({ data, tab }: { data: PatientData; tab?: string }) 
               </dd>
             </div>
             <div>
-              <dt className="caption">Llegó a 8 vasos</dt>
+              <dt className="caption">Llegó a {VASOS_META} vasos</dt>
+              <dd className="tnum">{diasConOchoVasos} días</dd>
+            </div>
+            <div>
+              <dt className="caption">Menos de 4 vasos</dt>
               <dd className="tnum">
-                {water.filter((w) => w.glasses >= 8).length} días
+                {water.filter((w) => w.glasses < 4).length} días
+              </dd>
+            </div>
+            <div>
+              <dt className="caption">Máximo</dt>
+              <dd className="tnum">
+                {water.length
+                  ? `${Math.max(...water.map((w) => w.glasses))} vasos`
+                  : '—'}
               </dd>
             </div>
           </dl>
@@ -816,37 +886,127 @@ export function PatientView({ data, tab }: { data: PatientData; tab?: string }) 
         <div className="card habito">
           <h3>Sueño</h3>
           <p className="caption">
-            {sleep.length
-              ? `${horas(Math.round(sleep.reduce((a, s) => a + s.minutes, 0) / sleep.length))} por noche`
-              : 'sin registros'}
+            {sleep.length ? `${horas(suenoPromedioMin)} por noche` : 'sin registros'}
           </p>
           <BarChart
             points={suenoPorDia}
             unit="h"
-            desde={from}
-            hasta={to}
             color="var(--chart-weight)"
             height={150}
             decimals={1}
           />
+          <dl className="habito-pie">
+            <div>
+              <dt className="caption">Noches</dt>
+              <dd className="tnum">
+                {sleep.length} de {diasEfectivos}
+              </dd>
+            </div>
+            <div>
+              <dt className="caption">Menos de 6 h</dt>
+              <dd className="tnum">{nochesCortas} noches</dd>
+            </div>
+            <div>
+              <dt className="caption">Más corta</dt>
+              <dd className="tnum">
+                {sleep.length
+                  ? horas(Math.min(...sleep.map((s) => s.minutes)))
+                  : '—'}
+              </dd>
+            </div>
+            <div>
+              <dt className="caption">Más larga</dt>
+              <dd className="tnum">
+                {sleep.length
+                  ? horas(Math.max(...sleep.map((s) => s.minutes)))
+                  : '—'}
+              </dd>
+            </div>
+          </dl>
           {/* La calidad se guardaba y no se mostraba en ningún resumen: siete
               horas de sueño malo y siete de sueño bueno son dos cosas
               distintas, y era el único dato del que solo se veía la duración. */}
           {sleep.length > 0 && (
-            <div className="habito-pie">
-              <div style={{ width: '100%' }}>
-                <div className="caption">Cómo lo calificó</div>
-                <div className="chips" style={{ marginTop: 'var(--s2)' }}>
-                  {calidades(sleep).map(([q, n]) => (
-                    <span key={q} className="chip chip--on tnum">
-                      {QUALITY_LABEL[q] ?? q} · {n}
-                    </span>
-                  ))}
-                </div>
+            <div className="habito-chips">
+              <div className="caption">Cómo lo calificó</div>
+              <div className="chips" style={{ marginTop: 'var(--s2)' }}>
+                {calidades(sleep).map(([q, n]) => (
+                  <span key={q} className="chip chip--on tnum">
+                    {QUALITY_LABEL[q] ?? q} · {n}
+                  </span>
+                ))}
               </div>
             </div>
           )}
         </div>
+
+      </div>
+
+      {/* El contexto —enfermedad, descansos, alcohol— va como una franja debajo
+          de las tres cartas y no como una cuarta carta: una carta de la misma
+          altura que las otras, con un período sin nada que contar, era un
+          cuadro vacío con una frase en el medio. La franja mide lo que tiene
+          que decir: los números siempre, y el gráfico de tragos por día solo
+          si hubo alcohol. Los días de enfermedad ya están como banda en el
+          gráfico de actividad, que es donde explican algo. */}
+      <div className="card contexto">
+        <dl className="habito-pie contexto-datos">
+          <div>
+            <dt className="caption">Enfermedad</dt>
+            <dd className="tnum">
+              {enfermos.length} {enfermos.length === 1 ? 'día' : 'días'}
+            </dd>
+            <dd className="caption">
+              {enfermos.length ? resumenEnfermedad(enfermos) : 'ninguno'}
+            </dd>
+          </div>
+          <div>
+            <dt className="caption">Descansos planificados</dt>
+            <dd className="tnum">{descansos.length}</dd>
+            <dd className="caption">
+              {descansos.length ? 'marcados como descanso' : 'ninguno'}
+            </dd>
+          </div>
+          <div>
+            <dt className="caption">Días con alcohol</dt>
+            <dd className="tnum">
+              {diasConAlcohol}
+              {diasEfectivos > 0 && (
+                <span className="muted"> de {diasEfectivos}</span>
+              )}
+            </dd>
+            <dd className="caption">
+              {diasConAlcohol ? `${num(ubeTotal)} tragos en total` : 'ninguno'}
+            </dd>
+          </div>
+          <div>
+            <dt className="caption">Tragos por semana</dt>
+            <dd className="tnum">{num(ubePorSemana)}</dd>
+            <dd className="caption">referencia: hasta 9–14 según sexo</dd>
+          </div>
+          <div>
+            <dt className="caption">Calorías del alcohol</dt>
+            <dd className="tnum estimate">≈ {miles(kcalAlcohol)} kcal</dd>
+            <dd className="caption">aparte de las comidas</dd>
+          </div>
+        </dl>
+
+        {diasConAlcohol > 0 && (
+          <div className="contexto-grafico">
+            <div className="caption" style={{ marginBottom: 'var(--s2)' }}>
+              Tragos por día
+            </div>
+            <BarChart
+              points={[...ubePorDia.entries()]
+                .map(([date, value]) => ({ date, value }))
+                .sort((a, b) => a.date.localeCompare(b.date))}
+              unit="tragos"
+              color="var(--info)"
+              height={120}
+              decimals={1}
+            />
+          </div>
+        )}
       </div>
     </Section>
   );
@@ -855,108 +1015,66 @@ export function PatientView({ data, tab }: { data: PatientData; tab?: string }) 
   const diario = (
     <Section
       title="Día a día"
-      hint="Cada día empieza cerrado: la fila dice qué momentos registró y cuánto sumó. El detalle de cada comida se abre aparte."
+      hint="Tocá un día para ver qué comió, con el agua, el sueño y la actividad de ese día."
     >
-      {!p.share_meals && !p.share_wellbeing && (
+      {!p.share_meals && !p.share_wellbeing ? (
         <div className="card">
           <p className="muted" style={{ margin: 0 }}>
             Nada compartido para mostrar acá.
           </p>
         </div>
-      )}
-
-      {(p.share_meals || p.share_wellbeing) && diasConAlgo.length === 0 && (
-        <div className="card">
-          <p className="muted" style={{ margin: 0 }}>
-            Sin registros en este período.
-          </p>
-        </div>
-      )}
-
-      {/* El período de un año son 365 días, y cada día trae adentro sus
-          comidas con la tabla de ítems entera: aunque nazcan cerrados, el HTML
-          se manda igual y la página pasaría de unos cientos de kilobytes a
-          varios megas para mostrar una lista de fechas. Se corta en 120 y se
-          dice, que es mejor que una pantalla que tarda diez segundos o una que
-          esconde el corte. Para el año están las otras pestañas, que resumen. */}
-      {diasConAlgo.length > TOPE_DIARIO && (
-        <div className="card" style={{ marginBottom: 'var(--s3)' }}>
-          <p className="muted" style={{ margin: 0 }}>
-            Se muestran los {TOPE_DIARIO} días más recientes de los{' '}
-            {diasConAlgo.length} con registros. El período entero sigue contado
-            en el resumen y en los gráficos; para ver más atrás, achicá el
-            período o mirá las fotos.
-          </p>
-        </div>
-      )}
-
-      {diasConAlgo.slice(0, TOPE_DIARIO).map((d, i) => (
-        <DayCard
-          key={d}
-          date={d}
-          meals={porDia.get(d) ?? []}
-          activities={activities.filter((a) => a.local_date === d)}
-          water={water.find((w) => w.local_date === d)}
-          sleep={sleep.find((s) => s.local_date === d)}
+      ) : (
+        <DayCalendar
+          // El calendario arranca donde arrancó la persona, no donde arranca
+          // el período: los días anteriores al primer registro no son huecos y
+          // no se dibujan. Ver `lib/tracking.ts`.
+          desde={ventana.vacia ? from : ventana.desdeEfectivo}
+          hasta={to}
+          hoy={to}
+          dias={bolsas}
           targetKcal={target}
-          photoUrls={photoUrls}
-          sharePhotos={p.share_photos}
+          shareMeals={p.share_meals}
           shareWellbeing={p.share_wellbeing}
-          // El contexto entra en la fila que ya existe y no en una sección
-          // aparte: "sin registros" y "estuvo enfermo" se leen juntos o no se
-          // leen. Ver `docs/contexto-diario.md`.
-          markers={marcasPorDia.get(d) ?? []}
-          alcohol={alcoholPorDia.get(d) ?? []}
-          notes={notasPorDia.get(d) ?? []}
-          // El más reciente abierto: es el que se mira al entrar, y deja ver
-          // de una que el día se abre sin tener que descubrir el triángulo.
-          defaultOpen={i === 0}
         />
-      ))}
+      )}
     </Section>
   );
 
+  // El orden es el de uso: lo que se mira primero en una consulta —el resumen,
+  // el calendario del día a día, los hábitos— y después el detalle por
+  // categoría. Las cuatro categorías del permiso siguen teniendo una pestaña
+  // cada una, con su punto ámbar si no está compartida.
   const tabs: Tab[] = [
     { id: 'resumen', label: 'Resumen', content: resumen },
-    { id: 'comidas', label: 'Comidas', off: !p.share_meals, content: comidas },
-    { id: 'fotos', label: 'Fotos', off: !p.share_photos, content: fotos },
-    { id: 'cuerpo', label: 'Cuerpo', off: !p.share_body, content: cuerpo },
+    { id: 'diario', label: 'Día a día', content: diario },
     {
       id: 'habitos',
       label: 'Hábitos',
       off: !p.share_wellbeing,
       content: habitos,
     },
-    { id: 'diario', label: 'Día a día', content: diario },
-    // Las notas van **después** del día a día y no entre las cuatro del medio:
-    // esas cuatro son exactamente las cuatro categorías del permiso, y esa
-    // correspondencia —"esta pestaña está apagada" y "esto no me lo
-    // compartieron" son la misma frase— es lo que hace legible la pantalla.
-    // Meter acá una que no es del paciente la rompería.
-    {
-      id: 'notas',
-      label: notes.length ? `Notas · ${notes.length}` : 'Notas',
-      content: (
-        <Section
-          title="Tus notas"
-          hint="Lo que observaste, lo que acordaron, qué mirar la próxima vez. Son tuyas: el paciente no las ve."
-        >
-          <Notes
-            patientId={p.patient_id}
-            notes={notes}
-            patientName={p.patient_name}
-          />
-        </Section>
-      ),
-    },
+    { id: 'comidas', label: 'Comidas', off: !p.share_meals, content: comidas },
+    { id: 'fotos', label: 'Fotos', off: !p.share_photos, content: fotos },
+    { id: 'cuerpo', label: 'Cuerpo', off: !p.share_body, content: cuerpo },
   ];
 
-  return <Tabs header={header} tabs={tabs} initial={tab ?? 'resumen'} />;
+  // El provider del modal del día envuelve a toda la ficha: lo abren el
+  // calendario y el gráfico de calorías, que son islas de cliente separadas.
+  // Ver `components/day-modal.tsx`.
+  return (
+    <DayModalProvider
+      dias={bolsas}
+      targetKcal={target}
+      goal={goal}
+      photoUrls={photoUrls}
+      shareMeals={p.share_meals}
+      sharePhotos={p.share_photos}
+      shareWellbeing={p.share_wellbeing}
+    >
+      <Tabs header={header} tabs={tabs} initial={tab ?? 'resumen'} />
+    </DayModalProvider>
+  );
 }
-
-/** Cuántos días dibuja el "día a día" como máximo. Ver el comentario de arriba:
- *  el corte es por peso del HTML, no por gusto. */
-const TOPE_DIARIO = 120;
 
 const OBJETIVO: Record<string, string> = {
   lose: 'Bajar de peso',
@@ -1026,6 +1144,28 @@ function calidades(sleep: SleepLog[]): [string, number][] {
     q,
     cuenta.get(q)!,
   ]);
+}
+
+/** Cuántas sesiones de cada intensidad, de la más suave a la más fuerte.
+ *
+ *  Los valores son los de `Intensity` en `lib/domain/enums` de la app. */
+const ESCALA_INTENSIDAD = ['light', 'moderate', 'vigorous'];
+
+const INTENSIDAD: Record<string, string> = {
+  light: 'Suave',
+  moderate: 'Moderada',
+  vigorous: 'Intensa',
+};
+
+function intensidades(activities: Activity[]): [string, number][] {
+  const cuenta = new Map<string, number>();
+  for (const a of activities) {
+    const k = a.intensity || 'moderate';
+    cuenta.set(k, (cuenta.get(k) ?? 0) + 1);
+  }
+  const conocidas = ESCALA_INTENSIDAD.filter((k) => cuenta.has(k));
+  const otras = [...cuenta.keys()].filter((k) => !ESCALA_INTENSIDAD.includes(k));
+  return [...conocidas, ...otras].map((k) => [k, cuenta.get(k)!]);
 }
 
 /** Suma los valores que caen en el mismo día. */

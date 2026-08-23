@@ -1,4 +1,4 @@
-import { comoFecha, diasEntre, rangoDeFechas } from './format.ts';
+import { diasEntre, rangoDeFechas } from './format.ts';
 
 /**
  * El período que **de verdad** se podía registrar.
@@ -75,23 +75,4 @@ export function ventanaEfectiva(
     empezoDespues: hayVentana && desdeEfectivo > desde,
     vacia: fechas.length === 0,
   };
-}
-
-/**
- * El texto que explica el recorte, o `null` si no hubo.
- *
- * Va como frase y no solo como número porque "13 de 13" sin la aclaración
- * parece un período de trece días elegido a mano, y la profesional necesita
- * saber que pidió treinta.
- */
-export function notaDeRecorte(v: Ventana): string | null {
-  if (!v.trackingSince) {
-    return 'No hay ningún registro en esta cuenta todavía.';
-  }
-  if (!v.empezoDespues) return null;
-  const d = comoFecha(v.desdeEfectivo).toLocaleDateString('es-AR', {
-    day: 'numeric',
-    month: 'long',
-  });
-  return `Empezó a registrar el ${d}: los ${v.dias} días desde entonces son los que se cuentan, no los ${v.diasPedidos} del período.`;
 }

@@ -8,7 +8,6 @@ import {
   fetchGoal,
   fetchMeals,
   fetchMeasurements,
-  fetchNotes,
   fetchSleep,
   fetchWater,
   fetchWeights,
@@ -101,7 +100,6 @@ export default async function PatientPage({
     goal,
     markers,
     alcohol,
-    notes,
   ] = await Promise.all([
     p.share_meals ? fetchMeals(supabase, id, from, to) : [],
     p.share_body ? fetchWeights(supabase, id, from, to) : [],
@@ -114,9 +112,6 @@ export default async function PatientPage({
     // actividad, el agua y el sueño.
     p.share_wellbeing ? fetchDayMarkers(supabase, id, from, to) : [],
     p.share_wellbeing ? fetchAlcohol(supabase, id, from, to) : [],
-    // Las notas son de la profesional, no del paciente: no dependen de ninguna
-    // categoría concedida.
-    fetchNotes(supabase, id),
   ]);
 
   const photoUrls = p.share_photos
@@ -147,7 +142,6 @@ export default async function PatientPage({
         measurements,
         markers,
         alcohol,
-        notes,
         goal,
         photoUrls,
       }}

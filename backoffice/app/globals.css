@@ -173,20 +173,6 @@ a:hover {
   gap: var(--s4);
 }
 
-.tag {
-  display: inline-block;
-  font-size: 12px;
-  padding: 2px var(--s3);
-  border-radius: 999px;
-  border: 1px solid var(--divider);
-  color: var(--text-muted);
-}
-
-.tag--ai {
-  border-color: var(--caution);
-  color: var(--caution);
-}
-
 button,
 .button {
   font: inherit;
@@ -333,64 +319,18 @@ td {
   padding-bottom: var(--s3);
 }
 
-/* Al bajar, la cabecera se achica: el nombre baja a tamaño de subtítulo y la
- * línea de contexto se va. Con 90 días abiertos, 96 px fijos de cabecera son
- * una franja que se lleva un séptimo de la pantalla para repetir un dato que
- * ya se leyó. */
-.topbar-id h1 {
-  transition: font-size 0.18s ease;
-}
-
-.topbar.is-compact .topbar-id {
-  align-items: center;
-  padding-bottom: var(--s2);
-}
-
-.topbar.is-compact .topbar-id h1 {
-  font-size: 18px;
-}
-
-.topbar.is-compact .topbar-back,
-.topbar.is-compact .topbar-sub {
-  display: none;
-}
-
-/* Lo que la cabecera achica se le devuelve al contenido de abajo, para que el
- * documento mida siempre lo mismo.
- *
- * Sin esto la página **se come el scroll**: la cabecera es `sticky`, o sea que
- * ocupa lugar en el flujo, y al compactarse el documento entero se acortaba 45
- * px. En una pestaña apenas más alta que la pantalla eso alcanzaba para que no
- * quedara nada que scrollear —medido: documento 619, pantalla 561, y el máximo
- * de scroll pasaba de 58 px a 13 en cuanto uno empezaba a bajar—.
- *
- * Va acá y no en un efecto de React porque tiene que resolverse en el **mismo**
- * cálculo de layout que el cambio de clase: si el documento llega a medirse más
- * corto, el navegador ya recortó la posición del scroll, y devolverle el alto
- * después no devuelve la posición.
- *
- * El relleno queda arriba de todo, así que al estar mirando algo de más abajo
- * ya salió de la pantalla: la franja de viewport que libera la cabecera
- * compacta se gana igual. Lo único que no cambia es el alto del documento.
- *
- * `--topbar-delta` lo mide `components/tabs.tsx` al montar y en cada cambio de
- * ancho; sin JavaScript vale 0 y tampoco hay compactado que compensar. */
-.topbar.is-compact + .page {
-  padding-top: calc(var(--s6) + var(--topbar-delta, 0px));
-}
-
+/* La cabecera mide siempre lo mismo. Hubo un modo compacto que al bajar
+ * escondía la línea de contexto y achicaba el nombre; se sacó en agosto de
+ * 2026 (ver `components/tabs.tsx`). Si vuelve, ojo: una cabecera `sticky` que
+ * cambia de alto acorta el documento y se come el scroll, y la compensación
+ * tiene que ser CSS en el mismo cálculo de layout — está en el historial de
+ * git, en la regla `.topbar.is-compact + .page`. */
 .topbar-back {
   margin: 0 0 var(--s2);
 }
 
 .topbar-sub {
   margin: var(--s1) 0 0;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .topbar-id h1 {
-    transition: none;
-  }
 }
 
 /* ── Pestañas ───────────────────────────────────────────────────────────── */
@@ -613,62 +553,11 @@ details[open] > summary .chev {
   }
 }
 
-/* ── El día, colapsado y abierto ────────────────────────────────────────── */
-
-.day {
-  padding: 0;
-  overflow: hidden;
-}
-
-.day + .day {
-  margin-top: var(--s3);
-}
-
-.day > summary {
-  display: flex;
-  align-items: center;
-  gap: var(--s4);
-  padding: var(--s4) var(--s5);
-}
-
-.day > summary:hover {
-  background: var(--hover);
-}
-
-.day-title {
-  min-width: 0;
-  flex: 1 1 auto;
-}
-
-/* Las fichas de los momentos son lo primero que se sacrifica cuando la fila no
- * entra: adentro del día está la misma información, y en pantalla angosta el
- * número de calorías importa más.
- *
- * Van con las dos clases —`.chips.day-chips`— y no con `.day-chips` sola: si no,
- * el `display: flex` de `.chips`, que está más abajo en este archivo, gana por
- * orden y las fichas no se esconden nunca. */
-.chips.day-chips {
-  display: none;
-}
-
-@media (min-width: 760px) {
-  .chips.day-chips {
-    display: flex;
-  }
-}
-
-.day-kcal {
-  flex: none;
-  text-align: right;
-}
+/* ── Las comidas de un día ──────────────────────────────────────────────── */
 
 .meal-kcal {
   margin-left: auto;
   white-space: nowrap;
-}
-
-.day-body {
-  padding: 0 var(--s5) var(--s5);
 }
 
 .slot {
@@ -726,103 +615,362 @@ details[open] > summary .chev {
   color: var(--text);
 }
 
-/* ── Calendario de adherencia ───────────────────────────────────────────── */
+/* ── El día a día, como calendario ──────────────────────────────────────── */
 
-/* El cuadrado lo calcula el componente y entra por `--cell`: treinta días con
- * el tamaño de noventa serían una estampilla en una carta de 1080 px. */
-.cal {
+/* Un mes por bloque, y **una grilla de verdad**: siete columnas separadas por
+ * rayas verticales finas, que son la estructura y no un adorno. La primera
+ * versión eran cartas con borde y sombra, una por día, con las rayas pintadas
+ * en el hueco entre cartas: dos sistemas visuales encimados, y las rayas a tres
+ * píxeles del borde de la carta se leían como un borde doble. Acá el día es una
+ * celda —sin borde propio, sin sombra— y lo que se toca se nota al pasar por
+ * encima. Las columnas se reparten el ancho sin mínimo, así en un teléfono
+ * siguen siendo siete. Lo que no entra se esconde de abajo para arriba:
+ * primero la línea de alrededor, después la unidad; el número del día y las
+ * calorías se quedan. */
+.dcal-month + .dcal-month {
+  margin-top: var(--s7);
+}
+
+.dcal-title {
+  margin-bottom: var(--s3);
+}
+
+:root {
+  --dcal-line: color-mix(in srgb, var(--text) 12%, transparent);
+}
+
+.dcal-dow,
+.dcal-grid {
   display: grid;
-  grid-auto-flow: column;
-  grid-template-rows: repeat(7, var(--cell));
-  gap: 3px;
-  width: max-content;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0;
 }
 
-.cal-cell {
-  width: var(--cell);
-  height: var(--cell);
-  border-radius: 3px;
-  /* El día sin registro es gris y opaco, no un contorno: un borde de un píxel
-   * al 9 % desaparece, y el hueco es justamente lo que hay que ver. */
-  background: var(--surface-raised);
-  border: 1px solid var(--hairline);
-}
-
-.cal-cell[data-on='1'] {
-  border-color: transparent;
-}
-
-/* Anterior al primer registro de la cuenta.
- *
- * Ni violeta ni el gris del día vacío: es una **tercera** categoría —"todavía
- * no existía"— y con el gris de "no registró" se leía como diecisiete días de
- * abandono al principio de todo mes. Sin relleno y con el borde punteado se ve
- * que el día está ahí sin afirmar nada sobre él. */
-.cal-cell[data-on='na'] {
-  background: transparent;
-  border-style: dashed;
-  border-color: color-mix(in srgb, var(--hairline) 70%, transparent);
-}
-
-.cal-days {
-  display: grid;
-  grid-template-rows: repeat(7, var(--cell));
-  gap: 3px;
-  margin-right: var(--s2);
+.dcal-dow {
   font-size: 10.5px;
-  line-height: var(--cell);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--dcal-line);
+}
+
+.dcal-dow span {
+  padding: 0 var(--s3) var(--s2);
+}
+
+/* La raya entre columnas es el borde izquierdo de cada celda salvo la primera
+ * de la fila: continua de arriba abajo, también por las celdas vacías y las
+ * que quedan fuera del mes, que están en la grilla aunque no dibujen nada. */
+.dcal-dow span:not(:nth-child(7n + 1)),
+.dcal-cell:not(:nth-child(7n + 1)) {
+  border-left: 1px solid var(--dcal-line);
+}
+
+.dcal-cell {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 2px;
+  min-height: 76px;
+  min-width: 0;
+  padding: var(--s3) var(--s3) var(--s4);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  font: inherit;
+  color: var(--text);
+  text-align: left;
+}
+
+/* Fuera del mes o del período: la celda está, para que la grilla no se corra,
+ * y no dibuja nada. */
+.dcal-cell--off {
+  pointer-events: none;
+}
+
+/* El día sin registro: solo el número, en gris. El hueco se ve porque al lado
+ * hay días llenos. */
+.dcal-cell--empty {
   color: var(--text-muted);
 }
 
-/* El calendario ocupa un tercio de la carta y antes el resto quedaba en blanco.
- * La fila son tres bloques: el calendario, lo que explica cómo leerlo y lo
- * mismo contado en números —la franja de los sábados se ve, pero "nueve días
- * seguidos" hay que contarlo con el dedo—. */
-.cal-layout {
+/* El día con registro es un botón. Se nota al pasar por encima y al tener el
+ * foco, con un fondo suave y no con un borde: el borde es de la grilla. */
+.dcal-cell--on {
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.dcal-cell--on:hover {
+  background: var(--hover);
+}
+
+.dcal-cell--on:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.dcal-top {
   display: flex;
-  gap: var(--s6);
-  align-items: stretch;
-  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--s2);
 }
 
-.cal-legend {
-  flex: 1 1 200px;
-  max-width: 32ch;
-  margin: 0;
-  align-self: center;
+.dcal-num {
+  font-size: 12.5px;
+  line-height: 1.3;
+  color: var(--text-muted);
 }
 
-/* Dos columnas y no cuatro en fila: cuatro datos repartidos en 700 px quedan
- * tan separados entre sí que dejan de leerse como un bloque. */
-.cal-facts {
-  flex: 1 1 260px;
+/* Hoy: el número en acento, que es lo único que lo distingue. */
+.dcal-cell[data-today='1'] .dcal-num {
+  color: var(--accent-text);
+  font-weight: 600;
+}
+
+/* Enfermedad y alcohol, como puntos arriba a la derecha: es lo que explica al
+ * resto de la celda y tiene que verse antes de abrirla. Son los mismos dos
+ * colores de las bandas de los gráficos de Hábitos, y los únicos que codifican
+ * algo en esta pantalla. */
+.dcal-marks {
+  display: flex;
+  gap: 3px;
+  flex: none;
+  padding-top: 4px;
+}
+
+.dcal-mark {
+  display: block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+.dcal-mark--sick {
+  background: var(--caution);
+}
+
+.dcal-mark--drink {
+  background: var(--info);
+}
+
+.dcal-kcal {
+  margin-top: auto;
+  font-size: 15px;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dcal-kcal small {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-variant-numeric: normal;
+}
+
+/* El mismo ámbar del gráfico de calorías: el día que se pasó del objetivo. */
+.dcal-kcal--over {
+  color: var(--caution);
+}
+
+/* "sin comidas" donde entra; una raya donde no. */
+.dcal-kcal--none {
+  font-size: 11.5px;
+}
+
+.dcal-short {
+  display: none;
+}
+
+@media (max-width: 520px) {
+  .dcal-long {
+    display: none;
+  }
+  .dcal-short {
+    display: inline;
+  }
+}
+
+/* Las cuatro rayitas: desayuno, almuerzo, cena, snacks, siempre en ese orden y
+ * siempre las cuatro; la que falta se ve apagada, no ausente. Se reparten el
+ * ancho de la celda para seguir siendo cuatro en un teléfono. */
+.dcal-slots {
+  display: flex;
+  gap: 2px;
+}
+
+.dcal-slots i {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--surface-raised);
+}
+
+.dcal-slots i[data-on='1'] {
+  background: var(--chart-intake);
+}
+
+/* Hasta dos líneas y después se corta: "71 min · 3 vasos · 7 h 58" no entra en
+ * una en una celda de 140 px, y cortado a una línea se perdía justo el sueño,
+ * que es lo último. */
+.dcal-sub {
+  font-size: 11px;
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+@media (max-width: 760px) {
+  .dcal-sub {
+    display: none;
+  }
+}
+
+@media (max-width: 520px) {
+  .dcal-cell {
+    min-height: 56px;
+    padding: var(--s2);
+  }
+  .dcal-kcal {
+    font-size: 12.5px;
+  }
+  .dcal-kcal small {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dcal-cell--on {
+    transition: none;
+  }
+}
+
+/* ── El día abierto, adentro del modal ──────────────────────────────────── */
+
+/* Una sola columna: no hay foto grande que poner al costado, y los cuadros de
+ * reparto ya van de a dos adentro. Va con las dos clases para ganarle a la
+ * regla de dos columnas del modal de la foto, que tiene la misma especificidad
+ * y está en una media query.
+ *
+ * El ancho se acota en el **diálogo** y no en la caja: acotado en la caja, el
+ * diálogo seguía midiendo sus 920 y la caja quedaba pegada a la izquierda con
+ * una franja vacía a la derecha. */
+.modal--day {
+  max-width: min(880px, 94vw);
+}
+
+.modal-box.modal-box--day {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.dd-actions {
+  display: flex;
+  gap: var(--s2);
+  flex: none;
+}
+
+/* Las flechas de día anterior y siguiente, en el color del texto: son la
+ * navegación principal del modal y en gris se leían como deshabilitadas. La
+ * cruz lleva el acento, que es lo que la distingue de las flechas de al lado. */
+.dd-nav {
+  color: var(--text);
+  border-color: var(--divider);
+  font-size: 18px;
+  line-height: 1;
+  padding-bottom: 2px;
+}
+
+.dd-nav:hover:not(:disabled) {
+  border-color: var(--accent);
+  background: var(--hover);
+}
+
+.dd-nav:disabled {
+  color: var(--text-muted);
+}
+
+.dd-close {
+  color: var(--accent-text);
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 20%, transparent);
+}
+
+.dd-close:hover {
+  color: var(--accent-text);
+  background: color-mix(in srgb, var(--accent) 32%, transparent);
+}
+
+.dd-header {
+  margin: 0 0 var(--s3);
+}
+
+/* La barra contra el objetivo: la pista y el número, en una fila. */
+.dd-target {
   display: grid;
-  gap: var(--s5) var(--s6);
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  align-content: center;
-  margin: 0;
-  padding-left: var(--s6);
-  border-left: 1px solid var(--divider);
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--s4);
 }
 
-.cal-fact dd {
-  margin: 0;
+/* Los dos cuadros de reparto, de a dos cuando entran. El piso es menor que el
+ * de `.grid--auto` porque acá no hay gráficos de 320 px que proteger. Las dos
+ * cartas miden lo mismo de alto: la grilla ya empareja las celdas, y la carta
+ * de adentro se estira hasta llenar la suya. */
+.dd-grid {
+  display: grid;
+  gap: var(--s4);
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
 }
 
-.cal-fact dd:first-of-type {
+.dd-grid > div,
+.grid--parejo > div {
+  display: flex;
+  flex-direction: column;
+}
+
+.dd-grid > div > .card,
+.grid--parejo > div > .card {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  /* Lo que sobra de alto se reparte entre las filas, así la carta de cuatro
+   * momentos no queda con las filas arriba y un hueco abajo. */
+  justify-content: space-evenly;
+}
+
+.dd-habitos {
+  display: grid;
+  gap: var(--s3);
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+}
+
+.dd-habito {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+  padding: var(--s4) var(--s5);
+}
+
+.dd-habito-value {
   font-size: 19px;
   line-height: 1.2;
 }
 
-/* En pantalla angosta los tres bloques se apilan y la raya vertical, que
- * separaba columnas, pasa a cortar el bloque al medio. */
-@media (max-width: 900px) {
-  .cal-facts {
-    padding-left: 0;
-    border-left: 0;
-    padding-top: var(--s5);
-    border-top: 1px solid var(--divider);
-  }
+.dd-habito-kcal {
+  font-size: 12.5px;
+  margin-left: var(--s3);
+}
+
+.dd-sesiones {
+  list-style: none;
+  margin: 0;
+  padding: 0;
 }
 
 /* ── Barra de reparto ───────────────────────────────────────────────────── */
@@ -1131,10 +1279,6 @@ details[open] > summary .chev {
   font-variant-numeric: normal;
 }
 
-.modal-pos {
-  margin: auto 0 0;
-}
-
 /* ── Hábitos ────────────────────────────────────────────────────────────── */
 
 /* La carta es una columna: título, bajada, gráfico y el pie con los números que
@@ -1165,6 +1309,109 @@ details[open] > summary .chev {
 
 .habito-pie dd {
   margin: 0;
+}
+
+/* Las fichas de intensidad o de calidad, debajo del pie de números. */
+.habito-chips {
+  padding-top: var(--s3);
+}
+
+/* La franja de contexto debajo de las tres cartas de Hábitos: los números en
+ * fila y, si hubo alcohol, el gráfico de tragos por día al lado. Mide lo que
+ * tiene que decir: en un período sin nada es una sola fila de números. */
+.contexto {
+  margin-top: var(--s4);
+  display: flex;
+  gap: var(--s6);
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+
+.contexto-datos {
+  flex: 1 1 420px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  gap: var(--s4) var(--s6);
+}
+
+.contexto-datos dd:first-of-type {
+  font-size: 19px;
+  line-height: 1.2;
+}
+
+.contexto-grafico {
+  flex: 1 1 320px;
+  min-width: 0;
+}
+
+/* ── Las tarjetas del tablero ───────────────────────────────────────────── */
+
+.kpi-grid {
+  display: grid;
+  gap: var(--s3);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.kpi-grid + .kpi-grid {
+  margin-top: var(--s3);
+}
+
+@media (min-width: 880px) {
+  .kpi-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.kpi {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s1);
+  padding: var(--s4) var(--s5);
+}
+
+.kpi-value {
+  font-size: 26px;
+  line-height: 1.15;
+  margin-top: var(--s1);
+}
+
+.kpi-unit {
+  font-size: 13px;
+  margin-left: 5px;
+  color: var(--text-muted);
+  font-variant-numeric: normal;
+}
+
+/* La línea de contexto va siempre, aunque esté vacía, para que las visuales de
+ * una fila queden a la misma altura. */
+.kpi-sub {
+  min-height: 1.4em;
+}
+
+.kpi-visual {
+  margin-top: auto;
+  padding-top: var(--s3);
+}
+
+.kpi-track {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--s3);
+}
+
+.kpi-dots {
+  flex-wrap: wrap;
+}
+
+.spark {
+  display: block;
+  width: 100%;
+}
+
+.spark--vacio {
+  border-bottom: 1px dashed var(--hairline);
 }
 
 /* ── Medidas corporales ─────────────────────────────────────────────────── */
@@ -1226,7 +1473,7 @@ details[open] > summary .chev {
   pointer-events: none;
 }
 
-/* ── Contexto del día: enfermedad, alcohol y notas ───────────────────────── */
+/* ── Contexto del día: enfermedad y alcohol ─────────────────────────────── */
 
 /*
  * Lo que califica un día sin medirlo. Ver `docs/contexto-diario.md`.
@@ -1241,83 +1488,15 @@ details[open] > summary .chev {
   background: color-mix(in srgb, var(--caution) 14%, var(--surface-raised));
 }
 
-/* La nota de la profesional se distingue de los datos del paciente: es lo único
- * de esta pantalla que escribió ella, y confundirlo con un registro sería leer
- * su propia hipótesis como si fuera un dato. */
-.chip--note {
-  color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 14%, var(--surface-raised));
-}
-
 .day-context {
   border-left: 2px solid color-mix(in srgb, var(--caution) 50%, transparent);
   padding-left: var(--s3);
-  margin-bottom: var(--s4);
 }
 
 .day-context p {
   margin: 0 0 var(--s1);
   font-size: 13px;
   line-height: 1.6;
-}
-
-.day-context .day-note {
-  border-left: 2px solid color-mix(in srgb, var(--accent) 50%, transparent);
-  padding-left: var(--s3);
-  margin-left: calc(var(--s3) * -1 - 2px);
-}
-
-/* ── Notas ──────────────────────────────────────────────────────────────── */
-
-.note-input {
-  width: 100%;
-  margin-top: var(--s2);
-  padding: var(--s3);
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--hairline);
-  background: var(--surface-raised);
-  color: var(--text);
-  font: inherit;
-  /* Solo vertical: el `resize` libre de un textarea adentro de una carta deja
-   * arrastrarlo más ancho que el contenedor y romper el layout. */
-  resize: vertical;
-}
-
-.note-input:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 1px;
-}
-
-.note-date {
-  padding: var(--s2) var(--s3);
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--hairline);
-  background: var(--surface-raised);
-  color: var(--text);
-  font: inherit;
-  /* El calendario nativo del navegador dibuja su ícono en negro sobre el tema
-   * oscuro y queda invisible. `color-scheme` le dice qué tema usar sin tener
-   * que reimplementar el control. */
-  color-scheme: light dark;
-}
-
-/* El salto de línea que escribió la profesional es información: un párrafo con
- * tres viñetas escritas a mano se convertía en un bloque corrido. */
-.note-body {
-  white-space: pre-wrap;
-  margin: var(--s2) 0 0;
-  line-height: 1.65;
-}
-
-button.ghost {
-  background: transparent;
-  border-color: transparent;
-  color: var(--text-muted);
-}
-
-button.ghost:hover {
-  color: var(--text);
-  border-color: var(--hairline);
 }
 
 /* La leyenda de las bandas de contexto de un gráfico.
@@ -1370,4 +1549,143 @@ button.ghost:hover {
   font-size: 12px;
   white-space: pre-wrap;
   word-break: break-word;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * Movimiento.
+ *
+ * Todo lo que aparece, aparece en unos 200 ms y no de golpe: lo que se abre
+ * (un colapsable, el modal, una pestaña) entra con un fundido corto y un
+ * desplazamiento de unos píxeles, y las barras crecen desde cero. Es lo justo
+ * para que el ojo siga qué cambió; más largo estorba a quien abre treinta
+ * comidas seguidas. Con `prefers-reduced-motion` se apaga todo junto, abajo.
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+@keyframes nm-entrar {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes nm-subir {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes nm-modal {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes nm-fondo {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes nm-crecer-y {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+
+@keyframes nm-crecer-x {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+/* El cuerpo de un colapsable, al abrirse. El alto no se anima —un `<details>`
+ * nativo no lo permite sin medirlo con JavaScript— pero el contenido entra con
+ * un fundido, que es lo que se percibe. */
+details[open] > .meal-body {
+  animation: nm-entrar 0.2s ease-out both;
+}
+
+/* El modal y su fondo oscuro. Solo la apertura: el cierre de un `<dialog>`
+ * nativo es inmediato y animarlo requiere demorar el `close()`. */
+.modal[open] {
+  animation: nm-modal 0.22s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.modal[open]::backdrop {
+  animation: nm-fondo 0.22s ease-out both;
+}
+
+/* La pestaña que entra. Salir de `display: none` reinicia la animación, así
+ * que cada cambio de pestaña la vuelve a correr sin tocar el árbol. */
+.panel:not([hidden]) {
+  animation: nm-subir 0.2s ease-out both;
+}
+
+/* Las barras de los gráficos crecen desde el piso, y las pistas de reparto
+ * desde la izquierda. En un SVG el origen se fija con `transform-box`. */
+.chart rect.bar {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: nm-crecer-y 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.split-fill {
+  transform-origin: 0 50%;
+  animation: nm-crecer-x 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+/* Botones, pestañas y fichas: el color no salta al pasar por encima. */
+button,
+.button,
+.tab,
+.seg > a {
+  transition: color 0.15s ease, background-color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.stat,
+.card {
+  transition: border-color 0.15s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  details[open] > .meal-body,
+  .modal[open],
+  .modal[open]::backdrop,
+  .panel:not([hidden]),
+  .chart rect.bar,
+  .split-fill {
+    animation: none;
+  }
+  button,
+  .button,
+  .tab,
+  .seg > a,
+  .stat,
+  .card {
+    transition: none;
+  }
 }

@@ -45,10 +45,6 @@ export function MyCode() {
         >
           {code ?? '…'}
         </div>
-        <p className="caption" style={{ marginTop: 'var(--s2)', maxWidth: 460 }}>
-          Quien quiera que la sigas lo carga en la app, en Perfil → Mi
-          nutricionista, y ahí elige qué te deja ver.
-        </p>
       </div>
 
       {code && (

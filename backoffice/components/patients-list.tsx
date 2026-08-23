@@ -44,20 +44,14 @@ export function PatientsList({
   const orden = [...patients].sort((a, b) =>
     (a.patient_name ?? '').localeCompare(b.patient_name ?? '', 'es'),
   );
+  const resumen = resumenDeLaSemana(patients, diasConCarga);
 
   return (
     <>
       <header className="topbar">
         <div className="topbar-inner topbar-inner--plain">
           <div className="topbar-id">
-            <div>
-              <h1>Pacientes</h1>
-              <p className="topbar-sub caption">
-                {patients.length === 0
-                  ? 'Quienes te dieron acceso a su seguimiento.'
-                  : `${patients.length} ${patients.length === 1 ? 'persona te dio' : 'personas te dieron'} acceso a su seguimiento.`}
-              </p>
-            </div>
+            <h1>Pacientes</h1>
             <SignOut />
           </div>
         </div>
@@ -84,7 +78,7 @@ export function PatientsList({
 
         {orden.length > 0 && (
           <>
-            <div className="section-header">Con acceso vigente</div>
+            <div className="section-header">{resumen}</div>
             <div className="grid grid--auto">
               {orden.map((p) => (
                 <Card
@@ -176,6 +170,25 @@ function Card({
       )}
     </Link>
   );
+}
+
+/** La línea que encabeza la lista: cuántos son y, si los hay, cuántos se
+ *  quedaron sin cargar nada en la semana. Es la respuesta corta a la pregunta
+ *  con la que se abre la pantalla; quiénes son lo dice cada ficha. Solo cuenta
+ *  a quienes comparten las comidas: de los demás no se sabe si cargaron. */
+function resumenDeLaSemana(
+  patients: PatientRow[],
+  diasConCarga: Record<string, string[]>,
+): string {
+  const n = patients.length;
+  const sinCargar = patients.filter(
+    (p) => p.share_meals && (diasConCarga[p.patient_id] ?? []).length === 0,
+  ).length;
+  const partes = [`${n} ${n === 1 ? 'paciente' : 'pacientes'}`];
+  if (sinCargar > 0) {
+    partes.push(`${sinCargar} sin cargar en la última semana`);
+  }
+  return partes.join(' · ');
 }
 
 function categorias(p: PatientRow): string[] {

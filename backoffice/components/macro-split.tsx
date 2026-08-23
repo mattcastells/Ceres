@@ -18,15 +18,21 @@ import { miles } from '@/lib/format';
  * El promedio va sobre los días **con comidas cargadas** y no sobre el período,
  * por lo mismo que en el reparto por momento: dividir por los días en blanco
  * diría que come menos, cuando lo que pasó es que no registró.
+ *
+ * Con `diasConComida = 1` y `porDia = false` es el mismo cuadro para un solo
+ * día, que es como lo usa la ficha del día.
  */
 export function MacroSplit({
   meals,
   diasConComida,
   goal,
+  porDia = true,
 }: {
   meals: Meal[];
   diasConComida: number;
   goal: Goal | null;
+  /** Si los gramos son un promedio diario o el total de ese día. */
+  porDia?: boolean;
 }) {
   if (!diasConComida || meals.length === 0) {
     return (
@@ -106,7 +112,7 @@ export function MacroSplit({
 
             <span className="macro-value tnum">
               {miles(m.gramos)}
-              <span className="muted"> g/día</span>
+              <span className="muted">{porDia ? ' g/día' : ' g'}</span>
             </span>
 
             <span className="macro-goal caption tnum">

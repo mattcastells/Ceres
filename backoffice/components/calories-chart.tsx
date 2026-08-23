@@ -1,8 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { diasEntre, fechaCorta, fechaMedia, miles } from '@/lib/format';
+import { fechaCorta, fechaMedia, miles } from '@/lib/format';
 import { ejeLindo, useChartWidth } from '@/lib/chart';
+import { useAbrirDia } from '@/components/day-modal';
 
 export type DayKcal = { date: string; kcal: number };
 
@@ -16,30 +17,33 @@ export type DayKcal = { date: string; kcal: number };
  * Las barras nacen en el cero y no en el mínimo del rango: en una magnitud, un
  * eje truncado convierte 1.900 contra 2.100 en el doble.
  *
- * **El eje X es el período elegido arriba.** Los días sin comidas se saltean
- * —una barra en cero diría que comió cero, que no es lo que pasó— pero cada
- * barra cae en su fecha, así que el salteo se ve como el hueco que es. Antes
- * las barras se apretaban una al lado de la otra y siete días desparramados en
- * un mes se leían como una semana de registro seguido.
+ * **El eje X son los días con comidas, uno al lado del otro.** Con el período
+ * de noventa días de alguien que empezó hace treinta, un eje calendario era dos
+ * tercios de gráfico en blanco y las barras apretadas en la punta derecha. Cada
+ * barra ocupa un lugar y el globito dice de qué fecha es; los extremos del eje
+ * son el primer y el último día con comidas. Los días sin registro no se
+ * dibujan —una barra en cero diría que comió cero, que no es lo que pasó— y
+ * quién dejó de registrar lo cuenta el calendario del día a día.
  *
  * El día que se pasó del objetivo va en otro tono. Es la única codificación por
  * color de la pantalla y se sostiene sola: el tono de "por encima" está sobre
  * la línea punteada y el de "por debajo" abajo, así que la posición dice lo
  * mismo que el color y no hace falta distinguirlos para leer el gráfico.
+ *
+ * Cada barra **se abre**: el clic va al mismo modal del día que usa el
+ * calendario (`useAbrirDia`). El gráfico contesta "cuánto" y el modal "qué",
+ * sin pasar por la pestaña del día a día.
  */
 export function CaloriesChart({
   days,
   target,
-  desde,
-  hasta,
 }: {
   days: DayKcal[];
   target: number | null;
-  desde?: string;
-  hasta?: string;
 }) {
   const [hover, setHover] = useState<number | null>(null);
   const [box, ancho] = useChartWidth();
+  const abrir = useAbrirDia();
 
   const W = Math.max(ancho, 240);
   const H = 240;
@@ -51,17 +55,15 @@ export function CaloriesChart({
     Math.max(...days.map((d) => d.kcal), target ?? 0),
     5,
   );
-  const inicio = desde ?? days[0]?.date ?? '';
-  const fin = hasta ?? days[days.length - 1]?.date ?? inicio;
-  const totalDias = Math.max(diasEntre(inicio, fin) + 1, 1);
+  const inicio = days[0]?.date ?? '';
+  const fin = days[days.length - 1]?.date ?? inicio;
 
-  const step = innerW / totalDias;
+  const step = innerW / Math.max(days.length, 1);
   // 2 px de aire entre barras: sin el respiro, dos días seguidos se leen como
   // un bloque. Y un techo de 56: en el período de 7 días son cinco barras
   // repartiéndose mil píxeles, y sin el tope cada una queda de 190 px de ancho.
   const barW = Math.min(Math.max(step - 2, 1.5), 56);
-  const x = (fecha: string) =>
-    PAD.left + diasEntre(inicio, fecha) * step + (step - barW) / 2;
+  const x = (i: number) => PAD.left + i * step + (step - barW) / 2;
 
   const y = (v: number) => PAD.top + innerH - (v / max) * innerH;
   const point = hover === null ? null : days[hover];
@@ -79,7 +81,7 @@ export function CaloriesChart({
           height={H}
           style={{ display: 'block' }}
           role="img"
-          aria-label="Calorías consumidas por día"
+          aria-label="Calorías consumidas por día registrado"
           onMouseLeave={() => setHover(null)}
         >
           {ticks.map((v) => (
@@ -110,7 +112,8 @@ export function CaloriesChart({
             return (
               <rect
                 key={d.date}
-                x={x(d.date)}
+                className="bar"
+                x={x(i)}
                 y={y(d.kcal)}
                 width={barW}
                 height={Math.max(innerH - (y(d.kcal) - PAD.top), 0)}
@@ -121,17 +124,20 @@ export function CaloriesChart({
             );
           })}
 
-          {/* Zonas de hover más anchas que las barras: en el período de un año
-              una barra mide un píxel y medio. */}
+          {/* Zonas de hover más anchas que las barras: con un año de registro
+              diario una barra mide un píxel y medio. Son también el clic que
+              abre el día, por lo mismo: a una barra finita no se le apunta. */}
           {days.map((d, i) => (
             <rect
               key={`zona-${d.date}`}
-              x={x(d.date) + barW / 2 - Math.max(step, 8) / 2}
+              x={x(i) + barW / 2 - Math.max(step, 8) / 2}
               y={PAD.top}
               width={Math.max(step, 8)}
               height={innerH}
               fill="transparent"
+              style={abrir ? { cursor: 'pointer' } : undefined}
               onMouseEnter={() => setHover(i)}
+              onClick={() => abrir?.(d.date)}
             />
           ))}
 
@@ -159,10 +165,6 @@ export function CaloriesChart({
             </>
           )}
 
-          {/* Los extremos son los del **período**, no los del primer y último
-              día con datos: si dicen "28 jul – 3 ago" cuando arriba está
-              elegido un mes, el gráfico está contando otra cosa que el resto de
-              la pantalla. */}
           <text
             x={PAD.left}
             y={H - 7}
@@ -172,16 +174,18 @@ export function CaloriesChart({
           >
             {fechaCorta(inicio)}
           </text>
-          <text
-            x={W - PAD.right}
-            y={H - 7}
-            textAnchor="end"
-            fontSize="11"
-            fill="var(--text-muted)"
-            className="tnum"
-          >
-            {fechaCorta(fin)}
-          </text>
+          {fin !== inicio && (
+            <text
+              x={W - PAD.right}
+              y={H - 7}
+              textAnchor="end"
+              fontSize="11"
+              fill="var(--text-muted)"
+              className="tnum"
+            >
+              {fechaCorta(fin)}
+            </text>
+          )}
         </svg>
       )}
 
