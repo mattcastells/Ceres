@@ -7,7 +7,6 @@
 import type { PatientData } from '@/components/patient-view';
 import type {
   AlcoholLog,
-  CareNote,
   DayMarker,
   Meal,
   MealItem,
@@ -215,25 +214,6 @@ export function sampleData(days = 30, empiezaEnMedio = false): PatientData {
       },
     ]);
 
-  const notes: CareNote[] = [
-    {
-      id: 'n1',
-      patient_id: 'demo',
-      local_date: null,
-      body: 'Arrancamos con el plan de descenso. Prioridad: sostener el desayuno, que es la comida que más se saltea.',
-      created_at: `${conDatos[0]}T10:00:00-03:00`,
-      updated_at: `${conDatos[0]}T10:00:00-03:00`,
-    },
-    {
-      id: 'n2',
-      patient_id: 'demo',
-      local_date: diaEnfermo,
-      body: 'Semana con angina. No leer la caída de actividad como abandono.',
-      created_at: `${diaEnfermo}T18:00:00-03:00`,
-      updated_at: `${diaEnfermo}T18:00:00-03:00`,
-    },
-  ];
-
   return {
     patient: {
       patient_id: 'demo',
@@ -258,7 +238,6 @@ export function sampleData(days = 30, empiezaEnMedio = false): PatientData {
     measurements,
     markers,
     alcohol,
-    notes,
     goal: {
       base_calorie_target: 2000,
       protein_g: 120,

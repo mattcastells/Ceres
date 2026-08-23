@@ -20,16 +20,12 @@ Los **datos del paciente** son de solo lectura. No hay una sola política de
 escritura sobre ellos para el profesional, así que no es una convención de la
 interfaz: es que la base no tiene por dónde.
 
-Lo único que el panel escribe son **sus propias notas** (`care_notes`,
-migración 42), que son una tabla aparte. Dos cosas de esas notas, porque son las
-que se preguntan:
-
-- **Las lee solo quien las escribió.** El paciente no las ve, ni en la app ni
-  por API, ni siquiera las que son sobre él. Fue un pedido explícito del dueño
-  de la cuenta y está fijado en `supabase/tests/care_contexto_test.sql`.
-- **Revocar el acceso no las borra, pero corta la escritura.** El texto es de
-  quien lo escribió; seguir anotando sobre alguien que cortó el acceso es lo que
-  el corte tiene que impedir.
+**El panel no escribe nada.** Hubo una pestaña de notas propias de la profesional
+(`care_notes`, migración 42) y se sacó en agosto de 2026 porque no se usaba; la
+tabla, sus políticas y sus tests (`supabase/tests/care_contexto_test.sql`)
+siguen en la base, sin pantalla que los use. Si algún día vuelve, las dos reglas
+que tenía eran: las lee solo quien las escribió —el paciente no las ve, ni en la
+app ni por API—, y revocar el acceso no las borra pero corta la escritura.
 
 ## El período efectivo, que es de donde salen todos los denominadores
 
@@ -176,19 +172,29 @@ maqueta HTML parecida que se desincroniza al primer cambio. `PatientsList`
 está partido igual y por lo mismo.
 
 Una ficha son 30 días de comidas, o 365, y en una sola tira eso es imposible de
-leer. La pantalla se reparte en **siete pestañas** —Resumen, Comidas, Fotos,
-Cuerpo, Hábitos, Día a día, Notas— y **las cuatro del medio son exactamente las
-cuatro categorías con las que se concede el permiso** (`share_meals`,
-`share_photos`, `share_body`, `share_wellbeing`): así "esta pestaña está
-apagada" y "esto no me lo compartieron" son la misma frase.
+leer. La pantalla se reparte en **seis pestañas**, en el orden en que se usan
+en una consulta: Resumen, Día a día, Hábitos, Comidas, Fotos, Cuerpo. **Cuatro
+de ellas son exactamente las cuatro categorías con las que se concede el
+permiso** (`share_wellbeing`, `share_meals`, `share_photos`, `share_body`): así
+"esta pestaña está apagada" y "esto no me lo compartieron" son la misma frase.
 
-Las Notas van **al final y fuera de esas cuatro**, por lo mismo: no son del
-paciente. Y por eso también el contexto del día —enfermedad, descanso, alcohol—
-entró en `share_wellbeing` en vez de estrenar una quinta categoría, que habría
-roto la correspondencia para agregar un interruptor que nadie pidió. La categoría que el paciente no comparte
-**no se esconde**: la pestaña queda con un punto ámbar y adentro dice qué falta
-y dónde se prende. Una pestaña ausente se leería como "esto no existe" en vez de
-"esto no me lo dieron".
+Por eso el contexto del día —enfermedad, descanso, alcohol— entró en
+`share_wellbeing` en vez de estrenar una quinta categoría, que habría roto la
+correspondencia para agregar un interruptor que nadie pidió. La categoría que el
+paciente no comparte **no se esconde**: la pestaña queda con un punto ámbar y
+adentro dice qué falta y dónde se prende. Una pestaña ausente se leería como
+"esto no existe" en vez de "esto no me lo dieron".
+
+El Resumen es **un tablero de pocas tarjetas** (`Kpi` en `components/stat.tsx`):
+cada una dice tres cosas —el número, una línea de contexto y una mini-visual:
+la pista contra el objetivo, los puntos de los últimos catorce días, una
+sparkline (`components/spark.tsx`)—. Fue primero una fila de fichas de un
+número, después dieciséis fichas en cuatro grupos, y las dos eran una pared
+que había que leer entera para armarse la imagen. La sparkline es la única
+excepción a "el SVG se dibuja al ancho real de la caja": no tiene texto que se
+deforme, así que un `viewBox` estirado está bien y se ahorra un observer por
+tarjeta. No reemplaza a un gráfico —no se lee un valor de ahí—: dice la forma
+al lado del número que sí se lee. Los dos gráficos grandes siguen debajo.
 
 Tres decisiones que conviene no deshacer sin querer:
 
@@ -199,42 +205,62 @@ Tres decisiones que conviene no deshacer sin querer:
   "Comidas" a "Cuerpo" volvería a pedir comidas, peso y medidas y a firmar de
   nuevo las URLs de todas las fotos para mostrar algo que ya estaba en la
   página. El período **sí** navega, porque ahí cambian los datos.
-- **Los paneles inactivos se ocultan con `hidden`, no se desmontan.** Un día que
+- **Los paneles inactivos se ocultan con `hidden`, no se desmontan.** Lo que
   alguien abrió sigue abierto al volver.
 - **Los colapsables son `<details>` nativos**, sin estado de React. Abren sin
   JavaScript, el teclado y el lector de pantalla ya saben qué son, y el Ctrl+F
   del navegador entra igual en lo cerrado. Como efecto de borde, la pantalla
   carga liviana: las fotos son `loading="lazy"` adentro de un `<details>`
-  cerrado, así que el navegador no baja veintiocho imágenes para mostrar una
-  lista de fechas.
+  cerrado, así que el navegador no baja una imagen por comida hasta que alguien
+  abre esa comida.
 
-El día a día **nace cerrado**, con el más reciente abierto. Cerrado, cada día es
-una fila que contesta lo que se pregunta primero —qué momentos registró, cuántas
-calorías, cuánto se corrió del objetivo— y adentro cada comida es otra fila que
-se abre para ver los ítems y la foto. Abierto de entrada, para llegar al martes
-había que pasar por cuatro tablas de seis columnas del miércoles.
+El día a día es **un calendario** (`components/day-calendar.tsx`): un mes por
+bloque, del más reciente al más viejo, una celda por día, y el día se abre en
+un modal. Antes era una lista de filas colapsables, una por día con registro.
+Servía para leer de corrido pero no para ubicarse: "¿qué pasó el fin de semana
+del 15?" era bajar contando, y un hueco de tres días no se veía porque los días
+sin registro no tenían fila. En el calendario el hueco es una celda con el
+número solo entre dos llenas, y el sábado está debajo del sábado anterior.
 
-La cabecera es **fija** y se achica al bajar: leyendo el 12 de julio hay que
-poder seguir viendo de quién es la ficha y qué período está puesto. El cambio a
-compacto lo dispara un `IntersectionObserver` sobre un centinela de 1 px, no un
-listener de scroll.
+Es **una grilla de verdad**: siete columnas separadas por rayas verticales
+finas, y la celda no tiene borde ni sombra propios. La primera versión eran
+cartas —una por día, con borde y sombra— y las rayas pintadas en el hueco entre
+cartas: dos sistemas visuales encimados, y la raya a tres píxeles del borde de
+la carta se leía como un borde doble. Lo que se toca se nota al pasar por
+encima, no con un marco.
 
-⚠️ **Lo que la cabecera achica hay que devolvérselo al contenido de abajo.** Es
-`sticky`, o sea que ocupa lugar en el flujo: al compactarse el documento entero
-se acortaba unos 45 px, y en una pestaña apenas más alta que la pantalla eso
-alcanzaba para que **no quedara nada que scrollear**. Medido: documento 619,
-pantalla 561, y en cuanto uno empezaba a bajar el máximo de scroll pasaba de 58
-px a 13. La página se comía el scroll y parecía trabada.
+Cada celda con registro dice lo que se pregunta primero sin abrirla: las
+calorías —en ámbar si se pasó—, las cuatro rayitas de los momentos, y el agua,
+el sueño y la actividad en una línea. Un punto arriba a la derecha si el día
+tuvo enfermedad o alcohol. El modal (`components/day-detail.tsx`) trae los
+totales, la distancia al objetivo, el reparto por momento y los macros —los
+mismos cuadros de la pestaña Comidas, para un solo día—, las comidas con sus
+ítems y fotos, y la actividad, el agua y el sueño de ese día. Las flechas pasan
+al día con registro anterior o siguiente. Solo se dibujan las semanas que tocan
+el período, y el calendario arranca donde arrancó la persona, no donde arranca
+el período: los días anteriores al primer registro no son huecos y no aparecen.
 
-La compensación es la regla `.topbar.is-compact + .page` de `globals.css`, y
-tiene que ser CSS: **tiene que resolverse en el mismo cálculo de layout que el
-cambio de clase**. Con un efecto de React —incluso `useLayoutEffect`— el
-navegador ya midió el documento más corto y ya recortó la posición del scroll,
-y devolverle el alto un instante después no devuelve la posición; está
-comprobado, no es una precaución. `components/tabs.tsx` solo mide cuánto vale
-la diferencia (`--topbar-delta`), poniendo y sacando la clase a mano dentro de
-un efecto de layout, porque depende de si el nombre entra en una línea o en
-dos.
+La cabecera es **fija** y mide siempre lo mismo: leyendo el 12 de julio hay que
+poder seguir viendo de quién es la ficha, su contexto y qué período está puesto.
+Hubo un modo compacto —al bajar escondía la línea de contexto y achicaba el
+nombre— y se sacó en agosto de 2026: esa línea es justo lo que uno quiere
+seguir viendo, y los 45 px que se ganaban no valían la maquinaria.
+
+⚠️ Si el modo compacto vuelve, hay una trampa que ya costó una tarde: una
+cabecera `sticky` que cambia de alto **acorta el documento y se come el
+scroll** —medido: documento 619, pantalla 561, y el máximo de scroll pasaba de
+58 px a 13 en cuanto uno bajaba—. La compensación tiene que ser CSS, en el mismo
+cálculo de layout que el cambio de clase; con un efecto de React, incluso
+`useLayoutEffect`, el navegador ya recortó la posición del scroll y devolverle
+el alto no la devuelve. La solución completa está en el historial de git
+(`.topbar.is-compact + .page` y `--topbar-delta`).
+
+**Lo que se abre, se abre en unos 200 ms y no de golpe**: el cuerpo de un
+colapsable, el modal y su fondo, la pestaña que entra; las barras de los
+gráficos crecen desde el piso y las pistas de reparto desde la izquierda. Está
+todo junto al final de `globals.css`, bajo "Movimiento", y se apaga entero con
+`prefers-reduced-motion`. El cierre del modal es inmediato: animar el cierre de
+un `<dialog>` nativo requiere demorar el `close()`, y no vale lo que cuesta.
 
 ### La pestaña de fotos
 
@@ -272,11 +298,15 @@ abrir nada.
   calculados sobre lo que llegó. `fetchMeals` pagina de a mil con un orden total
   (`local_date`, `logged_at`, `id`) para que las páginas no se pisen. Un dato
   faltante que se ve igual de bien que uno completo es peor que un error.
-- **El día a día se corta en 120 días y lo dice.** Cada día trae adentro sus
-  comidas con la tabla de ítems entera: aunque nazcan cerrados, el HTML se manda
-  igual. Medido en producción, la ficha del año pesa 4,5 MB en crudo y 614 kB
-  comprimida, y tarda 0,55 s; con 30 días son 147 kB y 96 ms. El corte visible
-  es mejor que una pantalla que tarda o que una que esconde lo que no muestra.
+- **El día a día viaja como datos, no como HTML.** Cuando era una lista de
+  `<details>`, cada día mandaba la tabla de ítems de cada comida ya renderizada
+  —la ficha del año pesaba 4,5 MB en crudo— y por eso se cortaba en 120 días.
+  El calendario es un Client Component que recibe **una bolsa por día con
+  registro** (`DayBundle`) y dibuja el modal en el navegador, así que lo que
+  viaja es el JSON de las comidas, bastante más liviano que la tabla, y ya no
+  hay corte: el año entero se puede abrir día por día. Si alguna vez vuelve a
+  pesar, lo que hay que recortar es el detalle de los ítems de los días viejos,
+  no los días.
 
 Las fotos también se firman **de a 400 y en paralelo**: un año fotografiando
 cada comida junta más de mil rutas, y eso en un solo pedido es un cuerpo enorme
@@ -296,13 +326,21 @@ hay pacientes en otro huso, eso sale del perfil y no de una constante.
 ### El contexto del día
 
 Enfermedad, descanso y alcohol. Se abren con `share_wellbeing` y aparecen en
-tres lugares, siempre **solo si hay algo que decir**:
+cuatro lugares:
 
 - una banda de 3 px al pie del gráfico de actividad, que es el hueco que más se
   parece a abandono y el que más seguido tiene explicación;
-- una etiqueta en la fila **cerrada** del día a día, porque el día en que la
-  persona estuvo en cama y no registró nada tiene que explicarse sin abrirlo;
-- una sección "Qué más pasó" al final del Resumen.
+- un punto en el casillero del día en el calendario, y el detalle arriba de
+  todo al abrirlo, porque el día en que la persona estuvo en cama y no registró
+  nada tiene que explicarse antes de leer el resto;
+- la tarjeta "Alcohol y enfermedad" del Resumen, que está **siempre, también en
+  cero**: antes era una sección que aparecía solo si había algo, y una semana
+  limpia no se distinguía de una semana sin compartir;
+- la franja de contexto debajo de las tres cartas de Hábitos: los números
+  siempre, y el gráfico de tragos por día solo si hubo alcohol. Fue una cuarta
+  carta de la misma altura que las otras, y en un período sin nada que contar
+  era un cuadro vacío con una frase en el medio; la franja mide lo que tiene
+  que decir.
 
 Tres reglas que conviene no deshacer:
 
@@ -351,19 +389,28 @@ exagera el día que se pasó.
 
 ### Cuatro cosas de los gráficos que cuesta ver y son fáciles de deshacer
 
-- **El eje X es el período elegido arriba, no la lista de días con datos.** Es
-  lo más fácil de romper y lo que más miente. Con el eje por posición, cada
-  punto ocupaba un lugar y listo: siete días de actividad sueltos en un mes se
-  dibujaban pegados, ocupando toda la carta, con "28 jul – 3 ago" abajo. Se
-  leía como una semana de registro seguido cuando eran siete días desparramados
-  en treinta, y el gráfico contradecía al calendario de adherencia que estaba
-  tres centímetros más arriba. Ahora cada barra cae en su fecha (`diasEntre` en
-  `lib/format.ts`) y los días sin registro son huecos. Vale para los cuatro:
-  barras, calorías, peso y las medidas corporales — en el de peso era peor,
-  porque cinco pesajes de una semana y uno de un mes después quedaban
-  equidistantes y **la pendiente de la tendencia salía inventada**.
-- **El hueco sigue sin ser una barra en cero.** Cero diría que comió cero, que
-  no es lo que pasó. Lo que cambió es que ahora el hueco se ve.
+- **En los gráficos de barras, el eje X son los días con registro, uno al lado
+  del otro.** Esto se decidió dos veces en sentidos opuestos, así que conviene
+  saber por qué quedó así. Primero el eje era la posición; después pasó a ser
+  el calendario del período, porque siete días sueltos de un mes se dibujaban
+  pegados y se leían como una semana seguida. Y en agosto de 2026 volvió a la
+  posición, a pedido: con el período de noventa días de alguien que empezó hace
+  treinta, el eje calendario era dos tercios de gráfico en blanco y las barras
+  apretadas en la punta derecha. Lo que hace tolerable la vuelta es que **quién
+  dejó de registrar y cuándo ahora lo muestra el calendario del día a día**, que
+  es el lugar donde los huecos se ven; el gráfico contesta "cuánto" y el
+  calendario "qué días". Los extremos del eje son el primer y el último día con
+  datos, y el globito dice de qué fecha es cada barra. Las bandas de contexto
+  —enfermedad, alcohol— le agregan su día al eje aunque no tenga barra, que es
+  justo el día que hay que poder explicar.
+- **Peso y medidas siguen siendo un eje de tiempo**, porque ahí la pendiente es
+  todo lo que se mira y cinco pesajes de una semana y uno de un mes después no
+  pueden quedar equidistantes. Lo que cambió es que el eje va del primer al
+  último registro y no de punta a punta del período: la proporción entre fechas
+  se mantiene (`diasEntre` en `lib/format.ts`) y el blanco de antes del primer
+  pesaje no se dibuja.
+- **El día sin registro sigue sin ser una barra en cero.** Cero diría que comió
+  cero, que no es lo que pasó. Simplemente no está.
 - **El SVG se dibuja al ancho real de la caja** (`lib/chart.ts`,
   `useChartWidth`), no en un `viewBox` fijo estirado con `width="100%"`. Un
   `viewBox` fijo escala **también el texto**: la misma etiqueta de 11 px salía
@@ -404,6 +451,9 @@ conviene saber dónde estaba el error antes:
 - **La variación de una medida tampoco lleva verde ni rojo.** Que la cintura
   baje es bueno en un plan de descenso y malo en uno de ganancia de masa, y el
   panel no sabe cuál de los dos está mirando.
-- **El calendario de registro es una sola tinta.** La intensidad es cuánto
-  comió, no si estuvo bien; y el día sin registro es un gris de otra familia,
-  no un violeta clarito, porque no es "comió poco" sino otra categoría.
+- **El calendario del día a día no califica el día.** El casillero con registro
+  y el vacío se distinguen por el borde —lleno contra punteado—, no por un
+  color: no hay verde de "registró" ni rojo de "faltó". Los únicos colores son
+  el ámbar de las calorías del día que se pasó del objetivo, que es el mismo del
+  gráfico, y los dos puntos de contexto —enfermedad y alcohol—, que son los
+  mismos de las bandas de Hábitos.

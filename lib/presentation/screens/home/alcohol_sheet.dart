@@ -6,6 +6,7 @@ import '../../../core/theme/nm_theme.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/utils/dates.dart';
+import '../../../core/utils/formats.dart';
 import '../../../domain/calculations/alcohol.dart';
 import '../../../domain/models/alcohol.dart';
 import '../../components/system/buttons.dart';
@@ -59,8 +60,14 @@ class _AlcoholSheetState extends ConsumerState<_AlcoholSheet> {
     NmSnackbar.show(context, 'Anotado');
   }
 
+  /// Cuántas unidades de **esa bebida** —dos copas, una lata—, que es otra
+  /// cosa que la UBE y por eso no usa `Fmt.standardDrinks`.
+  ///
+  /// El separador sale de `Fmt` igual: escrito a mano salía "1.9" con el punto
+  /// del inglés, en una pantalla donde todo el resto —las calorías, los vasos,
+  /// el peso— va con coma.
   String _cantidad(double q) =>
-      q == q.roundToDouble() ? q.round().toString() : q.toStringAsFixed(1);
+      q == q.roundToDouble() ? Fmt.integer(q) : Fmt.decimal1(q);
 
   @override
   Widget build(BuildContext context) {
@@ -138,10 +145,13 @@ class _AlcoholSheetState extends ConsumerState<_AlcoholSheet> {
           // Las dos cifras que hacen que esto sirva de algo. La UBE porque es
           // lo único con lo que se pueden sumar una cerveza y un whisky, y las
           // calorías porque son las que no aparecen en ninguna comida.
+          // "Tragos" y no "unidades de bebida estándar": es la misma palabra
+          // que usa la tarjeta de Inicio, y dos vocabularios para el mismo
+          // número obligan a traducir mentalmente entre dos pantallas.
           Text(
-            '≈ ${_cantidad(double.parse(ubeDeEsto.toStringAsFixed(1)))} '
-            'unidades de bebida · ≈ $kcalDeEsto kcal',
-            style: NmTextStyles.from(NmType.caption, color: nm.caution),
+            '≈ ${Fmt.standardDrinks(ubeDeEsto)} · '
+            '${Fmt.estimatedKcal(kcalDeEsto)}',
+            style: NmTextStyles.from(NmType.caption, color: nm.caution).tnum,
           ),
 
           const SizedBox(height: NmSpace.s5),
@@ -155,9 +165,12 @@ class _AlcoholSheetState extends ConsumerState<_AlcoholSheet> {
           if (delDia.isNotEmpty) ...<Widget>[
             const SizedBox(height: NmSpace.s5),
             Text(
-              'Hoy: ${_cantidad(double.parse(ube.toStringAsFixed(1)))} '
-              'unidades · ≈ $kcal kcal',
-              style: NmTextStyles.from(NmType.caption, color: nm.textMuted),
+              'En el día: ≈ ${Fmt.standardDrinks(ube)} · '
+              '${Fmt.estimatedKcal(kcal)}',
+              style: NmTextStyles.from(
+                NmType.caption,
+                color: nm.textMuted,
+              ).tnum,
             ),
             const SizedBox(height: NmSpace.s2),
             for (final log in delDia)
@@ -169,11 +182,11 @@ class _AlcoholSheetState extends ConsumerState<_AlcoholSheet> {
                   style: NmTextStyles.from(NmType.body, color: nm.text),
                 ),
                 subtitle: Text(
-                  '≈ ${log.kcal} kcal',
+                  Fmt.estimatedKcal(log.kcal),
                   style: NmTextStyles.from(
                     NmType.caption,
                     color: nm.textMuted,
-                  ),
+                  ).tnum,
                 ),
                 trailing: NmIconButton(
                   icon: PhosphorIcons.trash(),
@@ -187,7 +200,9 @@ class _AlcoholSheetState extends ConsumerState<_AlcoholSheet> {
 
           const SizedBox(height: NmSpace.s2),
           Text(
-            'Las calorías del alcohol son una estimación y van aparte de las '
+            'Un trago es una unidad de bebida estándar: 10 g de alcohol puro, '
+            'que es lo único con lo que se pueden sumar una cerveza y un '
+            'whisky. Las calorías son una estimación y van aparte de las '
             'comidas: sumarlas ahí escondería de dónde salieron.',
             style: NmTextStyles.from(NmType.caption, color: nm.textMuted),
           ),

@@ -10,13 +10,20 @@ const SLOT_ORDER = ['breakfast', 'lunch', 'dinner', 'snack'];
  * con el mismo promedio comen distinto si una hace tres comidas y la otra pone
  * la mitad del día en la cena. Cuatro barras con su nombre al lado, una sola
  * tinta: no hay tres colores de marca que distinguir.
+ *
+ * Sirve para un período —promedio por día sobre los días con comidas— y para
+ * un solo día, con `diasConComida = 1` y `porDia = false`, que es como lo usa
+ * la ficha del día: ahí "kcal/día" sería decir dos veces lo mismo.
  */
 export function SlotSplit({
   meals,
   diasConComida,
+  porDia = true,
 }: {
   meals: Meal[];
   diasConComida: number;
+  /** Si el número de la derecha es un promedio diario o el total de ese día. */
+  porDia?: boolean;
 }) {
   const total = meals.reduce((a, m) => a + m.total_kcal, 0);
 
@@ -45,17 +52,11 @@ export function SlotSplit({
               <div className="split-fill" style={{ width: `${pct}%` }} />
             </div>
             <span className="tnum caption">
-              {pct} % · {miles(kcal / diasConComida)} kcal/día
+              {pct} % · {miles(kcal / diasConComida)} {porDia ? 'kcal/día' : 'kcal'}
             </span>
           </div>
         );
       })}
-
-      <p className="caption" style={{ marginTop: 'var(--s5)', marginBottom: 0 }}>
-        El promedio es sobre los {diasConComida} días con comidas cargadas, no
-        sobre el período: dividir por los días en blanco bajaría todo por igual
-        y diría que come menos, cuando lo que pasó es que no registró.
-      </p>
     </div>
   );
 }

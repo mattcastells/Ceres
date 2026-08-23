@@ -2,7 +2,6 @@ import {
   DRINK_LABEL,
   SEVERITY_LABEL,
   type AlcoholLog,
-  type CareNote,
   type DayMarker,
 } from '@/lib/queries';
 import { num } from '@/lib/format';
@@ -22,13 +21,11 @@ import { num } from '@/lib/format';
 export function DayContext({
   markers = [],
   alcohol = [],
-  notes = [],
   compacto = false,
 }: {
   markers?: DayMarker[];
   alcohol?: AlcoholLog[];
-  notes?: CareNote[];
-  /** En una fila cerrada del día a día: solo las etiquetas, sin las notas. */
+  /** Solo las etiquetas, para un lugar chico. */
   compacto?: boolean;
 }) {
   const enfermo = markers.find((m) => m.kind === 'sick');
@@ -36,7 +33,7 @@ export function DayContext({
   const ube = alcohol.reduce((a, x) => a + x.std_drinks, 0);
   const kcal = alcohol.reduce((a, x) => a + x.kcal, 0);
 
-  if (!enfermo && !descanso && alcohol.length === 0 && notes.length === 0) {
+  if (!enfermo && !descanso && alcohol.length === 0) {
     return null;
   }
 
@@ -48,7 +45,6 @@ export function DayContext({
         {ube > 0 && (
           <span className="chip tnum">{num(ube)} tragos</span>
         )}
-        {notes.length > 0 && <span className="chip chip--note">Nota</span>}
       </span>
     );
   }
@@ -82,11 +78,6 @@ export function DayContext({
           </span>
         </p>
       )}
-      {notes.map((n) => (
-        <p key={n.id} className="day-note">
-          <strong>Tu nota</strong> — {n.body}
-        </p>
-      ))}
     </div>
   );
 }

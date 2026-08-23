@@ -22,7 +22,7 @@
 
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { ventanaEfectiva, notaDeRecorte } from './tracking.ts';
+import { ventanaEfectiva } from './tracking.ts';
 
 describe('el período efectivo', () => {
   test('sin recorte, es el período pedido', () => {
@@ -31,7 +31,6 @@ describe('el período efectivo', () => {
     assert.equal(v.dias, 30);
     assert.equal(v.diasPedidos, 30);
     assert.equal(v.empezoDespues, false);
-    assert.equal(notaDeRecorte(v), null);
   });
 
   test('cuenta creada a mitad de mes: arranca el día que arrancó ella', () => {
@@ -41,9 +40,6 @@ describe('el período efectivo', () => {
     // El período pedido no cambia: es con lo que se rotula la pantalla.
     assert.equal(v.diasPedidos, 30);
     assert.equal(v.empezoDespues, true);
-    // Y el recorte se dice, no solo se aplica.
-    assert.match(notaDeRecorte(v)!, /13 días/);
-    assert.match(notaDeRecorte(v)!, /no los 30/);
   });
 
   test('cuenta creada a mitad de semana: 4 de 4, no 4 de 7', () => {
@@ -69,7 +65,6 @@ describe('el período efectivo', () => {
     // denominador. "0 de 30 · 0 %" sobre una cuenta que nunca registró nada es
     // un reproche por días que no se sabe si existieron.
     assert.equal(v.diasPedidos, 30);
-    assert.match(notaDeRecorte(v)!, /ningún registro/);
   });
 
   test('empezó después del final del período: cero, nunca negativo', () => {

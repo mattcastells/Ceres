@@ -95,16 +95,6 @@ export type AlcoholLog = {
   note: string | null;
 };
 
-/** Una nota de la profesional. `local_date` null = del seguimiento en general. */
-export type CareNote = {
-  id: string;
-  patient_id: string;
-  local_date: string | null;
-  body: string;
-  created_at: string;
-  updated_at: string;
-};
-
 export const SEVERITY_LABEL: Record<number, string> = {
   1: 'leve',
   2: 'moderada',
@@ -374,27 +364,6 @@ export async function fetchAlcohol(
     kcal: Number(r.kcal ?? 0),
     note: (r.note as string | null) ?? null,
   }));
-}
-
-/**
- * Las notas que escribió **esta** profesional sobre este paciente.
- *
- * No hace falta filtrar por autor: la policy de `care_notes` solo devuelve las
- * propias. El `eq` va igual, por lo mismo que el resto de las consultas de este
- * archivo — una policy nueva mañana no puede empezar a mezclar filas de otro.
- */
-export async function fetchNotes(
-  db: SupabaseClient,
-  patientId: string,
-): Promise<CareNote[]> {
-  const { data } = await db
-    .from('care_notes')
-    .select('id, patient_id, local_date, body, created_at, updated_at')
-    .eq('patient_id', patientId)
-    .is('deleted_at', null)
-    .order('created_at', { ascending: false });
-
-  return (data ?? []) as unknown as CareNote[];
 }
 
 /**

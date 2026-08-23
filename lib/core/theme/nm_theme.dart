@@ -67,6 +67,13 @@ class NmTheme extends ThemeExtension<NmTheme> {
   /// Texto legible sobre [accentFill].
   Color get accentOnFill => isDark ? NmAccent.c200 : NmAccent.c700;
 
+  /// Relleno tintado de [caution], para el fondo de un estado marcado.
+  ///
+  /// Sale del token y no es un color nuevo: así un cambio de paleta lo arrastra
+  /// solo. El alpha es bajo a propósito — es un fondo que tiene que dejar leer
+  /// el ícono que lleva encima, no un cartel.
+  Color get cautionFill => caution.withValues(alpha: isDark ? 0.22 : 0.16);
+
   /// Color del bloque de skeleton (21-motion-and-loading.md §4.2).
   Color get skeleton => isDark ? NmNeutral.c800 : NmNeutral.c200;
 

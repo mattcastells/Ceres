@@ -1,4 +1,4 @@
--- El contrato entre el push de la app y las tablas (migraciones 29 y 30).
+-- El contrato entre el push de la app y las tablas (migraciones 29, 30 y 46).
 --
 -- Dos cosas que no se ven mirando una fila sola y que decidían qué versión de
 -- un dato sobrevivía:
@@ -15,7 +15,7 @@
 create extension if not exists pgtap with schema extensions;
 
 begin;
-select plan(26);
+select plan(32);
 
 insert into auth.users (
   id, instance_id, aud, role, email, encrypted_password,
@@ -410,6 +410,81 @@ select is(
   (select count(*)::int from public.meals where logged_at is null),
   0,
   'Ninguna comida queda sin espejo'
+);
+
+-- ── El upsert de day_markers, tal como lo manda la app (migración 46) ────
+--
+-- La app sube con `onConflict: 'user_id,local_date,kind'`, y el único de la
+-- tabla era un índice **parcial** (`where deleted_at is null`): Postgres no lo
+-- infiere para un `on conflict` sin el predicado, así que cada push de marcas
+-- moría con 42P10 y un día de enfermedad marcado en el teléfono no llegaba
+-- nunca a la base. Este bloque es ese mismo upsert contra el esquema real: con
+-- el índice parcial falla, con el de la 46 pasa.
+select lives_ok(
+  $$insert into public.day_markers
+      (id, user_id, local_date, kind, severity, note, tags)
+    values ('eeee0010-0000-4000-8000-000000000010',
+            '77777777-7777-7777-7777-777777777777', current_date - 8, 'sick',
+            2, 'Angina', '{}')
+    on conflict (user_id, local_date, kind) do update
+      set severity = excluded.severity, note = excluded.note$$,
+  'El push de una marca nueva entra con el on conflict que manda la app'
+);
+
+-- El mismo día otra vez —el push reescribe todo en cada corrida— pisa, no choca.
+select lives_ok(
+  $$insert into public.day_markers
+      (id, user_id, local_date, kind, severity, note, tags)
+    values ('eeee0011-0000-4000-8000-000000000011',
+            '77777777-7777-7777-7777-777777777777', current_date - 8, 'sick',
+            3, 'Angina, peor', '{}')
+    on conflict (user_id, local_date, kind) do update
+      set severity = excluded.severity, note = excluded.note$$,
+  'El push repetido del mismo día pisa la marca en vez de chocar'
+);
+
+select is(
+  (select count(*)::int from public.day_markers
+    where user_id = '77777777-7777-7777-7777-777777777777'
+      and local_date = current_date - 8 and kind = 'sick'),
+  1,
+  'Queda una sola marca por (día, tipo)'
+);
+
+select is(
+  (select severity::int from public.day_markers
+    where user_id = '77777777-7777-7777-7777-777777777777'
+      and local_date = current_date - 8 and kind = 'sick'),
+  3,
+  'Y es la del último push'
+);
+
+-- Desmarcar viaja como lápida y volver a marcar la revive: una fila por
+-- (día, tipo) siempre, muerta o viva. Es lo que hace imposible el estado que
+-- el índice parcial permitía —una muerta y una viva del mismo día—.
+update public.day_markers set deleted_at = now()
+ where user_id = '77777777-7777-7777-7777-777777777777'
+   and local_date = current_date - 8 and kind = 'sick';
+
+select lives_ok(
+  $$insert into public.day_markers
+      (id, user_id, local_date, kind, severity, note, tags, deleted_at)
+    values ('eeee0012-0000-4000-8000-000000000012',
+            '77777777-7777-7777-7777-777777777777', current_date - 8, 'sick',
+            1, null, '{}', null)
+    on conflict (user_id, local_date, kind) do update
+      set severity = excluded.severity, note = excluded.note,
+          deleted_at = excluded.deleted_at$$,
+  'Marcar de nuevo un día desmarcado revive la lápida en vez de duplicarla'
+);
+
+select is(
+  (select count(*)::int from public.day_markers
+    where user_id = '77777777-7777-7777-7777-777777777777'
+      and local_date = current_date - 8 and kind = 'sick'
+      and deleted_at is null),
+  1,
+  'La marca revivida queda viva y sigue siendo una sola'
 );
 
 select * from finish();

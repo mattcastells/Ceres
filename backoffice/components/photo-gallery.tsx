@@ -255,13 +255,6 @@ export function PhotoGallery({
                   </tbody>
                 </table>
               </div>
-
-              {plano.length > 1 && abierta !== null && (
-                <p className="caption modal-pos tnum">
-                  {abierta + 1} de {plano.length} · las flechas del teclado
-                  pasan a la siguiente
-                </p>
-              )}
             </div>
           </div>
         )}

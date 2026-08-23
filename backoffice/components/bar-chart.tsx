@@ -1,28 +1,32 @@
 'use client';
 
 import { useState } from 'react';
-import { diasEntre, fechaCorta } from '@/lib/format';
+import { fechaCorta } from '@/lib/format';
 import { ejeLindo, useChartWidth } from '@/lib/chart';
 
 export type Point = { date: string; value: number };
 
 /**
- * Barras por día, una sola serie, sobre el período completo.
+ * Barras por día, una sola serie, **solo de los días con registro**.
  *
  * Deliberadamente genérico y de una serie: agua, sueño, actividad y cada macro
  * usan este mismo componente. Una sola serie no necesita paleta categórica ni
  * leyenda —el título la nombra— y así ninguno de estos gráficos depende de
  * distinguir dos colores de marca, que es donde la paleta de la app no llega.
  *
- * **El eje X es el período elegido arriba, no la lista de días con datos.** Es
- * la corrección importante: antes cada punto ocupaba una posición y listo, así
- * que siete días sueltos de un mes se dibujaban pegados, del ancho de la carta
- * y con las fechas de los extremos abajo. Se leía como una semana de registro
- * seguido cuando eran siete días desparramados en treinta. Ahora cada barra
- * cae en su fecha y los días sin registro son huecos.
+ * **El eje X son los días registrados, uno al lado del otro, y no el
+ * calendario.** Con el período de noventa días de alguien que empezó hace
+ * treinta, un eje calendario era dos tercios de gráfico en blanco y las barras
+ * apretadas en la punta derecha. Cada barra ocupa un lugar y el globito dice de
+ * qué fecha es; los extremos del eje son el primer y el último día con datos.
  *
- * El hueco sigue siendo un hueco y no una barra en cero: cero diría que comió
- * cero, que no es lo que pasó. La diferencia es que ahora el hueco se ve.
+ * El día sin registro no se dibuja, ni siquiera en cero: cero diría que comió
+ * cero, que no es lo que pasó. Quién dejó de registrar y cuándo lo cuenta el
+ * calendario del día a día, que es el lugar donde los huecos se ven.
+ *
+ * Las bandas de contexto —enfermedad, alcohol— le agregan su día al eje aunque
+ * ese día no tenga barra: un día de enfermedad sin actividad es justo el que
+ * hay que poder explicar, y si no tuviera lugar en el eje la banda no se vería.
  *
  * Las barras nacen en cero. En una magnitud, un eje truncado convierte 1.900
  * contra 2.100 en el doble.
@@ -30,8 +34,6 @@ export type Point = { date: string; value: number };
 export function BarChart({
   points,
   unit,
-  desde,
-  hasta,
   color = 'var(--chart-intake)',
   target,
   targetLabel,
@@ -46,10 +48,6 @@ export function BarChart({
   sickDays?: string[];
   /** Fechas con algún consumo de alcohol. */
   drinkDays?: string[];
-  /** Los extremos del período. Sin ellos se usa el rango de los datos, que es
-   *  lo que hay que evitar salvo que no haya período que respetar. */
-  desde?: string;
-  hasta?: string;
   color?: string;
   target?: number | null;
   targetLabel?: string;
@@ -95,17 +93,21 @@ export function BarChart({
     innerH < 140 ? 3 : 5,
   );
 
-  const inicio = desde ?? points[0]?.date ?? '';
-  const fin = hasta ?? points[points.length - 1]?.date ?? inicio;
-  const totalDias = Math.max(diasEntre(inicio, fin) + 1, 1);
+  // Los lugares del eje: cada día con barra y cada día con banda, en orden.
+  const lugares = [
+    ...new Set([...points.map((p) => p.date), ...sickDays, ...drinkDays]),
+  ].sort();
+  const indice = new Map(lugares.map((d, i) => [d, i]));
+  const inicio = lugares[0] ?? '';
+  const fin = lugares[lugares.length - 1] ?? inicio;
 
-  const step = innerW / totalDias;
+  const step = innerW / Math.max(lugares.length, 1);
   // 2 px de aire, un techo de 56 —con 7 días son cinco barras repartiéndose mil
   // píxeles— y un piso de 1,2 para que un año de registro diario siga dibujando
   // una línea por día en vez de nada.
   const barW = Math.min(Math.max(step - 2, 1.2), 56);
   const x = (fecha: string) =>
-    PAD.left + diasEntre(inicio, fecha) * step + (step - barW) / 2;
+    PAD.left + (indice.get(fecha) ?? 0) * step + (step - barW) / 2;
   const y = (v: number) => PAD.top + innerH - (v / max) * innerH;
 
   const point = hover === null ? null : points[hover];
@@ -123,7 +125,7 @@ export function BarChart({
           height={H}
           style={{ display: 'block' }}
           role="img"
-          aria-label={`Valores por día en ${unit}, del ${fechaCorta(inicio)} al ${fechaCorta(fin)}`}
+          aria-label={`Valores por día registrado en ${unit}, del ${fechaCorta(inicio)} al ${fechaCorta(fin)}`}
           onMouseLeave={() => setHover(null)}
         >
           {ticks.map((v) => (
@@ -188,6 +190,7 @@ export function BarChart({
           {points.map((p, i) => (
             <rect
               key={p.date}
+              className="bar"
               x={x(p.date)}
               y={y(p.value)}
               width={barW}
@@ -227,9 +230,9 @@ export function BarChart({
             </>
           )}
 
-          {/* Zonas de hover más anchas que las barras: con el eje en días, una
-              barra de un año mide un píxel y medio y apuntarle sería una prueba
-              de puntería, no una interacción. */}
+          {/* Zonas de hover más anchas que las barras: con un año de registro
+              diario una barra mide un píxel y medio y apuntarle sería una
+              prueba de puntería, no una interacción. */}
           {points.map((p, i) => (
             <rect
               key={`zona-${p.date}`}
@@ -251,16 +254,18 @@ export function BarChart({
           >
             {fechaCorta(inicio)}
           </text>
-          <text
-            x={W - PAD.right}
-            y={H - 5}
-            textAnchor="end"
-            fontSize="10.5"
-            fill="var(--text-muted)"
-            className="tnum"
-          >
-            {fechaCorta(fin)}
-          </text>
+          {fin !== inicio && (
+            <text
+              x={W - PAD.right}
+              y={H - 5}
+              textAnchor="end"
+              fontSize="10.5"
+              fill="var(--text-muted)"
+              className="tnum"
+            >
+              {fechaCorta(fin)}
+            </text>
+          )}
         </svg>
       )}
 
