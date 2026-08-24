@@ -303,13 +303,33 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                         },
                                       ),
                                     ),
-                                  if (summary.activities.isEmpty &&
-                                      !summary.isRestDay) ...<Widget>[
+                                  // El botón de sumar vive acá abajo **siempre**
+                                  // que el día no sea de descanso, no solo
+                                  // cuando la lista está vacía.
+                                  //
+                                  // Estaba condicionado a `activities.isEmpty`,
+                                  // y el resumen de arriba también esconde su
+                                  // "Agregar" apenas hay una sesión: o sea que
+                                  // después de cargar el primer ejercicio la
+                                  // tarjeta se quedaba sin ninguna forma de
+                                  // sumar otro, y había que salir al "+" de la
+                                  // barra y volver a entrar por el mismo camino
+                                  // que se acababa de recorrer. Cargar dos
+                                  // actividades en un día no es el caso raro:
+                                  // una caminata y una entrada de gimnasio ya
+                                  // son dos.
+                                  if (!summary.isRestDay) ...<Widget>[
                                     const SizedBox(height: NmSpace.s2),
                                     Align(
                                       alignment: Alignment.centerLeft,
                                       child: NmButton.ghost(
-                                        label: 'Agregar actividad',
+                                        // "Otra" cuando ya hay una: el botón
+                                        // dice qué va a pasar, y de paso deja
+                                        // claro que no reemplaza a la que está.
+                                        label: summary.activities.isEmpty
+                                            ? 'Agregar actividad'
+                                            : 'Agregar otra actividad',
+                                        icon: PhosphorIcons.plus(),
                                         onPressed: () => showAddSheet(
                                           context,
                                           activityFirst: true,

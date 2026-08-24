@@ -102,6 +102,49 @@ void main() {
     expect(find.byType(CalorieRing), findsOneWidget);
   });
 
+  testWidgets('con una actividad cargada se puede sumar otra sin salir', (
+    tester,
+  ) async {
+    late ProviderContainer container;
+    await tester.runAsync(() async {
+      final booted = await _boot();
+      container = booted.$1;
+    });
+    addTearDown(() => container.dispose());
+
+    await tester.pumpWidget(_wrap(container, const HomeScreen()));
+    await _settle(tester);
+
+    // El día sembrado ya tiene actividad, que es justo el estado en el que la
+    // tarjeta se quedaba sin salida: el botón de abajo estaba condicionado a
+    // que la lista estuviera vacía, y el resumen de arriba esconde su
+    // "Agregar" apenas hay una sesión. Resultado: después del primer
+    // ejercicio había que salir al "+" de la barra para cargar el segundo.
+    expect(container.read(todaySummaryProvider).activities, isNotEmpty);
+    expect(find.text('Agregar otra actividad'), findsOneWidget);
+  });
+
+  testWidgets('en un día de descanso no se ofrece sumar actividad', (
+    tester,
+  ) async {
+    late ProviderContainer container;
+    await tester.runAsync(() async {
+      final booted = await _boot();
+      container = booted.$1;
+      await booted.$2.setRestDay(today(), true);
+    });
+    addTearDown(() => container.dispose());
+
+    await tester.pumpWidget(_wrap(container, const HomeScreen()));
+    await _settle(tester);
+
+    // El descanso es una marca sobre el día entero: ofrecer cargar un
+    // entrenamiento ahí sería contradecir lo que la persona acaba de declarar.
+    // Para eso está "Quitar", que saca la marca primero.
+    expect(find.text('Agregar otra actividad'), findsNothing);
+    expect(find.text('Agregar actividad'), findsNothing);
+  });
+
   testWidgets('con crédito 0 % no hay fila de ajuste ni texto sobre ella', (
     tester,
   ) async {
