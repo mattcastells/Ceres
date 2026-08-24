@@ -7,8 +7,14 @@
 // podía hacer.
 //
 // Estos tests fijan las dos cosas que hacen que el modo nuevo no estorbe: que
-// el saldo siga siendo lo que pasa sin tocar nada, y que el número escrito sea
-// el que se usa de verdad.
+// el saldo siga siendo el punto de partida, y que el número escrito sea el que
+// se usa de verdad.
+//
+// Y una tercera, que se agregó después: **entrar no pide nada**. La pantalla
+// preguntaba sola al abrirse, o sea que abrirla ya gastaba una de las 20
+// consultas del día —incluso entrando sin querer— y lo hacía con el saldo que
+// hubiera en ese instante, que casi nunca es el número con el que uno quiere
+// buscar.
 //
 // El pedido falla en este entorno —no hay servidor, `suggestMeals` lanza
 // `providerUnavailable`— y no importa: lo que se comprueba es con qué
@@ -77,7 +83,7 @@ void main() {
     view.resetDevicePixelRatio();
   });
 
-  testWidgets('sin tocar nada pregunta por el saldo del día', (tester) async {
+  testWidgets('entrar no le pregunta nada al modelo', (tester) async {
     late ProviderContainer container;
     await tester.runAsync(() async {
       container = await _boot();
@@ -89,14 +95,25 @@ void main() {
 
     final restante = container.read(todaySummaryProvider).balance.remainingKcal;
 
-    // El camino corto no cambió: se entra y ya está pidiendo, sin un paso de
-    // configuración antes.
+    // El saldo del día sigue siendo el modo por omisión y se dice cuál es: lo
+    // que cambió es que decirlo no es pedirlo.
     expect(find.text('Lo que me queda'), findsOneWidget);
     expect(find.text('Otro número'), findsOneWidget);
     expect(find.textContaining('$restante kcal que te quedan'), findsOneWidget);
 
     // El campo solo aparece cuando se lo pide.
     expect(find.text('Calorías del plato'), findsNothing);
+
+    // Y lo que de verdad prueba este test: no salió ningún pedido.
+    //
+    // En este entorno `suggestMeals` lanza `providerUnavailable`, así que un
+    // pedido disparado solo terminaría en un error en pantalla. Que se vea la
+    // invitación —y ningún error— es la única forma de comprobar desde acá que
+    // la pantalla no le habló al modelo por su cuenta, que era el bug: se
+    // gastaba una de las 20 consultas del día con solo abrirla.
+    expect(find.text('Decime con cuánto y busco'), findsOneWidget);
+    expect(find.textContaining('necesitan cuenta'), findsNothing);
+    expect(find.text('Buscar opciones'), findsOneWidget);
   });
 
   testWidgets('"Otro número" arranca del saldo y se puede corregir', (

@@ -76,11 +76,17 @@ class _SuggestionsScreenState extends ConsumerState<SuggestionsScreen> {
 
   final TextEditingController _target = TextEditingController();
 
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _pedir());
-  }
+  // Sin `initState` que pida nada, y eso es lo importante de esta pantalla.
+  //
+  // Hasta ahora entrar acá disparaba una consulta al modelo sola, antes de que
+  // nadie pidiera nada. Estaba mal por tres motivos distintos y cualquiera de
+  // los tres alcanza: gastaba una de las 20 consultas del día con solo abrir
+  // la pantalla —incluso para mirar, o para entrar sin querer—; le pegaba al
+  // proveedor con el saldo que hubiera en ese instante, que casi nunca es el
+  // número con el que uno quiere buscar; y hacía imposible elegir "Otro
+  // número" sin haber gastado antes una búsqueda que no se pidió.
+  //
+  // La regla, ahora: **nada sale para Gemini hasta que alguien toca el botón.**
 
   @override
   void dispose() {
@@ -97,6 +103,14 @@ class _SuggestionsScreenState extends ConsumerState<SuggestionsScreen> {
   int get _presupuesto => _custom
       ? int.tryParse(_target.text.trim()) ?? 0
       : _remaining;
+
+  /// Si lo que está en pantalla salió de pedir exactamente esto.
+  ///
+  /// Cuando no —porque todavía no se pidió nada, porque se cambió de modo, o
+  /// porque se comió algo y el saldo se movió—, hay que decir con qué se
+  /// buscaría al tocar el botón. Cuando sí, decirlo dos veces es ruido.
+  bool get _alDia =>
+      _budget > 0 && _shownIsCustom == _custom && _budget == _presupuesto;
 
   /// Las restricciones del perfil, para decirlas en pantalla. Quien las aplica
   /// es el servidor; acá solo se muestran.
@@ -216,16 +230,12 @@ class _SuggestionsScreenState extends ConsumerState<SuggestionsScreen> {
   Widget build(BuildContext context) {
     final nm = context.nm;
 
+    // Sin el botón de refrescar de la barra: ahora que el de abajo dice
+    // "Buscar otras", eran dos puertas a lo mismo, y la de arriba —un ícono
+    // circular al lado del título— es la que más fácil se toca sin querer. Cada
+    // toque es una consulta al modelo y una unidad de las 20 del día.
     return NmScreen(
       title: '¿Qué como?',
-      actions: <Widget>[
-        if (!_loading)
-          NmIconButton(
-            icon: PhosphorIcons.arrowsClockwise(),
-            tooltip: 'Otras opciones',
-            onPressed: _pedir,
-          ),
-      ],
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
@@ -246,10 +256,11 @@ class _SuggestionsScreenState extends ConsumerState<SuggestionsScreen> {
                   _target.text = '$_remaining';
                 }
               });
-              // Volver a "lo que me queda" no necesita confirmación: el número
-              // ya está y es el del día. Al revés sí, porque todavía no se sabe
-              // cuál va a ser.
-              if (!custom) _pedir();
+              // Y nada más: cambiar de modo **no** busca. Antes volver a "lo
+              // que me queda" disparaba una consulta sola, con el argumento de
+              // que el número ya se sabía. Que se sepa el número no quiere
+              // decir que se haya pedido nada, y cada tirada del modelo la
+              // paga la cuota del día.
             },
           ),
           const SizedBox(height: NmSpace.s4),
@@ -268,25 +279,48 @@ class _SuggestionsScreenState extends ConsumerState<SuggestionsScreen> {
               },
             ),
             const SizedBox(height: NmSpace.s3),
-            NmButton(
-              label: 'Buscar opciones',
-              block: true,
-              icon: PhosphorIcons.magnifyingGlass(),
-              loading: _loading,
-              onPressed: _presupuesto > 0 ? _pedir : null,
-            ),
-            const SizedBox(height: NmSpace.s5),
-          ] else if (_budget > 0) ...<Widget>[
+          ] else if (!_alDia) ...<Widget>[
+            // Con qué se buscaría al tocar el botón. En "Otro número" no hace
+            // falta —el campo lo dice—, y cuando lo que está en pantalla salió
+            // justo de este presupuesto tampoco: ahí habla el texto de abajo,
+            // que describe lo que se ve.
             Text(
-              'Tres platos que entran en las $_budget kcal que te quedan hoy.',
+              _remaining > 0
+                  ? 'Buscamos con las $_remaining kcal que te quedan hoy.'
+                  : 'Hoy no te quedan calorías: elegí "Otro número" para '
+                        'buscar igual.',
               style: NmTextStyles.from(NmType.bodySm, color: nm.textMuted),
             ),
-            const SizedBox(height: NmSpace.s6),
+            const SizedBox(height: NmSpace.s3),
           ],
 
-          if (_custom && _budget > 0 && _shownIsCustom) ...<Widget>[
+          // El botón está en los dos modos, y es la única puerta al modelo.
+          //
+          // Antes vivía solo dentro de "Otro número", porque el otro modo
+          // buscaba solo. Ahora que no busca nada solo, sin este botón ahí no
+          // habría forma de buscar.
+          NmButton(
+            label: _options == null ? 'Buscar opciones' : 'Buscar otras',
+            block: true,
+            icon: PhosphorIcons.magnifyingGlass(),
+            loading: _loading,
+            onPressed: _presupuesto > 0 && !_loading ? _pedir : null,
+          ),
+          const SizedBox(height: NmSpace.s5),
+
+          // Con qué presupuesto salió **el pedido que está en pantalla**, que
+          // no es necesariamente el que está elegido ahora: se puede buscar con
+          // 600 y después escribir 900 sin volver a buscar.
+          //
+          // Se dibuja apenas sale el pedido y no cuando llegan las opciones: si
+          // el pedido falla, saber con cuánto se pidió es justamente lo que
+          // hace entendible el error.
+          if (_budget > 0) ...<Widget>[
             Text(
-              'Tres platos de hasta $_budget kcal.',
+              _shownIsCustom
+                  ? 'Tres platos de hasta $_budget kcal.'
+                  : 'Tres platos que entran en las $_budget kcal que te '
+                        'quedaban hoy.',
               style: NmTextStyles.from(NmType.bodySm, color: nm.textMuted),
             ),
             const SizedBox(height: NmSpace.s5),
@@ -331,14 +365,25 @@ class _SuggestionsScreenState extends ConsumerState<SuggestionsScreen> {
               // nada que pedir de nuevo.
               onRetry: _error!.code == ApiErrorCode.budgetTooLow ? null : _pedir,
             )
-          else if (_options != null && _options!.isEmpty)
+          // Lo primero que se ve al entrar. Es una pantalla que **no hizo
+          // nada** todavía, y tiene que verse así: un spinner acá era la app
+          // gastando cuota por su cuenta y haciéndolo pasar por normal.
+          else if (_options == null)
+            const EmptyState(
+              icon: Icons.restaurant_menu_outlined,
+              title: 'Decime con cuánto y busco',
+              body: 'Elegí el presupuesto y tocá "Buscar opciones". Cada '
+                  'búsqueda le pregunta al modelo, así que sale cuando vos '
+                  'querés y no antes.',
+            )
+          else if (_options!.isEmpty)
             const EmptyState(
               icon: Icons.no_food_outlined,
               title: 'Esta vez no salió nada',
               body: 'Ninguna opción cerró con ese presupuesto. Probá de nuevo: '
                   'el modelo no siempre contesta lo mismo.',
             )
-          else if (_options != null)
+          else
             for (final option in _options!)
               Padding(
                 padding: const EdgeInsets.only(bottom: NmSpace.s4),
