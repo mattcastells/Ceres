@@ -12,11 +12,75 @@
 export const GEMINI_MODEL = Deno.env.get('GEMINI_MODEL') ?? 'gemini-3.6-flash';
 export const PROMPT_VERSION = Deno.env.get('GEMINI_PROMPT_VERSION') ?? 'v3';
 
-/** Cuota diaria por usuario (D-18). */
-export const DAILY_QUOTA = 20;
+/**
+ * Cuota diaria por usuario (D-18).
+ *
+ * Es **nuestro** techo, no el de Google: existe para que una cuenta no se lleve
+ * puesto el cupo del proyecto entero, que es una sola clave para toda la app.
+ * Se lee del entorno para poder subirlo sin tocar código el día que el plan del
+ * proveedor dé para más.
+ */
+export const DAILY_QUOTA = Number(Deno.env.get('AI_DAILY_QUOTA') ?? '') || 20;
 
-/** El proveedor puede tardar; más de esto es una app colgada. */
+/**
+ * Cuánto puede tardar **una** llamada al proveedor.
+ *
+ * No alcanza con esto solo: `callGemini` puede intentar dos veces, así que este
+ * número no es el techo de la función — ese es [GEMINI_BUDGET_MS].
+ */
 export const GEMINI_TIMEOUT_MS = 25_000;
+
+/**
+ * Cuánto puede tardar la función entera contra el proveedor, **sumando los dos
+ * intentos**.
+ *
+ * Este número existe porque su ausencia era el bug: el timeout de arriba era
+ * por intento, así que con un reintento el servidor podía estar 50 s en Gemini,
+ * y las apps esperan 45 s. O sea que cualquier llamada que necesitara un
+ * segundo intento terminaba **garantizado** en "El análisis tardó demasiado" —
+ * la app cortaba antes de que el servidor pudiera contestar, la cuota ya estaba
+ * gastada y, si el segundo intento salía bien, el resultado se tiraba a la
+ * basura sin que nadie lo viera.
+ *
+ * La regla, ahora, es que el servidor siempre conteste primero: 38 s de techo
+ * acá, más el resto de la función, entra cómodo en los 60 s que esperan los
+ * clientes. Y contestar es mejor que no contestar aunque la respuesta sea un
+ * fallo: un `ERR_UPSTREAM_TIMEOUT` queda registrado en `ai_analyses` y se puede
+ * mirar; un `TimeoutException` del lado del teléfono no deja rastro en ningún
+ * lado.
+ */
+export const GEMINI_BUDGET_MS = 38_000;
+
+/**
+ * Abajo de esto no vale la pena empezar un segundo intento: lo único que se
+ * consigue es llegar tarde igual, habiendo gastado el doble del proveedor.
+ */
+const MIN_ATTEMPT_MS = 6_000;
+
+/**
+ * Cuánto se le deja "pensar" al modelo antes de contestar.
+ *
+ * Los modelos de la familia Gemini 3 razonan **de fábrica** (`thinkingLevel`
+ * por omisión: `medium`), y esos tokens se pagan y se esperan. Para lo que hace
+ * esta app —leer una foto y devolver un JSON con una forma fija, que es
+ * extracción estructurada y no un problema de razonamiento— es tiempo y plata
+ * gastados en algo que el `responseSchema` ya garantiza.
+ *
+ * `low` y no `minimal` a propósito: estimar cuánto pesa una milanesa en una
+ * foto no es puro OCR, y dejarlo sin nada de razonamiento empeoraría el número
+ * que después le queda a alguien en el historial.
+ *
+ * Sale del entorno porque es el knob que hay que poder mover sin desplegar: si
+ * `GEMINI_MODEL` se baja a un `gemini-2.5-*`, que no entiende `thinkingLevel` y
+ * **rechaza el pedido entero con un 400**, se pone `GEMINI_THINKING_LEVEL` en
+ * `default` y el campo deja de mandarse.
+ */
+const THINKING_LEVEL = (Deno.env.get('GEMINI_THINKING_LEVEL') ?? 'low')
+  .trim()
+  .toLowerCase();
+
+/** `default` (o vacío) significa "no mandes el campo y que decida el modelo". */
+const SENDS_THINKING = THINKING_LEVEL !== '' && THINKING_LEVEL !== 'default';
 
 export const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -209,6 +273,15 @@ export interface GeminiOutcome {
   rateLimited: boolean;
   /** 503: el modelo está saturado. Se parece al 429 y no es lo mismo. */
   overloaded: boolean;
+  /**
+   * Se acabó [GEMINI_BUDGET_MS] antes de que el proveedor contestara.
+   *
+   * Va aparte de `lastError` porque quien llama tiene que poder decirlo con su
+   * propio código —un 504, no un "el modelo devolvió cualquier cosa"—: mandar a
+   * sacar otra foto cuando el problema fue la demora es mandar a arreglar el
+   * lugar equivocado.
+   */
+  timedOut: boolean;
   /** Lo que el proveedor pide esperar, cuando lo dice. `null` si no lo dijo. */
   retryAfterSeconds: number | null;
   diagnostics: GeminiDiagnostics;
@@ -274,10 +347,15 @@ export async function callGemini(
   schema: unknown = RESPONSE_SCHEMA,
 ): Promise<GeminiOutcome> {
   const startedAt = Date.now();
+  // El techo de los dos intentos juntos, fijado **una vez**. Cada intento se
+  // corta con lo que quede, no con 25 s frescos: dos relojes independientes es
+  // exactamente cómo se llegaba a 50 s.
+  const deadline = startedAt + GEMINI_BUDGET_MS;
   let parsed: unknown = null;
   let lastError = '';
   let rateLimited = false;
   let overloaded = false;
+  let timedOut = false;
   let retryAfterSeconds: number | null = null;
   const diagnostics: GeminiDiagnostics = {
     finishReason: null,
@@ -287,10 +365,23 @@ export async function callGemini(
   };
 
   for (const temperature of [0.2, 0]) {
-    try {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), GEMINI_TIMEOUT_MS);
+    const left = deadline - Date.now();
+    if (left < MIN_ATTEMPT_MS) {
+      // Se acabó el presupuesto entre un intento y el otro. No es un intento
+      // fallido más: es que ya no hay tiempo, y hay que decirlo así.
+      timedOut = true;
+      lastError = lastError ||
+        `Sin tiempo para otro intento (${GEMINI_BUDGET_MS / 1000} s)`;
+      break;
+    }
 
+    const controller = new AbortController();
+    const timer = setTimeout(
+      () => controller.abort(),
+      Math.min(GEMINI_TIMEOUT_MS, left),
+    );
+
+    try {
       const response = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`,
         {
@@ -306,11 +397,15 @@ export async function callGemini(
               temperature,
               responseMimeType: 'application/json',
               responseSchema: schema,
+              // Ver [THINKING_LEVEL]: sin esto el modelo razona de fábrica y
+              // cada foto se paga y se espera dos veces.
+              ...(SENDS_THINKING
+                ? { thinkingConfig: { thinkingLevel: THINKING_LEVEL } }
+                : {}),
             },
           }),
         },
       );
-      clearTimeout(timer);
 
       if (!response.ok) {
         // El cuerpo dice *por qué*; sin él, un 404 puede ser el modelo, la
@@ -328,7 +423,11 @@ export async function callGemini(
           // marca aparte: mezclarlas hizo que un problema de dos segundos se
           // leyera como el límite del plan.
           overloaded = true;
-          await new Promise((r) => setTimeout(r, 2000));
+          // La espera sale del mismo presupuesto que los intentos, así que se
+          // duerme solo si después va a quedar tiempo para intentar de verdad.
+          if (deadline - Date.now() > 2000 + MIN_ATTEMPT_MS) {
+            await new Promise((r) => setTimeout(r, 2000));
+          }
         }
         continue;
       }
@@ -364,6 +463,24 @@ export async function callGemini(
       }
     } catch (error) {
       lastError = error instanceof Error ? error.message : String(error);
+      // Lo cortamos nosotros por lento. Reintentar acá era el error: el segundo
+      // intento va a `temperature: 0` pero **no va a ser más rápido** —el
+      // modelo tarda lo que tarda—, así que lo único que se conseguía era
+      // duplicar la espera hasta pasarse del techo del cliente y gastar dos
+      // llamadas al proveedor para no mostrar nada.
+      if (isAbort(error)) {
+        timedOut = true;
+        lastError = `El proveedor no contestó en ${
+          Math.round((Date.now() - startedAt) / 1000)
+        } s`;
+        break;
+      }
+    } finally {
+      // En el `finally` y no después del `fetch`: el temporizador tiene que
+      // seguir armado mientras se lee el cuerpo. Cancelarlo apenas vuelven los
+      // headers dejaba la lectura del JSON sin ningún techo, que es otra forma
+      // —más silenciosa— de quedarse colgado para siempre.
+      clearTimeout(timer);
     }
   }
 
@@ -372,10 +489,28 @@ export async function callGemini(
     lastError,
     rateLimited,
     overloaded,
+    timedOut,
     retryAfterSeconds,
     diagnostics,
     latencyMs: Date.now() - startedAt,
   };
+}
+
+/**
+ * Si el corte lo pedimos nosotros.
+ *
+ * `AbortError` es lo que tira `fetch` cuando dispara nuestro temporizador. Se
+ * distingue de un fallo de red porque la salida es distinta: contra la red
+ * puede valer la pena insistir, contra el reloj no.
+ *
+ * Se mira el `name` y no `instanceof Error` porque lo que llega es un
+ * `DOMException`: hereda de `Error` según la especificación, pero apoyar la
+ * decisión en una cadena de prototipos que decide el runtime es apostar a que
+ * no cambie. El `name` es parte del contrato.
+ */
+function isAbort(error: unknown): boolean {
+  return typeof error === 'object' && error !== null &&
+    (error as { name?: unknown }).name === 'AbortError';
 }
 
 function isTerminal(finishReason: string | null): boolean {
@@ -447,6 +582,24 @@ export function overloadedResponse(): Response {
     'El modelo está ocupado en este momento. Probá de nuevo en unos ' +
       'segundos, o cargá la comida a mano.',
     503,
+  );
+}
+
+/**
+ * El 504: el proveedor no contestó dentro de [GEMINI_BUDGET_MS].
+ *
+ * Existe para que la app **reciba un error** en vez de quedarse esperando hasta
+ * su propio timeout. La diferencia no es cosmética: así el fallo queda en
+ * `ai_analyses` con su latencia y su motivo, se puede contar cuántos hubo, y el
+ * texto puede decir la verdad —fue la demora, no la foto— en vez del genérico
+ * que arma el cliente cuando se cansa de esperar.
+ */
+export function timedOutResponse(salida = ''): Response {
+  return fail(
+    'ERR_UPSTREAM_TIMEOUT',
+    'El modelo está tardando más de lo normal y cortamos la espera. Probá de ' +
+      `nuevo en un momento${salida ? `, o ${salida}` : ''}.`,
+    504,
   );
 }
 

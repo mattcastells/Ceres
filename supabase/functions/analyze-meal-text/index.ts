@@ -21,6 +21,7 @@ import {
   ok,
   overloadedResponse,
   rateLimitedResponse,
+  timedOutResponse,
   validate,
   validateTitle,
 } from '../_shared/estimation.ts';
@@ -108,6 +109,7 @@ Deno.serve(async (req) => {
     lastError,
     rateLimited,
     overloaded,
+    timedOut,
     retryAfterSeconds,
     diagnostics,
     latencyMs,
@@ -153,6 +155,10 @@ Deno.serve(async (req) => {
   if (parsed === null && overloaded) {
     await registrar('failed', 'ERR_AI_OVERLOADED');
     return overloadedResponse();
+  }
+  if (parsed === null && timedOut) {
+    await registrar('failed', 'ERR_UPSTREAM_TIMEOUT');
+    return timedOutResponse('cargá la comida a mano');
   }
 
   const items = validate(parsed);

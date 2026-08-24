@@ -20,10 +20,15 @@ class MealSuggestionsClient {
 
   static const String functionName = 'suggest-meals';
 
-  /// La función se corta sola a los 25 s contra Gemini; esto cubre eso más la
-  /// red. Sin timeout propio, una función que muere deja la pantalla girando
-  /// para siempre, sin error y sin forma de salir.
-  static const Duration timeout = Duration(seconds: 45);
+  /// Más largo que el techo de la función, por lo mismo que en
+  /// `GeminiAnalysisClient.timeout`: los 25 s de Gemini son por intento y la
+  /// función puede intentar dos veces, así que 45 s de acá cortaban antes de
+  /// que el servidor llegara a contestar. La función ahora se corta a los 38 s
+  /// y contesta; esto le da lugar de sobra.
+  ///
+  /// Sin timeout propio, una función que muere deja la pantalla girando para
+  /// siempre, sin error y sin forma de salir.
+  static const Duration timeout = Duration(seconds: 60);
 
   /// Abajo de esto ni se pregunta.
   ///

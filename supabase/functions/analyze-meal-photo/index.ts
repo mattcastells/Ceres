@@ -24,6 +24,7 @@ import {
   ok,
   overloadedResponse,
   rateLimitedResponse,
+  timedOutResponse,
   validate,
   validateTitle,
 } from '../_shared/estimation.ts';
@@ -132,6 +133,7 @@ Deno.serve(async (req) => {
     lastError,
     rateLimited,
     overloaded,
+    timedOut,
     retryAfterSeconds,
     diagnostics,
     latencyMs,
@@ -183,6 +185,13 @@ Deno.serve(async (req) => {
   if (parsed === null && overloaded) {
     await registrar('ERR_AI_OVERLOADED');
     return overloadedResponse();
+  }
+  // La demora también es un fallo con nombre propio, y se registra como los
+  // otros. Sin esto la app cortaba sola por timeout y no quedaba **ninguna**
+  // fila: "el análisis tarda mucho" era una impresión que no se podía medir.
+  if (parsed === null && timedOut) {
+    await registrar('ERR_UPSTREAM_TIMEOUT');
+    return timedOutResponse('cargá la comida a mano');
   }
 
   const items = validate(parsed);

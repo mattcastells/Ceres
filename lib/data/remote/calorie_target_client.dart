@@ -22,10 +22,15 @@ class CalorieTargetClient {
 
   static const String functionName = 'suggest-calorie-target';
 
-  /// La función se corta sola a los 25 s contra Gemini; esto cubre eso más la
-  /// red. `invoke` no trae timeout propio, y sin esto el paso del alta se
-  /// queda girando para siempre — en la única pantalla de la que no se sale.
-  static const Duration timeout = Duration(seconds: 40);
+  /// Más largo que el techo de la función, por lo mismo que en
+  /// `GeminiAnalysisClient.timeout`: los 25 s de Gemini son por intento y la
+  /// función puede intentar dos veces, así que 40 s de acá cortaban antes de
+  /// que el servidor llegara a contestar. Este era el peor de los tres, y
+  /// encima en el alta.
+  ///
+  /// `invoke` no trae timeout propio, y sin esto el paso del alta se queda
+  /// girando para siempre — en la única pantalla de la que no se sale.
+  static const Duration timeout = Duration(seconds: 60);
 
   Future<AiCalorieTarget> propose({
     required BiologicalSex sex,

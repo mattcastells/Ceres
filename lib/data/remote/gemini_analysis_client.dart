@@ -26,12 +26,23 @@ class GeminiAnalysisClient {
   /// La hermana por texto: misma validación y misma cuota, sin foto.
   static const String textFunctionName = 'analyze-meal-text';
 
-  /// La función se corta sola a los 25 s contra Gemini; esto cubre eso más la
-  /// descarga de la foto y la red.
+  /// Tiene que ser **más largo** que el techo de la función, no parecido.
+  ///
+  /// Acá estaba el bug que llenaba la pantalla de "El análisis tardó
+  /// demasiado". La función se corta a los 25 s contra Gemini, sí, pero eso es
+  /// **por intento** y puede intentar dos veces: 50 s de servidor contra 45 s
+  /// de acá. O sea que cualquier análisis que necesitara un segundo intento
+  /// terminaba en el mensaje de demora aunque el servidor hubiera contestado
+  /// bien un rato después — la foto y la cuota gastadas, el resultado tirado.
+  ///
+  /// Ahora la función tiene un presupuesto total de 38 s y contesta ella un
+  /// `ERR_UPSTREAM_TIMEOUT`; esto son 60 s para que siempre le llegue a hablar
+  /// primero. El timeout de acá deja de ser lo normal y vuelve a ser lo que
+  /// tiene que ser: la red que se cortó de verdad.
   ///
   /// `invoke` **no trae timeout propio**: sin esto, una función que muere deja
   /// la pantalla girando para siempre, sin error y sin forma de salir.
-  static const Duration timeout = Duration(seconds: 45);
+  static const Duration timeout = Duration(seconds: 60);
 
   /// Estima una comida a partir de una descripción escrita.
   ///

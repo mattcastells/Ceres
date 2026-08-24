@@ -14,7 +14,14 @@ prellenar la pantalla de revisión (F-05/F-06). **Nunca** guarda directo: el usu
 Function `analyze-meal-photo`. La clave nunca llega al cliente.
 
 **Variables.** `GEMINI_API_KEY` (secreto de Edge Functions),
-`GEMINI_MODEL` (default `gemini-2.5-flash`), `GEMINI_PROMPT_VERSION`.
+`GEMINI_MODEL` (default `gemini-3.6-flash`), `GEMINI_THINKING_LEVEL` (default `low`),
+`GEMINI_PROMPT_VERSION`.
+
+**Techos de tiempo.** Cada llamada al proveedor se corta a los 25 s y los dos intentos
+juntos a los 38 s (`GEMINI_BUDGET_MS`), después de lo cual la función contesta
+`ERR_UPSTREAM_TIMEOUT` (504) y lo registra en `ai_analyses`. Los clientes esperan 60 s: el
+techo del servidor tiene que ser **más chico** que el del cliente, o la app corta antes de
+que el servidor llegue a contestar y el fallo no queda registrado en ningún lado.
 
 **Contrato.** Se pide salida estructurada con `responseMimeType: application/json` y
 `responseSchema` = `gemini-output-schema.json`. La respuesta se valida contra el schema
