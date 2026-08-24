@@ -28,21 +28,25 @@ export const DAILY_QUOTA = Number(Deno.env.get('AI_DAILY_QUOTA') ?? '') || 20;
  * No alcanza con esto solo: `callGemini` reintenta, así que este número no es el
  * techo de la función — ese es [GEMINI_BUDGET_MS].
  *
- * Bajó de 25 s a 18 s cuando los datos de `ai_analyses` mostraron dos cosas.
- * Una: con el razonamiento apagado (ver [THINKING_LEVEL]) una respuesta buena
- * llega en 4 o 5 s, y las más lentas que se midieron con razonamiento puesto
- * apenas pasaban de 20 s. Dos: los intentos que fallan no tardan, **se cuelgan**
- * —`tokens_in` en `null`, o sea que no volvió ni un byte— y siempre topan justo
- * contra este número. Cortarlos antes no pierde nada y deja tiempo para otro
- * intento, que es el que suele funcionar.
+ * 30 s, medido contra `ai_analyses`: con [THINKING_LEVEL] en `medium` una
+ * respuesta buena tarda entre 9 y 25 s —la más lenta que se midió fueron
+ * 25215 ms—, así que abajo de 30 s estaríamos matando análisis que iban a
+ * salir bien. Que es exactamente lo que no queremos: acá se prefiere esperar
+ * a fallar.
+ *
+ * Los intentos que **sí** hay que cortar no tardan, se cuelgan: vuelven con
+ * `tokens_in` en `null` —ni un byte— y topan justo contra este número. Se pagan
+ * enteros, y esa es la parte fea de tenerlo alto. Distinguir un cuelgue de un
+ * modelo pensando requeriría leer la respuesta en streaming y mirar si llega un
+ * primer byte; mientras eso no exista, este número es el único árbitro y se
+ * pone del lado de no perder un análisis bueno.
  *
  * Sale del entorno (`GEMINI_TIMEOUT_MS`) porque **está acoplado a
- * [THINKING_LEVEL]** y los dos tienen que poder moverse juntos. Con el
- * razonamiento en `medium` las respuestas buenas tardaban 20, 33, 38 y 40 s: un
- * tope de 18 s las mataría a todas. Quien suba el razonamiento tiene que subir
- * esto, y tenerlo hardcodeado obligaba a desplegar para averiguar cuál conviene.
+ * [THINKING_LEVEL]**: los dos tienen que moverse juntos. Con el razonamiento
+ * bajo las respuestas llegan en 4 o 5 s y este tope puede bajar a 18 s, lo que
+ * deja lugar para tres intentos en vez de dos.
  */
-export const GEMINI_TIMEOUT_MS = leerMs('GEMINI_TIMEOUT_MS', 18_000);
+export const GEMINI_TIMEOUT_MS = leerMs('GEMINI_TIMEOUT_MS', 30_000);
 
 /**
  * Cuánto puede tardar la función entera contra el proveedor, **sumando todos
@@ -56,19 +60,25 @@ export const GEMINI_TIMEOUT_MS = leerMs('GEMINI_TIMEOUT_MS', 18_000);
  * cuota ya estaba gastada y, si el segundo intento salía bien, el resultado se
  * tiraba a la basura sin que nadie lo viera.
  *
- * La regla es que el servidor siempre conteste primero: 48 s de techo acá, más
+ * La regla es que el servidor siempre conteste primero: 50 s de techo acá, más
  * el resto de la función, entra en los 60 s que esperan los clientes. Y
  * contestar es mejor que no contestar aunque la respuesta sea un fallo: un
  * `ERR_UPSTREAM_TIMEOUT` queda registrado en `ai_analyses` y se puede mirar; un
  * `TimeoutException` del lado del teléfono no deja rastro en ningún lado.
  *
+ * Con [GEMINI_TIMEOUT_MS] en 30 s esto da dos intentos y no tres: el primero
+ * se lleva 30 s y al segundo le quedan 20, que alcanzan para la mediana de una
+ * respuesta con razonamiento (~15 s) aunque no para la más lenta. Es el precio
+ * de darle al modelo tiempo de pensar, y se paga a sabiendas.
+ *
  * También del entorno (`GEMINI_BUDGET_MS`), por lo mismo que el de arriba. La
  * única regla que no se puede romper al moverlo: **tiene que quedar más chico
- * que el timeout del cliente** (60 s) con lugar para el resto de la función —
- * bajar la foto, pasarla a base64, escribir la fila—. Arriba de ~52 s la app
- * vuelve a cortar antes que el servidor y el fallo deja de quedar registrado.
+ * que el timeout del cliente** (60 s en 1.22.2) con lugar para el resto de la
+ * función —bajar la foto, pasarla a base64, escribir la fila—. Arriba de ~54 s
+ * la app vuelve a cortar antes que el servidor y el fallo deja de quedar
+ * registrado, que es el bug con el que empezó todo esto.
  */
-export const GEMINI_BUDGET_MS = leerMs('GEMINI_BUDGET_MS', 48_000);
+export const GEMINI_BUDGET_MS = leerMs('GEMINI_BUDGET_MS', 50_000);
 
 /**
  * Un número de milisegundos del entorno, o el de fábrica si no vino o vino mal.
@@ -103,22 +113,34 @@ const MIN_ATTEMPT_MS = 6_000;
 /**
  * Cuánto se le deja "pensar" al modelo antes de contestar.
  *
- * Los modelos de la familia Gemini 3 razonan **de fábrica** (`thinkingLevel`
- * por omisión: `medium`), y esos tokens se pagan y se esperan. Para lo que hace
- * esta app —leer una foto y devolver un JSON con una forma fija, que es
- * extracción estructurada y no un problema de razonamiento— es tiempo y plata
- * gastados en algo que el `responseSchema` ya garantiza.
+ * `medium`, que es lo que hacen de fábrica los Gemini 3. Estuvo en `low` una
+ * versión, buscando velocidad, y se volvió: **acá la precisión vale más que los
+ * segundos.**
  *
- * `low` y no `minimal` a propósito: estimar cuánto pesa una milanesa en una
- * foto no es puro OCR, y dejarlo sin nada de razonamiento empeoraría el número
- * que después le queda a alguien en el historial.
+ * El argumento para bajarlo era que esto es extracción estructurada, con el
+ * `responseSchema` garantizando la forma. Esa mitad es cierta para *identificar*
+ * qué hay en el plato, y falsa para lo que de verdad importa: estimar la
+ * porción. "La milanesa ocupa dos tercios del plato, un plato son 26 cm,
+ * entonces pesa unos 180 g" es una cadena de inferencia, no una lectura — y de
+ * ahí salen las calorías que le quedan a alguien en el historial, que después
+ * mira una nutricionista. Un número mal estimado no se nota, y ese es el
+ * problema: no avisa.
  *
- * Sale del entorno porque es el knob que hay que poder mover sin desplegar: si
- * `GEMINI_MODEL` se baja a un `gemini-2.5-*`, que no entiende `thinkingLevel` y
- * **rechaza el pedido entero con un 400**, se pone `GEMINI_THINKING_LEVEL` en
- * `default` y el campo deja de mandarse.
+ * Con `low` las respuestas bajaban de ~15 s a ~5 s. Nunca se midió si además
+ * empeoraban, y elegir velocidad sobre un riesgo sin medir, en una app de
+ * nutrición, es elegir mal. La lentitud tampoco era la causa de los fallos —eran
+ * los cuelgues, que se arreglan aparte—, así que el trueque compraba menos de lo
+ * que parecía.
+ *
+ * Si algún día se mide contra comidas de calorías conocidas y `low` empata, es
+ * un `secrets set` y listo. Ojo al moverlo: hay que mover [GEMINI_TIMEOUT_MS]
+ * con él, en la dirección que corresponda.
+ *
+ * Sale del entorno también porque si `GEMINI_MODEL` se baja a un `gemini-2.5-*`,
+ * que no entiende `thinkingLevel` y **rechaza el pedido entero con un 400**, se
+ * pone `GEMINI_THINKING_LEVEL` en `default` y el campo deja de mandarse.
  */
-const THINKING_LEVEL = (Deno.env.get('GEMINI_THINKING_LEVEL') ?? 'low')
+const THINKING_LEVEL = (Deno.env.get('GEMINI_THINKING_LEVEL') ?? 'medium')
   .trim()
   .toLowerCase();
 
