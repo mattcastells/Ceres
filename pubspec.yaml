@@ -8,7 +8,7 @@ publish_to: 'none'
 # APK por arquitectura con el corrimiento de Flutter, y el más alto que quedó
 # instalado fue 4011 (x86_64). Cualquier número por debajo de eso deja a esa
 # gente sin poder actualizar nunca más desde la app.
-version: 1.22.1+5032
+version: 1.22.2+5033
 
 environment:
   sdk: ^3.9.0
