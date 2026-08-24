@@ -33,6 +33,7 @@ import '../../domain/models/summaries.dart';
 import '../../domain/models/user_profile.dart';
 import '../../domain/models/water.dart';
 import '../../domain/repositories/repositories.dart';
+import '../../domain/services/document_merge.dart' show collapseGoals;
 import '../../domain/services/photo_sync_service.dart';
 import '../../domain/services/summary_builder.dart';
 import '../local/health_connect_gateway.dart';
@@ -322,9 +323,28 @@ class LocalRepository
   ///    conserva la de marca de tiempo más reciente, que es la última que la
   ///    persona vio en pantalla.
   Future<void> repararRegistrosViejos() async {
-    final objetivos = store.goals
-        .where((g) => g.endsOn == null || !g.endsOn!.isBefore(g.startsOn))
-        .toList();
+    // 4. **Dos objetivos cubriendo los mismos días.** Mismo patrón que el agua
+    //    y el sueño —la reconciliación une por id y no mira las fechas—, pero
+    //    con dos diferencias que lo hacen peor: acá el que se queja es el
+    //    servidor, con `goals_no_overlap`, y rechaza el lote entero, así que
+    //    los objetivos **dejan de sincronizar para siempre**; y el mensaje no
+    //    dice cuál es la fila que molesta. Pasó al reinstalar la app antes de
+    //    la 1.22.1: el alta forzada recalculaba el objetivo por fórmula sin
+    //    cerrar el que la persona tenía escrito a mano, y quedaban los dos
+    //    abiertos desde el mismo día.
+    //
+    //    Se repara acá y no solo en la reconciliación porque la reconciliación
+    //    necesita que la descarga funcione, y un teléfono ya roto tiene que
+    //    poder arreglarse sin depender de la red. `collapseGoals` decide, y su
+    //    regla es la del producto: lo que escribió la persona le gana a lo que
+    //    calculó una fórmula.
+    final objetivos = <Goal>[
+      for (final json in collapseGoals(<Map<String, dynamic>>[
+        for (final g in store.goals)
+          if (g.endsOn == null || !g.endsOn!.isBefore(g.startsOn)) g.toJson(),
+      ]))
+        Goal.fromJson(json),
+    ];
 
     // El renombrado va antes de juntar los duplicados: si no, se elegiría una
     // de las dos filas y después se le cambiaría el id igual.

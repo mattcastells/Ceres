@@ -577,4 +577,148 @@ void main() {
     });
   });
 
+  // Dos objetivos cubriendo los mismos días es el estado que rechaza
+  // `goals_no_overlap`, y rechazarlo tira **el lote entero**: desde ahí los
+  // objetivos no vuelven a subir nunca, con un error que no dice cuál es la
+  // fila que molesta. Del lado del teléfono nadie lo impedía: la unión es por
+  // id y las fechas no se miran.
+  group('un solo objetivo vigente por día', () {
+    // El caso real, con los datos que lo produjeron. Reinstalar la app antes de
+    // la 1.22.1 forzaba el alta de nuevo, y esa alta calculaba un objetivo por
+    // fórmula sin cerrar el que la persona tenía escrito a mano.
+    test('lo que escribió la persona le gana a lo que calculó la fórmula', () {
+      final salida = collapseGoals(<Map<String, dynamic>>[
+        <String, dynamic>{
+          'id': '2f291f46',
+          'startsOn': '2026-08-04',
+          'endsOn': '2026-08-22',
+          'baseCalorieTarget': 2000,
+          'targetMethod': 'manual',
+          'updatedAt': '2026-08-23T15:46:23.381407',
+        },
+        <String, dynamic>{
+          'id': 'e2b8b491',
+          'startsOn': '2026-08-23',
+          'endsOn': null,
+          'baseCalorieTarget': 2000,
+          'targetMethod': 'manual',
+          // Sin marca de tiempo. Es lo que hace peligroso desempatar solo por
+          // `updatedAt`: el de la persona perdería contra el de la fórmula.
+          'updatedAt': null,
+        },
+        <String, dynamic>{
+          'id': '0e080a02',
+          'startsOn': '2026-08-23',
+          'endsOn': null,
+          'baseCalorieTarget': 2269,
+          'targetMethod': 'calculated',
+          'updatedAt': '2026-08-23T15:46:23.386815',
+        },
+      ]);
+
+      expect(salida, hasLength(2));
+      expect(salida.last['id'], 'e2b8b491');
+      expect(salida.last['baseCalorieTarget'], 2000);
+      expect(salida.last['endsOn'], isNull, reason: 'sigue siendo el vigente');
+      // Y el historial anterior se respeta tal cual estaba.
+      expect(salida.first['id'], '2f291f46');
+      expect(salida.first['endsOn'], '2026-08-22');
+    });
+
+    test('con fechas distintas se cierra el anterior, no se descarta', () {
+      final salida = collapseGoals(<Map<String, dynamic>>[
+        <String, dynamic>{
+          'id': 'viejo',
+          'startsOn': '2026-07-28',
+          'endsOn': null,
+          'targetMethod': 'manual',
+          'updatedAt': '2026-07-28T10:00:00',
+        },
+        <String, dynamic>{
+          'id': 'nuevo',
+          'startsOn': '2026-08-23',
+          'endsOn': null,
+          'targetMethod': 'manual',
+          'updatedAt': '2026-08-23T10:00:00',
+        },
+      ]);
+
+      // Los dos siguen: el historial no se reescribe, se cierra.
+      expect(salida, hasLength(2));
+      expect(salida.first['endsOn'], '2026-08-22');
+      expect(salida.last['endsOn'], isNull);
+    });
+
+    test('entre dos del mismo tipo gana el más reciente', () {
+      final salida = collapseGoals(<Map<String, dynamic>>[
+        <String, dynamic>{
+          'id': 'antes',
+          'startsOn': '2026-08-23',
+          'endsOn': null,
+          'targetMethod': 'manual',
+          'updatedAt': '2026-08-23T10:00:00',
+        },
+        <String, dynamic>{
+          'id': 'despues',
+          'startsOn': '2026-08-23',
+          'endsOn': null,
+          'targetMethod': 'manual',
+          'updatedAt': '2026-08-23T18:00:00',
+        },
+      ]);
+
+      expect(salida, hasLength(1));
+      expect(salida.single['id'], 'despues');
+    });
+
+    test('una fecha ilegible se aparta, no se tira', () {
+      final salida = collapseGoals(<Map<String, dynamic>>[
+        <String, dynamic>{'id': 'roto', 'startsOn': 'cualquier cosa'},
+        <String, dynamic>{
+          'id': 'sano',
+          'startsOn': '2026-08-23',
+          'endsOn': null,
+          'targetMethod': 'manual',
+        },
+      ]);
+
+      expect(salida, hasLength(2));
+      expect(salida.map((g) => g['id']), containsAll(<String>['roto', 'sano']));
+    });
+
+    test('la reconciliación lo aplica, no solo la reparación', () {
+      final local = doc(
+        goals: <Map<String, dynamic>>[
+          <String, dynamic>{
+            'id': 'mio',
+            'startsOn': '2026-08-23',
+            'endsOn': null,
+            'targetMethod': 'manual',
+            'updatedAt': null,
+          },
+        ],
+        meals: <Map<String, dynamic>>[
+          <String, dynamic>{'id': 'm1', 'updatedAt': '2026-08-23T10:00:00Z'},
+        ],
+      );
+      final remote = doc(
+        goals: <Map<String, dynamic>>[
+          <String, dynamic>{
+            'id': 'del-servidor',
+            'startsOn': '2026-08-23',
+            'endsOn': null,
+            'targetMethod': 'calculated',
+            'updatedAt': '2026-08-23T15:46:23Z',
+          },
+        ],
+      );
+
+      final goals = mergeDocuments(local: local, remote: remote)['goals']! as List;
+
+      // Unir por id los dejaría a los dos y el push moriría contra
+      // `goals_no_overlap`.
+      expect(goals, hasLength(1));
+      expect((goals.single as Map<String, dynamic>)['id'], 'mio');
+    });
+  });
 }

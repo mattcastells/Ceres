@@ -131,6 +131,11 @@ Map<String, dynamic> mergeDocuments({
     remoteRows: _rows(remote['measurements']),
   );
 
+  // Después de unir por id, porque unir por id es lo que puede dejar dos
+  // objetivos cubriendo los mismos días: uno de cada lado, con ids distintos.
+  // Ver [collapseGoals] — sin esto el push de objetivos muere para siempre.
+  merged['goals'] = collapseGoals(_rows(merged['goals']));
+
   for (final key in _idlessLists) {
     final localList = _values(local[key]);
     final remoteList = _values(remote[key]);
@@ -328,3 +333,107 @@ bool _remoteIsNewer(
 
 DateTime? _parse(Object? raw) =>
     raw is String ? DateTime.tryParse(raw)?.toUtc() : null;
+
+/// Un solo objetivo vigente por día, también del lado del teléfono.
+///
+/// La base lo garantiza con `goals_no_overlap` desde la migración 3, y hasta
+/// ahora era **lo único** que lo garantizaba. Del lado del teléfono los
+/// objetivos se unen por id y nada mira las fechas, así que dos filas que cubren
+/// los mismos días con ids distintos conviven sin que nada se queje — hasta que
+/// se intenta subirlas y el servidor rechaza el lote entero. A partir de ahí los
+/// objetivos **no vuelven a sincronizar nunca**, con un error que no dice cuál
+/// es el problema ("conflicting key value violates exclusion constraint").
+///
+/// Pasó de verdad: reinstalar la app forzaba el alta de nuevo (arreglado en la
+/// 1.22.1), y esa alta recalculaba el objetivo por fórmula sin cerrar el que la
+/// persona ya tenía escrito a mano. Quedaron dos abiertos desde el mismo día.
+///
+/// Cómo se resuelve un cruce:
+///
+/// - **Fechas distintas**: se cierra el anterior el día antes de que empiece el
+///   siguiente. No se descarta nada: eso es historial y el historial no se
+///   reescribe.
+/// - **Mismo día de inicio**: uno sobra, y para elegir manda la regla del
+///   producto — **lo que escribió la persona le gana a lo que calculó una
+///   fórmula**. Un número calculado solo llega a existir porque alguien lo
+///   aceptó, y aceptarlo pasa por `saveGoal`, que reemplaza en vez de duplicar;
+///   si hay un duplicado es porque algo salió mal, y cuando algo sale mal el
+///   que no puede perder es el de la persona. Recién si los dos son del mismo
+///   tipo desempata `updatedAt`, y sin marca se lo trata como el más viejo.
+///
+/// Lo que no se puede leer se aparta y viaja igual: una fila con una fecha rota
+/// no es una fila para tirar.
+List<Map<String, dynamic>> collapseGoals(List<Map<String, dynamic>> rows) {
+  if (rows.length < 2) return rows;
+
+  final legibles = <(DateTime, Map<String, dynamic>)>[];
+  final ilegibles = <Map<String, dynamic>>[];
+  for (final row in rows) {
+    final desde = _parse(row['startsOn']);
+    if (desde == null) {
+      ilegibles.add(row);
+      continue;
+    }
+    legibles.add((desde, row));
+  }
+  if (legibles.length < 2) return rows;
+
+  legibles.sort((a, b) {
+    final porFecha = a.$1.compareTo(b.$1);
+    return porFecha != 0 ? porFecha : _cualGana(a.$2, b.$2);
+  });
+
+  // Uno por día de inicio. El orden de arriba ya dejó primero al que gana.
+  final unoPorDia = <(DateTime, Map<String, dynamic>)>[];
+  for (final entrada in legibles) {
+    if (unoPorDia.isNotEmpty &&
+        unoPorDia.last.$1.compareTo(entrada.$1) == 0) {
+      continue;
+    }
+    unoPorDia.add(entrada);
+  }
+
+  final salida = <Map<String, dynamic>>[];
+  for (var i = 0; i < unoPorDia.length; i++) {
+    final row = unoPorDia[i].$2;
+    if (i == unoPorDia.length - 1) {
+      salida.add(row);
+      continue;
+    }
+    final empiezaElSiguiente = unoPorDia[i + 1].$1;
+    final hasta = _parse(row['endsOn']);
+    // Abierto, o cerrado tan tarde que se mete en el siguiente: se cierra el
+    // día antes. Las fechas están estrictamente ordenadas y sin repetir, así
+    // que esto nunca deja `endsOn` antes que `startsOn`.
+    if (hasta == null || !hasta.isBefore(empiezaElSiguiente)) {
+      salida.add(<String, dynamic>{
+        ...row,
+        'endsOn': _diaIso(empiezaElSiguiente.subtract(const Duration(days: 1))),
+      });
+    } else {
+      salida.add(row);
+    }
+  }
+
+  return <Map<String, dynamic>>[...salida, ...ilegibles];
+}
+
+/// Cuál de dos objetivos que arrancan el mismo día se queda. Negativo: el
+/// primero.
+int _cualGana(Map<String, dynamic> a, Map<String, dynamic> b) {
+  final manualA = a['targetMethod'] == 'manual';
+  final manualB = b['targetMethod'] == 'manual';
+  if (manualA != manualB) return manualA ? -1 : 1;
+
+  final ta = _parse(a['updatedAt']);
+  final tb = _parse(b['updatedAt']);
+  if (ta == null && tb == null) return 0;
+  if (ta == null) return 1;
+  if (tb == null) return -1;
+  return tb.compareTo(ta);
+}
+
+/// `YYYY-MM-DD`, que es como `Goal.toJson` escribe las fechas de un objetivo.
+String _diaIso(DateTime d) => '${d.year.toString().padLeft(4, '0')}-'
+    '${d.month.toString().padLeft(2, '0')}-'
+    '${d.day.toString().padLeft(2, '0')}';
