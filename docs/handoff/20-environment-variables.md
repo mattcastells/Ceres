@@ -22,6 +22,8 @@ Leyenda de ámbito:
 | `GEMINI_API_KEY` | E | sí | Análisis de foto. Solo la Edge Function `analyze-meal-photo` |
 | `GEMINI_MODEL` | E | no | Default `gemini-3.6-flash` |
 | `GEMINI_THINKING_LEVEL` | E | no | Default `low`. Uno de `minimal`, `low`, `medium`, `high`, o `default` para no mandar el campo. Los Gemini 3 razonan de fábrica en `medium` y eso se paga y se espera; un `gemini-2.5-*` no entiende el campo y rechaza el pedido entero, así que con uno de esos va en `default` |
+| `GEMINI_TIMEOUT_MS` | E | no | Default 18000. Techo de **una** llamada al proveedor. Acoplado a `GEMINI_THINKING_LEVEL`: con razonamiento en `medium` las respuestas buenas tardan 20–40 s y este tope las mataría. Quien suba uno sube el otro |
+| `GEMINI_BUDGET_MS` | E | no | Default 48000. Techo de los 3 intentos juntos. **Tiene que quedar bajo los ~52 s**, o la app corta antes que el servidor y el fallo no queda registrado |
 | `GEMINI_PROMPT_VERSION` | E | no | Default `v3`; se persiste en `ai_analyses` |
 | `USDA_API_KEY` | E | sí | FoodData Central |
 | `OPEN_FOOD_FACTS_USER_AGENT` | E | sí | `Ceres/1.0 (contacto@ceres.app)` — exigido por su política |
@@ -85,6 +87,8 @@ SUPABASE_SERVICE_ROLE_KEY=
 GEMINI_API_KEY=
 GEMINI_MODEL=gemini-3.6-flash
 GEMINI_THINKING_LEVEL=low
+GEMINI_TIMEOUT_MS=18000
+GEMINI_BUDGET_MS=48000
 GEMINI_PROMPT_VERSION=v3
 USDA_API_KEY=
 OPEN_FOOD_FACTS_USER_AGENT=Ceres/1.0 (contacto@ceres.app)

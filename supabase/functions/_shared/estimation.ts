@@ -35,8 +35,14 @@ export const DAILY_QUOTA = Number(Deno.env.get('AI_DAILY_QUOTA') ?? '') || 20;
  * —`tokens_in` en `null`, o sea que no volvió ni un byte— y siempre topan justo
  * contra este número. Cortarlos antes no pierde nada y deja tiempo para otro
  * intento, que es el que suele funcionar.
+ *
+ * Sale del entorno (`GEMINI_TIMEOUT_MS`) porque **está acoplado a
+ * [THINKING_LEVEL]** y los dos tienen que poder moverse juntos. Con el
+ * razonamiento en `medium` las respuestas buenas tardaban 20, 33, 38 y 40 s: un
+ * tope de 18 s las mataría a todas. Quien suba el razonamiento tiene que subir
+ * esto, y tenerlo hardcodeado obligaba a desplegar para averiguar cuál conviene.
  */
-export const GEMINI_TIMEOUT_MS = 18_000;
+export const GEMINI_TIMEOUT_MS = leerMs('GEMINI_TIMEOUT_MS', 18_000);
 
 /**
  * Cuánto puede tardar la función entera contra el proveedor, **sumando todos
@@ -55,8 +61,27 @@ export const GEMINI_TIMEOUT_MS = 18_000;
  * contestar es mejor que no contestar aunque la respuesta sea un fallo: un
  * `ERR_UPSTREAM_TIMEOUT` queda registrado en `ai_analyses` y se puede mirar; un
  * `TimeoutException` del lado del teléfono no deja rastro en ningún lado.
+ *
+ * También del entorno (`GEMINI_BUDGET_MS`), por lo mismo que el de arriba. La
+ * única regla que no se puede romper al moverlo: **tiene que quedar más chico
+ * que el timeout del cliente** (60 s) con lugar para el resto de la función —
+ * bajar la foto, pasarla a base64, escribir la fila—. Arriba de ~52 s la app
+ * vuelve a cortar antes que el servidor y el fallo deja de quedar registrado.
  */
-export const GEMINI_BUDGET_MS = 48_000;
+export const GEMINI_BUDGET_MS = leerMs('GEMINI_BUDGET_MS', 48_000);
+
+/**
+ * Un número de milisegundos del entorno, o el de fábrica si no vino o vino mal.
+ *
+ * Se valida en vez de confiar: un `GEMINI_TIMEOUT_MS=` vacío o con un dedazo
+ * daría `NaN`, y un `NaN` en un `setTimeout` no falla — dispara al instante y
+ * cancela **todos** los intentos antes de empezar. Un tope mal escrito rompería
+ * el análisis entero sin decir por qué.
+ */
+function leerMs(clave: string, porOmision: number): number {
+  const valor = Number(Deno.env.get(clave) ?? '');
+  return Number.isFinite(valor) && valor >= 1000 ? valor : porOmision;
+}
 
 /**
  * Cuántas veces se le pide al proveedor antes de rendirse.
