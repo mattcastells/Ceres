@@ -25,35 +25,53 @@ export const DAILY_QUOTA = Number(Deno.env.get('AI_DAILY_QUOTA') ?? '') || 20;
 /**
  * Cuánto puede tardar **una** llamada al proveedor.
  *
- * No alcanza con esto solo: `callGemini` puede intentar dos veces, así que este
- * número no es el techo de la función — ese es [GEMINI_BUDGET_MS].
+ * No alcanza con esto solo: `callGemini` reintenta, así que este número no es el
+ * techo de la función — ese es [GEMINI_BUDGET_MS].
+ *
+ * Bajó de 25 s a 18 s cuando los datos de `ai_analyses` mostraron dos cosas.
+ * Una: con el razonamiento apagado (ver [THINKING_LEVEL]) una respuesta buena
+ * llega en 4 o 5 s, y las más lentas que se midieron con razonamiento puesto
+ * apenas pasaban de 20 s. Dos: los intentos que fallan no tardan, **se cuelgan**
+ * —`tokens_in` en `null`, o sea que no volvió ni un byte— y siempre topan justo
+ * contra este número. Cortarlos antes no pierde nada y deja tiempo para otro
+ * intento, que es el que suele funcionar.
  */
-export const GEMINI_TIMEOUT_MS = 25_000;
+export const GEMINI_TIMEOUT_MS = 18_000;
 
 /**
- * Cuánto puede tardar la función entera contra el proveedor, **sumando los dos
- * intentos**.
+ * Cuánto puede tardar la función entera contra el proveedor, **sumando todos
+ * los intentos**.
  *
- * Este número existe porque su ausencia era el bug: el timeout de arriba era
- * por intento, así que con un reintento el servidor podía estar 50 s en Gemini,
- * y las apps esperan 45 s. O sea que cualquier llamada que necesitara un
- * segundo intento terminaba **garantizado** en "El análisis tardó demasiado" —
- * la app cortaba antes de que el servidor pudiera contestar, la cuota ya estaba
- * gastada y, si el segundo intento salía bien, el resultado se tiraba a la
- * basura sin que nadie lo viera.
+ * Este número existe porque su ausencia era el bug original: el timeout de
+ * arriba es por intento, así que con un reintento el servidor podía estar 50 s
+ * en Gemini y las apps esperaban 45 s. O sea que cualquier llamada que
+ * necesitara un segundo intento terminaba **garantizado** en "El análisis tardó
+ * demasiado" — la app cortaba antes de que el servidor pudiera contestar, la
+ * cuota ya estaba gastada y, si el segundo intento salía bien, el resultado se
+ * tiraba a la basura sin que nadie lo viera.
  *
- * La regla, ahora, es que el servidor siempre conteste primero: 38 s de techo
- * acá, más el resto de la función, entra cómodo en los 60 s que esperan los
- * clientes. Y contestar es mejor que no contestar aunque la respuesta sea un
- * fallo: un `ERR_UPSTREAM_TIMEOUT` queda registrado en `ai_analyses` y se puede
- * mirar; un `TimeoutException` del lado del teléfono no deja rastro en ningún
- * lado.
+ * La regla es que el servidor siempre conteste primero: 48 s de techo acá, más
+ * el resto de la función, entra en los 60 s que esperan los clientes. Y
+ * contestar es mejor que no contestar aunque la respuesta sea un fallo: un
+ * `ERR_UPSTREAM_TIMEOUT` queda registrado en `ai_analyses` y se puede mirar; un
+ * `TimeoutException` del lado del teléfono no deja rastro en ningún lado.
  */
-export const GEMINI_BUDGET_MS = 38_000;
+export const GEMINI_BUDGET_MS = 48_000;
 
 /**
- * Abajo de esto no vale la pena empezar un segundo intento: lo único que se
- * consigue es llegar tarde igual, habiendo gastado el doble del proveedor.
+ * Cuántas veces se le pide al proveedor antes de rendirse.
+ *
+ * Tres, y no dos, por lo que se ve en `ai_analyses`: los intentos que se cuelgan
+ * vienen de a rachas —tres seguidos en dos minutos, el 24 de agosto— y cada uno
+ * que se cuelga no gasta nada del modelo, porque no llega a contestar. Con un
+ * solo reintento, una racha así se le aparece a la persona como un fallo que
+ * tiene que reintentar a mano.
+ */
+const MAX_ATTEMPTS = 3;
+
+/**
+ * Abajo de esto no vale la pena empezar otro intento: lo único que se consigue
+ * es llegar tarde igual, habiendo gastado otra llamada al proveedor.
  */
 const MIN_ATTEMPT_MS = 6_000;
 
@@ -347,8 +365,8 @@ export async function callGemini(
   schema: unknown = RESPONSE_SCHEMA,
 ): Promise<GeminiOutcome> {
   const startedAt = Date.now();
-  // El techo de los dos intentos juntos, fijado **una vez**. Cada intento se
-  // corta con lo que quede, no con 25 s frescos: dos relojes independientes es
+  // El techo de todos los intentos juntos, fijado **una vez**. Cada intento se
+  // corta con lo que quede, no con 18 s frescos: dos relojes independientes es
   // exactamente cómo se llegaba a 50 s.
   const deadline = startedAt + GEMINI_BUDGET_MS;
   let parsed: unknown = null;
@@ -364,7 +382,12 @@ export async function callGemini(
     tokensThinking: null,
   };
 
-  for (const temperature of [0.2, 0]) {
+  for (let intento = 0; intento < MAX_ATTEMPTS; intento++) {
+    // El primero con algo de temperatura y los siguientes en cero. El cero es
+    // determinista, y de eso depende la regla de más abajo: si con cero el
+    // modelo devolvió algo ilegible, pedírselo otra vez devuelve lo mismo.
+    const temperature = intento === 0 ? 0.2 : 0;
+
     const left = deadline - Date.now();
     if (left < MIN_ATTEMPT_MS) {
       // Se acabó el presupuesto entre un intento y el otro. No es un intento
@@ -433,6 +456,10 @@ export async function callGemini(
       }
       rateLimited = false;
       overloaded = false;
+      // Contestó: lo que haya pasado en un intento anterior ya no es lo que hay
+      // que reportar. Sin esto, un primer intento colgado dejaba `timedOut` en
+      // `true` y el 504 le ganaba al resultado bueno del segundo.
+      timedOut = false;
       retryAfterSeconds = null;
 
       const payload = await response.json();
@@ -443,7 +470,7 @@ export async function callGemini(
         lastError = `Gemini no devolvió contenido (corte: ${
           diagnostics.finishReason ?? 'sin motivo'
         })`;
-        if (isTerminal(diagnostics.finishReason)) break;
+        if (isTerminal(diagnostics.finishReason) || temperature === 0) break;
         continue;
       }
 
@@ -458,22 +485,34 @@ export async function callGemini(
         lastError = `JSON inválido (corte: ${
           diagnostics.finishReason ?? 'sin motivo'
         }): ${error instanceof Error ? error.message : String(error)}`;
-        if (isTerminal(diagnostics.finishReason)) break;
+        // Un `temperature: 0` que devolvió basura la va a volver a devolver
+        // igual: es determinista. Acá el intento de más no compra nada y se
+        // paga, así que se corta aunque queden intentos en el presupuesto.
+        if (isTerminal(diagnostics.finishReason) || temperature === 0) break;
         continue;
       }
     } catch (error) {
       lastError = error instanceof Error ? error.message : String(error);
-      // Lo cortamos nosotros por lento. Reintentar acá era el error: el segundo
-      // intento va a `temperature: 0` pero **no va a ser más rápido** —el
-      // modelo tarda lo que tarda—, así que lo único que se conseguía era
-      // duplicar la espera hasta pasarse del techo del cliente y gastar dos
-      // llamadas al proveedor para no mostrar nada.
+      // Lo cortamos nosotros: el proveedor no contestó dentro del intento.
+      //
+      // **Esto sí se reintenta**, y haberlo hecho terminal fue un error que
+      // costó una versión. El razonamiento era "si tardó, va a volver a
+      // tardar"; los datos de `ai_analyses` dicen que no. Los intentos que
+      // fallan no tardan, se **cuelgan**: vuelven con `tokens_in` en `null` —ni
+      // un byte— y siempre topan exactos contra [GEMINI_TIMEOUT_MS], mientras
+      // que el intento siguiente contesta en 5 o 15 s. Los análisis que antes
+      // terminaban en 35 o 40 s eran justamente eso: un cuelgue y un reintento
+      // que salió bien. Al cortarlos de una, esos pasaron a fallar y la persona
+      // tuvo que reintentar a mano dos o tres veces — el mismo gasto, pero
+      // encima molestando.
+      //
+      // Un cuelgue tampoco consume del proveedor: nunca llegó a generar nada.
       if (isAbort(error)) {
         timedOut = true;
         lastError = `El proveedor no contestó en ${
-          Math.round((Date.now() - startedAt) / 1000)
-        } s`;
-        break;
+          Math.round(Math.min(GEMINI_TIMEOUT_MS, GEMINI_BUDGET_MS) / 1000)
+        } s (intento ${intento + 1})`;
+        continue;
       }
     } finally {
       // En el `finally` y no después del `fetch`: el temporizador tiene que

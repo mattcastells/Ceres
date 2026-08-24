@@ -17,11 +17,18 @@ Function `analyze-meal-photo`. La clave nunca llega al cliente.
 `GEMINI_MODEL` (default `gemini-3.6-flash`), `GEMINI_THINKING_LEVEL` (default `low`),
 `GEMINI_PROMPT_VERSION`.
 
-**Techos de tiempo.** Cada llamada al proveedor se corta a los 25 s y los dos intentos
-juntos a los 38 s (`GEMINI_BUDGET_MS`), después de lo cual la función contesta
+**Techos de tiempo.** Cada llamada al proveedor se corta a los 18 s y los **tres** intentos
+juntos a los 48 s (`GEMINI_BUDGET_MS`), después de lo cual la función contesta
 `ERR_UPSTREAM_TIMEOUT` (504) y lo registra en `ai_analyses`. Los clientes esperan 60 s: el
 techo del servidor tiene que ser **más chico** que el del cliente, o la app corta antes de
 que el servidor llegue a contestar y el fallo no queda registrado en ningún lado.
+
+**Reintentos.** Un corte por cuelgue **se reintenta** (hasta 3 intentos, dentro del
+presupuesto): en `ai_analyses` los intentos que fallan no tardan, se cuelgan —vuelven con
+`tokens_in` en `null`, sin un byte— y el siguiente contesta en 5 o 15 s. Un 429 no se
+reintenta nunca (la cuota es del proyecto entero) y un JSON ilegible a `temperature: 0`
+tampoco (es determinista: trae lo mismo). La política vive probada en
+`_shared/estimation.test.ts`, que corre en CI.
 
 **Contrato.** Se pide salida estructurada con `responseMimeType: application/json` y
 `responseSchema` = `gemini-output-schema.json`. La respuesta se valida contra el schema

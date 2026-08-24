@@ -122,6 +122,22 @@ jobs:
             --format=esm --platform=node --outfile=/tmp/restrictions.test.mjs
           node /tmp/restrictions.test.mjs
 
+      # El otro pedazo que hay que correr, no leer.
+      #
+      # La política de reintentos de `callGemini` se rompió dos veces en dos
+      # semanas y en direcciones opuestas: primero sin techo total —dos intentos
+      # de 25 s contra un cliente que esperaba 45—, después haciendo terminal el
+      # corte por cuelgue, que convirtió en fallo todo lo que antes se salvaba
+      # reintentando. Las dos veces el código se leía razonable. Lo que las
+      # distingue es cuántas veces llama al proveedor y con qué se queda, y eso
+      # solo se ve ejecutándolo.
+      - name: Probar la política de reintentos contra el proveedor
+        run: |
+          npx --yes esbuild@0.24.0 --bundle \
+            supabase/functions/_shared/estimation.test.ts \
+            --format=esm --platform=node --outfile=/tmp/estimation.test.mjs
+          node /tmp/estimation.test.mjs
+
   database:
     name: Probar las políticas RLS
     runs-on: ubuntu-latest
