@@ -35,14 +35,30 @@ class GeminiAnalysisClient {
   /// terminaba en el mensaje de demora aunque el servidor hubiera contestado
   /// bien un rato después — la foto y la cuota gastadas, el resultado tirado.
   ///
-  /// Ahora la función tiene un presupuesto total de 38 s y contesta ella un
-  /// `ERR_UPSTREAM_TIMEOUT`; esto son 60 s para que siempre le llegue a hablar
+  /// Hoy la función tiene un presupuesto total propio y contesta ella un
+  /// `ERR_UPSTREAM_TIMEOUT`; esto le da lugar de sobra para llegar a hablar
   /// primero. El timeout de acá deja de ser lo normal y vuelve a ser lo que
   /// tiene que ser: la red que se cortó de verdad.
   ///
+  /// 90 s y no 60 para que el servidor pueda darse **tres** intentos contra el
+  /// proveedor —30 + 30 + 18— en vez de dos y medio. Con el razonamiento en
+  /// `medium` una respuesta buena tarda entre 9 y 25 s, así que un intento
+  /// necesita 30 s; y los que fallan se cuelgan y se llevan los 30 enteros, que
+  /// es lo que hace que el tercero valga la pena.
+  ///
+  /// Nadie va a esperar 90 s mirando: la pantalla de análisis tiene frases que
+  /// no se terminan nunca, hechas justamente para esto, y las salidas —cargar a
+  /// mano, volver— están siempre a la vista.
+  ///
+  /// ⚠️ **Subir el presupuesto del servidor antes que esto rompe la app.** El
+  /// techo del servidor tiene que quedar siempre por debajo del de acá: al
+  /// revés, el teléfono corta primero, la cuota queda gastada y el fallo no se
+  /// registra en ningún lado. Por eso el servidor sigue en 50 s hasta que esta
+  /// versión esté instalada, y recién ahí sube por `GEMINI_BUDGET_MS`.
+  ///
   /// `invoke` **no trae timeout propio**: sin esto, una función que muere deja
   /// la pantalla girando para siempre, sin error y sin forma de salir.
-  static const Duration timeout = Duration(seconds: 60);
+  static const Duration timeout = Duration(seconds: 90);
 
   /// Estima una comida a partir de una descripción escrita.
   ///

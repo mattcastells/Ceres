@@ -73,10 +73,19 @@ export const GEMINI_TIMEOUT_MS = leerMs('GEMINI_TIMEOUT_MS', 30_000);
  *
  * También del entorno (`GEMINI_BUDGET_MS`), por lo mismo que el de arriba. La
  * única regla que no se puede romper al moverlo: **tiene que quedar más chico
- * que el timeout del cliente** (60 s en 1.22.2) con lugar para el resto de la
- * función —bajar la foto, pasarla a base64, escribir la fila—. Arriba de ~54 s
- * la app vuelve a cortar antes que el servidor y el fallo deja de quedar
- * registrado, que es el bug con el que empezó todo esto.
+ * que el timeout del cliente**, con lugar para el resto de la función —bajar la
+ * foto, pasarla a base64, escribir la fila—. Si el servidor tarda más que la
+ * app, el teléfono corta primero, la cuota queda gastada y el fallo no se
+ * registra en ningún lado: es el bug con el que empezó todo esto.
+ *
+ * De ahí que el default siga en 50 s aunque 1.22.3 haya subido los clientes a
+ * 90 s. **El default lo manda el teléfono más viejo que siga andando**, no el
+ * último que salió: 50 s es lo que aguanta un 1.22.2 con sus 60 s. Cuando no
+ * queden teléfonos abajo de 1.22.3, esto sube a 78 s —30 + 30 + 18, tres
+ * intentos— con un `supabase secrets set GEMINI_BUDGET_MS=78000`, sin
+ * desplegar y sin tocar este archivo. Por eso es una variable de entorno y no
+ * una constante: el número correcto depende de qué hay instalado afuera, que es
+ * justo lo que el código no puede saber.
  */
 export const GEMINI_BUDGET_MS = leerMs('GEMINI_BUDGET_MS', 50_000);
 

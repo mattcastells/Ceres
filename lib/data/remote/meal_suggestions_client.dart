@@ -20,15 +20,15 @@ class MealSuggestionsClient {
 
   static const String functionName = 'suggest-meals';
 
-  /// Más largo que el techo de la función, por lo mismo que en
-  /// `GeminiAnalysisClient.timeout`: los 25 s de Gemini son por intento y la
-  /// función puede intentar dos veces, así que 45 s de acá cortaban antes de
-  /// que el servidor llegara a contestar. La función ahora se corta a los 38 s
-  /// y contesta; esto le da lugar de sobra.
+  /// Más largo que el techo de la función, por lo mismo —y con la misma
+  /// advertencia sobre el orden— que en `GeminiAnalysisClient.timeout`: el tope
+  /// del proveedor es **por intento** y la función reintenta, así que el techo
+  /// de acá tiene que cubrir todos los intentos juntos y quedar por encima del
+  /// presupuesto del servidor. Nunca al revés.
   ///
   /// Sin timeout propio, una función que muere deja la pantalla girando para
   /// siempre, sin error y sin forma de salir.
-  static const Duration timeout = Duration(seconds: 60);
+  static const Duration timeout = Duration(seconds: 90);
 
   /// Abajo de esto ni se pregunta.
   ///
