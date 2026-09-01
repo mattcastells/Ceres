@@ -32,7 +32,7 @@ import {
   DAILY_QUOTA,
   GEMINI_MODEL,
   PROMPT_VERSION,
-  callGemini,
+  callModel,
   fail,
   ok,
   overloadedResponse,
@@ -371,7 +371,8 @@ Deno.serve(async (req) => {
     timedOut,
     retryAfterSeconds,
     latencyMs,
-  } = await callGemini(
+    modelUsed,
+  } = await callModel(
       geminiKey,
       [{ text: `${PROMPT_SUGGEST_V1}${restringido}\n\n${contexto}` }],
       SUGGEST_SCHEMA,
@@ -413,7 +414,7 @@ Deno.serve(async (req) => {
   return ok({
     options,
     budgetKcal: budget,
-    model: GEMINI_MODEL,
+    model: modelUsed ?? GEMINI_MODEL,
     promptVersion: PROMPT_VERSION,
     latencyMs,
   });

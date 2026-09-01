@@ -9,6 +9,8 @@
 // Duplicar la validación sería peor que duplicar cualquier otra cosa: es la
 // que impide que un "9000 kcal" entre al historial de alguien.
 
+import { callClaude, claudeDisponible } from './claude.ts';
+
 export const GEMINI_MODEL = Deno.env.get('GEMINI_MODEL') ?? 'gemini-3.6-flash';
 export const PROMPT_VERSION = Deno.env.get('GEMINI_PROMPT_VERSION') ?? 'v3';
 
@@ -88,6 +90,28 @@ export const GEMINI_TIMEOUT_MS = leerMs('GEMINI_TIMEOUT_MS', 30_000);
  * justo lo que el código no puede saber.
  */
 export const GEMINI_BUDGET_MS = leerMs('GEMINI_BUDGET_MS', 50_000);
+
+/**
+ * El techo de la función entera contra **todos** los proveedores.
+ *
+ * [GEMINI_BUDGET_MS] es lo que puede gastar Google; este es lo que puede gastar
+ * el análisis, respaldo incluido. Son dos números y no uno porque el respaldo
+ * solo sirve si le queda tiempo: darle a Gemini los 78 s enteros y después
+ * llamar a Claude sería llamarlo cuando el teléfono ya cortó.
+ *
+ * 78 s = 30 + 30 + 18, y entra en los 90 s que espera un cliente 1.22.3 o
+ * posterior con lugar para el resto de la función.
+ */
+export const AI_BUDGET_MS = leerMs('AI_BUDGET_MS', 78_000);
+
+/**
+ * Lo que se le guarda al respaldo cuando está configurado.
+ *
+ * 28 s: alcanza para una respuesta con razonamiento y sobra poco. Sale de
+ * restar, no de sumar — es el único orden que garantiza que el respaldo tenga
+ * con qué correr, porque el que gasta primero es el otro.
+ */
+const CLAUDE_RESERVE_MS = leerMs('CLAUDE_RESERVE_MS', 28_000);
 
 /**
  * Un número de milisegundos del entorno, o el de fábrica si no vino o vino mal.
@@ -360,6 +384,16 @@ export interface GeminiOutcome {
   retryAfterSeconds: number | null;
   diagnostics: GeminiDiagnostics;
   latencyMs: number;
+  /**
+   * Qué modelo contestó, o `null` si no contestó ninguno.
+   *
+   * Existe desde que hay respaldo: antes `ai_analyses.model` se llenaba con la
+   * constante `GEMINI_MODEL` y eso era verdad por construcción. Con dos
+   * proveedores dejó de serlo, y una columna que dice "gemini-3.6-flash" en una
+   * fila que contestó Claude arruina justo la tabla con la que se decide todo
+   * esto.
+   */
+  modelUsed: string | null;
 }
 
 /**
@@ -419,12 +453,16 @@ export async function callGemini(
   // funciones que estiman una comida. `suggest-meals` devuelve otra forma
   // —tres opciones, cada una con sus ingredientes y su receta— y pasa la suya.
   schema: unknown = RESPONSE_SCHEMA,
+  // Cuánto puede gastar Gemini de este análisis. Es un parámetro y no la
+  // constante a secas porque cuando hay respaldo configurado le toca menos:
+  // ver [callModel]. Por omisión, todo lo suyo — que es lo que hacía antes.
+  presupuestoMs: number = GEMINI_BUDGET_MS,
 ): Promise<GeminiOutcome> {
   const startedAt = Date.now();
   // El techo de todos los intentos juntos, fijado **una vez**. Cada intento se
   // corta con lo que quede, no con 18 s frescos: dos relojes independientes es
   // exactamente cómo se llegaba a 50 s.
-  const deadline = startedAt + GEMINI_BUDGET_MS;
+  const deadline = startedAt + presupuestoMs;
   let parsed: unknown = null;
   let lastError = '';
   let rateLimited = false;
@@ -450,7 +488,7 @@ export async function callGemini(
       // fallido más: es que ya no hay tiempo, y hay que decirlo así.
       timedOut = true;
       lastError = lastError ||
-        `Sin tiempo para otro intento (${GEMINI_BUDGET_MS / 1000} s)`;
+        `Sin tiempo para otro intento (${presupuestoMs / 1000} s)`;
       break;
     }
 
@@ -566,7 +604,7 @@ export async function callGemini(
       if (isAbort(error)) {
         timedOut = true;
         lastError = `El proveedor no contestó en ${
-          Math.round(Math.min(GEMINI_TIMEOUT_MS, GEMINI_BUDGET_MS) / 1000)
+          Math.round(Math.min(GEMINI_TIMEOUT_MS, presupuestoMs) / 1000)
         } s (intento ${intento + 1})`;
         continue;
       }
@@ -588,6 +626,73 @@ export async function callGemini(
     retryAfterSeconds,
     diagnostics,
     latencyMs: Date.now() - startedAt,
+    modelUsed: parsed === null ? null : GEMINI_MODEL,
+  };
+}
+
+/**
+ * El análisis completo: Gemini primero y, si falló, el respaldo.
+ *
+ * Esto es lo que llaman las funciones. `callGemini` quedó tal cual —es el bucle
+ * que se rompió dos veces y no hay motivo para volver a tocarlo— y lo de acá lo
+ * envuelve: una decisión de dos líneas, tomada con el resultado ya en la mano,
+ * en vez de un tercer proveedor metido adentro del reloj de los reintentos.
+ *
+ * **Se reintenta con Claude cuando Gemini no devolvió nada, y solo entonces.**
+ * Un análisis que salió no se paga dos veces. Y los fallos que quedan son todos
+ * de la misma clase —cuelgue, saturación, cuota, JSON ilegible—: ninguno se
+ * arregla insistiéndole al mismo, y todos son, hoy, un error en la cara de
+ * alguien que sacó una foto.
+ *
+ * El presupuesto se reparte **restando**: Gemini se lleva lo suyo hasta donde
+ * deje entrar al respaldo, no al revés. Con [AI_BUDGET_MS] en 78 s y
+ * [CLAUDE_RESERVE_MS] en 28, a Gemini le quedan 50 —sus dos intentos de
+ * siempre— y a Claude uno. Sin clave de Claude, Gemini se lleva los 78 y esto
+ * se comporta exactamente como antes de existir: **el respaldo no puede
+ * empeorar el caso en que no hay respaldo.**
+ */
+export async function callModel(
+  apiKey: string,
+  parts: unknown[],
+  schema: unknown = RESPONSE_SCHEMA,
+  // Inyectable para poder probar la política sin red. El bucle de arriba se
+  // rompió dos veces sin que se notara leyéndolo; esta decisión se prueba desde
+  // el primer día.
+  respaldo: typeof callClaude = callClaude,
+  hayRespaldo: typeof claudeDisponible = claudeDisponible,
+): Promise<GeminiOutcome> {
+  const startedAt = Date.now();
+  const conRespaldo = hayRespaldo();
+  const paraGemini = conRespaldo
+    ? Math.min(GEMINI_BUDGET_MS, AI_BUDGET_MS - CLAUDE_RESERVE_MS)
+    : Math.min(GEMINI_BUDGET_MS, AI_BUDGET_MS);
+
+  const gemini = await callGemini(apiKey, parts, schema, paraGemini);
+  if (gemini.parsed !== null || !conRespaldo) return gemini;
+
+  const queda = AI_BUDGET_MS - (Date.now() - startedAt);
+  if (queda < MIN_ATTEMPT_MS) {
+    // Sin tiempo para el respaldo. Se devuelve el fallo de Gemini como estaba:
+    // decir "Claude tampoco pudo" cuando ni se lo llamó sería inventar.
+    return gemini;
+  }
+
+  const claude = await respaldo(parts, schema, queda);
+  const latencyMs = Date.now() - startedAt;
+
+  if (claude.parsed !== null) {
+    return { ...claude, latencyMs };
+  }
+
+  // Fallaron los dos. Se reporta **el de Gemini**, porque es el que define qué
+  // ve la persona —un 429 de Google y un cuelgue de Claude no son lo mismo para
+  // ella— y porque es el que sigue siendo comparable con las 200 filas
+  // anteriores de `ai_analyses`. Lo de Claude va en el texto: es diagnóstico
+  // nuestro, no información para quien sacó la foto.
+  return {
+    ...gemini,
+    lastError: `${gemini.lastError} | respaldo: ${claude.lastError}`,
+    latencyMs,
   };
 }
 

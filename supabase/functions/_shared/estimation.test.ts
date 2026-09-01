@@ -24,7 +24,8 @@
 // Corre en CI con node, después de bundlear con esbuild.
 
 import './deno_shim.test.ts';
-import { callGemini } from './estimation.ts';
+import { RESPONSE_SCHEMA, callGemini, callModel } from './estimation.ts';
+import { aContenido, aJsonSchema } from './claude.ts';
 
 let fallos = 0;
 function check(ok: boolean, mensaje: string): void {
@@ -90,6 +91,61 @@ async function correr(guion: Array<() => Promise<unknown>>) {
   }
 }
 
+/**
+ * Lo mismo pero contra `callModel`, con el respaldo falseado.
+ *
+ * El respaldo se inyecta en vez de falsear su `fetch` porque lo que se prueba
+ * acá es **la decisión** —cuándo se llama y con qué resultado se queda—, no el
+ * cable contra Anthropic. Esa mitad no se puede probar sin una clave, y hacerla
+ * pasar por un `fetch` de mentira solo daría la sensación de que sí.
+ */
+async function correrModel(
+  guion: Array<() => Promise<unknown>>,
+  opciones: { hay: boolean; respaldoBueno?: boolean },
+) {
+  let llamadas = 0;
+  let respaldos = 0;
+  const original = globalThis.fetch;
+  globalThis.fetch = ((..._args: unknown[]) => {
+    const paso = guion[Math.min(llamadas, guion.length - 1)];
+    llamadas++;
+    return paso() as Promise<Response>;
+  }) as typeof fetch;
+
+  const respaldo = (async () => {
+    respaldos++;
+    const bueno = opciones.respaldoBueno !== false;
+    return {
+      parsed: bueno ? { items: [], title: 'Milanesa' } : null,
+      lastError: bueno ? '' : 'no contestó',
+      rateLimited: false,
+      overloaded: false,
+      timedOut: false,
+      retryAfterSeconds: null,
+      diagnostics: {
+        finishReason: bueno ? 'END_TURN' : null,
+        tokensIn: bueno ? 1600 : null,
+        tokensOut: bueno ? 250 : null,
+        tokensThinking: null,
+      },
+      modelUsed: bueno ? 'claude-de-mentira' : null,
+    };
+  }) as never;
+
+  try {
+    const outcome = await callModel(
+      'clave-de-mentira',
+      [{ text: 'hola' }],
+      RESPONSE_SCHEMA,
+      respaldo,
+      () => opciones.hay,
+    );
+    return { ...outcome, llamadas, respaldos };
+  } finally {
+    globalThis.fetch = original;
+  }
+}
+
 const main = async () => {
   // ── Lo que rompió la versión 1.22.2 ───────────────────────────────────
   {
@@ -141,11 +197,108 @@ const main = async () => {
     check(r.timedOut === false, 'el 429 se reportó como timeout');
   }
 
+  // ── Cuándo entra el respaldo, y cuándo no ─────────────────────────────
+  // La misma clase de error que los de arriba: no se ve leyéndolo. Un respaldo
+  // que corre de más se paga en cada análisis; uno que corre de menos no existe.
+
+  // Sin `ANTHROPIC_API_KEY` esto tiene que comportarse como antes de que el
+  // respaldo existiera. Es la comprobación más importante de las de acá abajo:
+  // el respaldo no puede empeorar el caso en que no hay respaldo.
+  {
+    const r = await correrModel([colgado], { hay: false });
+    check(r.parsed === null, 'sin respaldo configurado devolvió algo');
+    check(r.timedOut === true, 'sin respaldo se perdió el motivo del fallo');
+    check(r.respaldos === 0, `se llamó al respaldo sin clave: ${r.respaldos}`);
+  }
+
+  // Un análisis que salió no se paga dos veces.
+  {
+    const r = await correrModel([bien], { hay: true });
+    check(r.parsed !== null, 'Gemini contestó y el resultado se perdió');
+    check(r.respaldos === 0, 'se llamó al respaldo con Gemini contestando');
+    check(
+      r.modelUsed === 'gemini-3.6-flash',
+      `el modelo reportado no es el que contestó: ${r.modelUsed}`,
+    );
+  }
+
+  // El caso para el que se escribió todo esto: Gemini se cuelga las tres veces.
+  {
+    const r = await correrModel([colgado], { hay: true });
+    check(r.parsed !== null, 'el respaldo contestó y el resultado se perdió');
+    check(r.respaldos === 1, `el respaldo corre una sola vez, no ${r.respaldos}`);
+    check(
+      r.modelUsed === 'claude-de-mentira',
+      `contestó el respaldo y la fila diría ${r.modelUsed}`,
+    );
+    check(r.timedOut === false, 'contestó el respaldo y quedó marcado como timeout');
+  }
+
+  // El 429 de Google no se reintenta contra Google —gasta el cupo de otro— pero
+  // sí contra otro proveedor, que tiene su propia cuota. Son 8 en dos semanas.
+  {
+    const r = await correrModel([() => httpError(429, '')], { hay: true });
+    check(r.respaldos === 1, 'la cuota agotada de Google no llamó al respaldo');
+    check(r.parsed !== null, 'el respaldo no salvó un 429');
+  }
+
+  // Si fallan los dos, lo que se le dice a la persona sale del primero: un 429
+  // de Google y un cuelgue de Claude no son la misma salida para ella.
+  {
+    const r = await correrModel([colgado], { hay: true, respaldoBueno: false });
+    check(r.parsed === null, 'fallaron los dos y devolvió algo');
+    check(r.timedOut === true, 'fallaron los dos y se perdió el motivo de Gemini');
+    check(
+      r.lastError.includes('respaldo:'),
+      `el error no dice qué pasó con el respaldo: ${r.lastError}`,
+    );
+  }
+
+  // ── La traducción del contrato ────────────────────────────────────────
+  // Un schema mal traducido no falla ruidoso: el modelo devuelve algo con otra
+  // forma, `validate()` lo descarta y queda como "el modelo devolvió cualquier
+  // cosa". Se prueba acá porque es puro y no necesita red.
+  {
+    const s = aJsonSchema(RESPONSE_SCHEMA) as Record<string, unknown>;
+    check(s.type === 'object', `el tipo raíz no se tradujo: ${s.type}`);
+    const props = s.properties as Record<string, Record<string, unknown>>;
+    check(props.title.type === 'string', 'un tipo hoja quedó en mayúscula');
+    check(
+      s.additionalProperties === false,
+      'no se cerró el objeto: un campo de más solo puede confundir',
+    );
+    const item = (props.items.items ?? {}) as Record<string, unknown>;
+    const campos = item.properties as Record<string, Record<string, unknown>>;
+    check(campos.kcal.type === 'integer', 'INTEGER no se tradujo a integer');
+    check(
+      Array.isArray(campos.unit.enum) && campos.unit.enum.includes('g'),
+      'se perdió el enum de unidades al traducir',
+    );
+  }
+
+  // El orden de las partes es parte del prompt: en la foto la aclaración va
+  // después de la imagen a propósito.
+  {
+    const c = aContenido([
+      { text: 'prompt' },
+      { inlineData: { mimeType: 'image/jpeg', data: 'AAAA' } },
+      { text: 'aclaración' },
+    ]) as Array<Record<string, unknown>>;
+    check(c.length === 3, `se perdió una parte al traducir: ${c.length}`);
+    check(c[0].type === 'text' && c[2].type === 'text', 'se alteró el orden');
+    const src = c[1].source as Record<string, unknown>;
+    check(
+      c[1].type === 'image' && src.type === 'base64' &&
+        src.media_type === 'image/jpeg' && src.data === 'AAAA',
+      'la imagen no se tradujo a un bloque de Claude',
+    );
+  }
+
   if (fallos > 0) {
     console.error(`\n${fallos} comprobación(es) fallaron.`);
     throw new Error('estimation.test.ts falló');
   }
-  console.log('✓ 17 comprobaciones de la política de reintentos');
+  console.log('✓ 40 comprobaciones de la política de reintentos y del respaldo');
 };
 
 await main();

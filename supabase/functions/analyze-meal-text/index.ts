@@ -16,7 +16,7 @@ import {
   DAILY_QUOTA,
   GEMINI_MODEL,
   PROMPT_VERSION,
-  callGemini,
+  callModel,
   fail,
   ok,
   overloadedResponse,
@@ -113,7 +113,8 @@ Deno.serve(async (req) => {
     retryAfterSeconds,
     diagnostics,
     latencyMs,
-  } = await callGemini(
+    modelUsed,
+  } = await callModel(
       geminiKey,
       [{
         text: currentItems.length > 0
@@ -135,7 +136,7 @@ Deno.serve(async (req) => {
       user_id: user.id,
       source: 'text',
       status,
-      model: GEMINI_MODEL,
+      model: modelUsed ?? GEMINI_MODEL,
       prompt_version: PROMPT_VERSION,
       error_code: errorCode,
       latency_ms: latencyMs,
@@ -191,7 +192,7 @@ Deno.serve(async (req) => {
     user_id: user.id,
     source: 'text',
     status: 'completed',
-    model: GEMINI_MODEL,
+    model: modelUsed ?? GEMINI_MODEL,
     prompt_version: PROMPT_VERSION,
     items,
     raw_response: parsed,
@@ -216,7 +217,7 @@ Deno.serve(async (req) => {
     title: validateTitle(parsed),
     items,
     overallConfidence: Number(confidenceAvg.toFixed(2)),
-    model: GEMINI_MODEL,
+    model: modelUsed ?? GEMINI_MODEL,
     promptVersion: PROMPT_VERSION,
     latencyMs,
   });

@@ -23,7 +23,12 @@ Leyenda de ámbito:
 | `GEMINI_MODEL` | E | no | Default `gemini-3.6-flash` |
 | `GEMINI_THINKING_LEVEL` | E | no | Default `medium`. Uno de `minimal`, `low`, `medium`, `high`, o `default` para no mandar el campo. Los Gemini 3 razonan de fábrica en `medium` y eso se paga y se espera; un `gemini-2.5-*` no entiende el campo y rechaza el pedido entero, así que con uno de esos va en `default` |
 | `GEMINI_TIMEOUT_MS` | E | no | Default 30000. Techo de **una** llamada al proveedor. Acoplado a `GEMINI_THINKING_LEVEL`: con razonamiento en `medium` una respuesta buena tarda 9–25 s y un tope más bajo la mataría. Quien suba uno sube el otro |
-| `GEMINI_BUDGET_MS` | E | no | Default 50000. Techo de los intentos juntos (con 30000 arriba, da dos). **Tiene que quedar bajo los ~54 s**, o la app corta antes que el servidor y el fallo no queda registrado |
+| `GEMINI_BUDGET_MS` | E | no | Default 50000, puesto en 78000 en producción. Techo de los intentos **contra Gemini** juntos (con 30000 arriba, 78000 da tres). Se recorta solo a `AI_BUDGET_MS − CLAUDE_RESERVE_MS` cuando hay respaldo configurado |
+| `AI_BUDGET_MS` | E | no | Default 78000. Techo del análisis entero, respaldo incluido. **Tiene que quedar bajo los ~85 s**, o la app corta antes que el servidor y el fallo no queda registrado. Los clientes esperan 90 s desde 1.22.3; con un teléfono en 1.22.2 o anterior el techo es ~54 s |
+| `ANTHROPIC_API_KEY` | E | no | Enciende el respaldo. Sin ella todo se comporta como antes de que existiera: un solo proveedor. Ver `_shared/claude.ts` |
+| `CLAUDE_MODEL` | E | no | Default `claude-opus-5`. El modelo del respaldo |
+| `CLAUDE_EFFORT` | E | no | Default `medium`. Cuánto razona el respaldo: `low`, `medium`, `high`, `xhigh`, `max` |
+| `CLAUDE_RESERVE_MS` | E | no | Default 28000. Lo que se le guarda al respaldo del presupuesto total. Se resta, no se suma: es el único orden que garantiza que llegue a correr |
 | `GEMINI_PROMPT_VERSION` | E | no | Default `v3`; se persiste en `ai_analyses` |
 | `USDA_API_KEY` | E | sí | FoodData Central |
 | `OPEN_FOOD_FACTS_USER_AGENT` | E | sí | `Ceres/1.0 (contacto@ceres.app)` — exigido por su política |
@@ -88,7 +93,12 @@ GEMINI_API_KEY=
 GEMINI_MODEL=gemini-3.6-flash
 GEMINI_THINKING_LEVEL=medium
 GEMINI_TIMEOUT_MS=30000
-GEMINI_BUDGET_MS=50000
+GEMINI_BUDGET_MS=78000
+AI_BUDGET_MS=78000
+ANTHROPIC_API_KEY=
+CLAUDE_MODEL=claude-opus-5
+CLAUDE_EFFORT=medium
+CLAUDE_RESERVE_MS=28000
 GEMINI_PROMPT_VERSION=v3
 USDA_API_KEY=
 OPEN_FOOD_FACTS_USER_AGENT=Ceres/1.0 (contacto@ceres.app)
