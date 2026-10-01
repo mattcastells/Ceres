@@ -148,6 +148,16 @@ jobs:
             --format=esm --platform=node --outfile=/tmp/validate.test.mjs
           node /tmp/validate.test.mjs
 
+      # La tabla SARA 2 que usa la estimación (prompt v5) se extrajo de un PDF,
+      # y un extractor de tablas puede tener éxito con las columnas corridas.
+      # Esto valida el archivo que se despliega: cada fila cierra con Atwater.
+      - name: Probar la tabla SARA 2
+        run: |
+          npx --yes esbuild@0.24.0 --bundle \
+            supabase/functions/_shared/sara2.test.ts \
+            --format=esm --platform=node --outfile=/tmp/sara2.test.mjs
+          node /tmp/sara2.test.mjs
+
   database:
     name: Probar las políticas RLS
     runs-on: ubuntu-latest

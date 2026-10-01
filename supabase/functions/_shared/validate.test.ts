@@ -168,6 +168,51 @@ const uno = (raw: unknown, kept = []) => validate({ items: [raw] }, kept)?.[0];
   check(r?.kcal === 100, `un ítem chico se corrigió por proporción: ${r?.kcal}`);
 }
 
+// ── La tabla SARA 2 (v5) ────────────────────────────────────────────────
+// Con una fila válida, los valores cada 100 g salen de la tabla y no del
+// modelo: S150 es "Arroz blanco, hervido", 126 kcal (el modelo dijo 130).
+{
+  const r = uno(item({ saraId: 'S150' }));
+  check(r?.kcal === 227, `arroz por tabla: se esperaban 227 kcal y salió ${r?.kcal}`);
+  check(r?.proteinG === 4.3, `arroz por tabla: proteínas ${r?.proteinG}`);
+  check(r?.confidence === 0.8, 'una fila que coincide no tiene por qué bajar la confianza');
+}
+
+// El código se tolera como lo copie el modelo: minúsculas, con el nombre al lado.
+{
+  const r = uno(item({ saraId: ' s150 Arroz blanco, hervido' }));
+  check(r?.kcal === 227, `el código con nombre no se reconoció: ${r?.kcal}`);
+}
+
+// Un código que no existe no rompe nada: siguen los valores del modelo.
+{
+  const r = uno(item({ saraId: 'S99999' }));
+  check(r?.kcal === 234, `un código inexistente cambió la cuenta: ${r?.kcal}`);
+}
+{
+  const r = uno(item({ saraId: '' }));
+  check(r?.kcal === 234, `saraId vacío cambió la cuenta: ${r?.kcal}`);
+}
+
+// Fila equivocada: "Tostadas integrales" (envasadas, 386) para una rebanada de
+// pan tostado que el modelo mismo estimó en 260. No se usa la fila, se usa lo
+// que estimó el modelo y la confianza baja.
+{
+  const r = uno(item({
+    name: 'Pan integral tostado',
+    saraId: 'S379',
+    grams: 30,
+    quantity: 1,
+    unit: 'rebanada',
+    kcalPer100g: 260,
+    proteinPer100g: 9,
+    carbsPer100g: 48,
+    fatPer100g: 3.5,
+  }));
+  check(r?.kcal === 78, `fila equivocada: se esperaban 78 kcal del modelo y salió ${r?.kcal}`);
+  check(r?.confidence === 0.5, 'fila equivocada y la confianza no bajó');
+}
+
 // ── Lo imposible se tira ────────────────────────────────────────────────
 {
   const r = validate({

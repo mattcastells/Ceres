@@ -41,13 +41,25 @@ y más de 50 kcal, el modelo mezcló los campos y se usa su total, que es lo que
 Devuelve a la app los ítems con el contrato de siempre (`gemini-output-schema.json`). Si no
 queda nada utilizable → `ERR_AI_INVALID_RESPONSE`.
 
-**Volver a v3.** v4 salió sin medirse contra comidas de calorías conocidas. v3 sigue en el
-código: `supabase secrets set GEMINI_PROMPT_VERSION=v3 --project-ref ifincvqdsotorvmwzpos`
-vuelve al prompt y al contrato anteriores sin desplegar, y `GEMINI_PROMPT_VERSION=v4` (o
-borrar el secreto) vuelve a v4. `ai_analyses.prompt_version` dice con cuál salió cada análisis.
+**Tabla SARA 2 (v5).** Desde v5 el prompt incluye el catálogo de la SARA 2 (Tabla de
+composición química de alimentos para Argentina, Ministerio de Salud, 2022: 926 alimentos,
+solo código y nombre) y el modelo devuelve en `saraId` la fila de cada alimento, o vacío si
+no está. Con una fila válida, los valores cada 100 g salen de la tabla y no del modelo. Si la
+fila elegida difiere más de 1,4× (y más de 40 kcal/100 g) de lo que el propio modelo estimó,
+se descarta por fila equivocada, se usan los valores del modelo y la confianza baja a 0,5.
+La tabla vive generada en `_shared/sara2_data.ts` desde `docs/fuentes/sara2.pdf` con
+`node tool/extraer_sara2.mjs`; el extractor deja afuera las filas que no cierran con
+Atwater 4/4/9/7 (hoy 4, errores de la propia tabla) y `_shared/sara2.test.ts` lo vuelve a
+controlar en CI.
 
-Prompt (v4), resumido — vive versionado en `supabase/functions/analyze-meal-photo/prompts/v4.ts`
-(y su par de texto en `analyze-meal-text/prompts/text_v2.ts`):
+**Volver atrás.** Ninguna versión se midió contra comidas de calorías conocidas antes de
+salir. Las anteriores siguen en el código: `supabase secrets set GEMINI_PROMPT_VERSION=v4
+--project-ref ifincvqdsotorvmwzpos` vuelve a v4 (sin la tabla) y `=v3` al contrato de
+totales, sin desplegar; `=v5` o borrar el secreto vuelve a la última.
+`ai_analyses.prompt_version` dice con cuál salió cada análisis.
+
+Prompt (v4, base de v5), resumido — vive versionado en `supabase/functions/analyze-meal-photo/prompts/v4.ts`
+(y su par de texto en `analyze-meal-text/prompts/text_v2.ts`; v5 les suma `SARA2_PROMPT`):
 
 > Analizá la foto y devolvé los alimentos visibles. Para cada uno: preparación; porción
 > estimada desde una referencia de tamaño conocido (plato 26 cm, tenedor 19 cm, vaso 250 ml…),

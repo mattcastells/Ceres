@@ -12,6 +12,7 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { PROMPT_TEXT_V1 } from './prompts/text_v1.ts';
 import { PROMPT_TEXT_V2 } from './prompts/text_v2.ts';
+import { PROMPT_TEXT_V3 } from './prompts/text_v3.ts';
 import {
   CORS,
   DAILY_QUOTA,
@@ -28,9 +29,14 @@ import {
 } from '../_shared/estimation.ts';
 import { parseCurrentItems, recalculatedFrom } from '../_shared/recalc.ts';
 
-// text_v1 va con el contrato v3 y sigue acá para poder volver sin desplegar:
+// Cada prompt de texto va con un contrato: text_v1 con v3, text_v2 con v4 y
+// text_v3 con v5. Los anteriores siguen acá para poder volver sin desplegar:
 // ver `PROMPT_VERSION`.
-const PROMPT = PROMPT_VERSION === 'v3' ? PROMPT_TEXT_V1 : PROMPT_TEXT_V2;
+const PROMPT = PROMPT_VERSION === 'v3'
+  ? PROMPT_TEXT_V1
+  : PROMPT_VERSION === 'v4'
+  ? PROMPT_TEXT_V2
+  : PROMPT_TEXT_V3;
 
 /** Una descripción más larga que esto no es una comida, es un relato. */
 const MAX_DESCRIPTION = 400;
@@ -124,7 +130,7 @@ Deno.serve(async (req) => {
         text: currentItems.length > 0
           ? `${PROMPT}\n${recalculatedFrom(currentItems, description, {
             withPhoto: false,
-            perHundred: PROMPT_VERSION === 'v4',
+            perHundred: PROMPT_VERSION !== 'v3',
           })}`
           : `${PROMPT}\n\nDescripción: ${description}`,
       }],

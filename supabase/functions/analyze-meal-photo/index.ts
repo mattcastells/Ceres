@@ -15,6 +15,7 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { PROMPT_V3, describedBy as describedByV3 } from './prompts/v3.ts';
 import { PROMPT_V4, describedBy as describedByV4 } from './prompts/v4.ts';
+import { PROMPT_V5 } from './prompts/v5.ts';
 import {
   CORS,
   DAILY_QUOTA,
@@ -31,8 +32,13 @@ import {
 } from '../_shared/estimation.ts';
 import { parseCurrentItems, recalculatedFrom } from '../_shared/recalc.ts';
 
-// v3 sigue acá para poder volver sin desplegar: ver `PROMPT_VERSION`.
-const PROMPT = PROMPT_VERSION === 'v3' ? PROMPT_V3 : PROMPT_V4;
+// Las versiones anteriores siguen acá para poder volver sin desplegar: ver
+// `PROMPT_VERSION`. v5 usa la misma aclaración que v4.
+const PROMPT = PROMPT_VERSION === 'v3'
+  ? PROMPT_V3
+  : PROMPT_VERSION === 'v4'
+  ? PROMPT_V4
+  : PROMPT_V5;
 const describedBy = PROMPT_VERSION === 'v3' ? describedByV3 : describedByV4;
 
 /** Mismo techo que `analyze-meal-text`: más que esto no es una aclaración. */
@@ -151,7 +157,7 @@ Deno.serve(async (req) => {
           ? [{
             text: recalculatedFrom(currentItems, description, {
               withPhoto: true,
-              perHundred: PROMPT_VERSION === 'v4',
+              perHundred: PROMPT_VERSION !== 'v3',
             }),
           }]
           : description

@@ -10,25 +10,34 @@
 // que impide que un "9000 kcal" entre al historial de alguien.
 
 import type { CurrentItem } from './recalc.ts';
+import { sara2Row } from './sara2.ts';
 
 export const GEMINI_MODEL = Deno.env.get('GEMINI_MODEL') ?? 'gemini-3.6-flash';
+
 /**
- * Qué versión del prompt y del contrato con el modelo corre: `v4` o `v3`.
+ * Qué versión del prompt y del contrato con el modelo corre: `v5`, `v4` o `v3`.
  *
- * Es un interruptor y no solo una etiqueta. v4 cambió **qué** se le pregunta al
- * modelo (gramos y valores cada 100 g en vez de kcal; ver [RESPONSE_SCHEMA]) y
- * salió sin haberse medido contra comidas de calorías conocidas. Si empeora,
- * volver tiene que ser un `supabase secrets set GEMINI_PROMPT_VERSION=v3`, sin
- * desplegar y sin tocar código. Cualquier otro valor —vacío, un dedazo— corre
- * v4: un interruptor mal escrito no puede dejar el análisis sin prompt.
+ * Es un interruptor y no solo una etiqueta. Cada versión cambió **qué** se le
+ * pregunta al modelo:
  *
- * Se guarda en `ai_analyses.prompt_version`, que es lo que permite comparar las
- * dos después.
+ * - v3: las kcal y los macros del ítem, de memoria.
+ * - v4: gramos y valores cada 100 g; la cuenta la hace [validate].
+ * - v5: lo de v4, más la fila de la tabla SARA 2 que corresponde a cada
+ *   alimento; los valores cada 100 g salen de la tabla (ver `_shared/sara2.ts`).
+ *
+ * Ninguna se midió contra comidas de calorías conocidas antes de salir. Si una
+ * empeora, volver es un `supabase secrets set GEMINI_PROMPT_VERSION=v4` (o
+ * `v3`), sin desplegar y sin tocar código. Cualquier otro valor —vacío, un
+ * dedazo— corre la última: un interruptor mal escrito no puede dejar el
+ * análisis sin prompt.
+ *
+ * Se guarda en `ai_analyses.prompt_version`, que es lo que permite comparar
+ * las versiones después.
  */
-export const PROMPT_VERSION: 'v3' | 'v4' =
-  (Deno.env.get('GEMINI_PROMPT_VERSION') ?? '').trim().toLowerCase() === 'v3'
-    ? 'v3'
-    : 'v4';
+export const PROMPT_VERSION: 'v3' | 'v4' | 'v5' = (() => {
+  const v = (Deno.env.get('GEMINI_PROMPT_VERSION') ?? '').trim().toLowerCase();
+  return v === 'v3' || v === 'v4' ? v : 'v5';
+})();
 
 /**
  * Cuota diaria por usuario (D-18).
@@ -306,9 +315,38 @@ const RESPONSE_SCHEMA_V3 = {
   },
 };
 
+/**
+ * v4 más `saraId`: el código de la fila de la tabla SARA 2, o vacío si el
+ * alimento no está. Va justo después de la preparación —primero se decide qué
+ * es y cómo está hecho, después se lo busca— y no es obligatorio: un plato que
+ * la tabla no tiene no puede tener código.
+ */
+const RESPONSE_SCHEMA_V5 = (() => {
+  const items = RESPONSE_SCHEMA_V4.properties.items.items;
+  const ordering = [...items.propertyOrdering];
+  ordering.splice(ordering.indexOf('preparation') + 1, 0, 'saraId');
+  return {
+    ...RESPONSE_SCHEMA_V4,
+    properties: {
+      ...RESPONSE_SCHEMA_V4.properties,
+      items: {
+        ...RESPONSE_SCHEMA_V4.properties.items,
+        items: {
+          ...items,
+          propertyOrdering: ordering,
+          properties: { ...items.properties, saraId: { type: 'STRING' } },
+        },
+      },
+    },
+  };
+})();
+
 /** El contrato que corresponde a [PROMPT_VERSION]. */
-export const RESPONSE_SCHEMA =
-  PROMPT_VERSION === 'v3' ? RESPONSE_SCHEMA_V3 : RESPONSE_SCHEMA_V4;
+export const RESPONSE_SCHEMA = PROMPT_VERSION === 'v3'
+  ? RESPONSE_SCHEMA_V3
+  : PROMPT_VERSION === 'v4'
+  ? RESPONSE_SCHEMA_V4
+  : RESPONSE_SCHEMA_V5;
 
 export interface AnalysisItem {
   name: string;
@@ -362,6 +400,61 @@ interface Totals {
   grams: number | null;
   /** `false` si las kcal no cerraban con los macros y hubo que corregirlas. */
   consistent: boolean;
+}
+
+/**
+ * Cuánto pueden diferir las kcal cada 100 g de la fila elegida y las que
+ * estimó el modelo antes de sospechar que eligió mal: 1,4 veces, y más de 40
+ * kcal cada 100 g (el café da 1 contra 2 y no es un error).
+ *
+ * Diferencias más chicas son justo lo que la tabla viene a corregir —la
+ * memoria del modelo—, así que ahí manda la tabla. Una diferencia así de
+ * grande ya no suele ser de memoria sino de fila: "Tostadas integrales"
+ * (envasadas, 386) por una rebanada de pan tostado (~260) da 1,48. Con 1,6
+ * ese caso, que es el más probable, pasaba.
+ */
+const TABLE_MISMATCH_RATIO = 1.4;
+const TABLE_MISMATCH_FLOOR_KCAL = 40;
+
+/**
+ * Los totales del ítem a partir de los gramos y la fila de la tabla SARA 2.
+ *
+ * Devuelve `null` si el ítem no trae una fila válida —el alimento no está en
+ * la tabla, o el modelo devolvió un código que no existe— y `'mismatch'` si la
+ * fila no se parece a lo que el modelo mismo estimó (ver
+ * [TABLE_MISMATCH_RATIO]). En los dos casos el ítem sigue con sus propios
+ * valores cada 100 g, por [fromPer100].
+ *
+ * No se pasa por el control de Atwater ni por el del total: la fila ya cierra
+ * (el extractor no deja entrar las que no) y esos controles buscan errores de
+ * los números del modelo, que acá no se usan.
+ */
+function fromTable(i: Record<string, unknown>): Totals | 'mismatch' | null {
+  const row = sara2Row(i.saraId);
+  if (!row) return null;
+  const grams = Number(i.grams);
+  if (!inRange(grams, 0.1, 5000)) return null;
+
+  const estimated = Number(i.kcalPer100g);
+  if (Number.isFinite(estimated) && estimated > 0) {
+    const ratio = Math.max(row.kcal, estimated) /
+      Math.max(1, Math.min(row.kcal, estimated));
+    if (
+      ratio > TABLE_MISMATCH_RATIO &&
+      Math.abs(row.kcal - estimated) > TABLE_MISMATCH_FLOOR_KCAL
+    ) {
+      return 'mismatch';
+    }
+  }
+
+  return {
+    kcal: Math.round((grams * row.kcal) / 100),
+    proteinG: redondear((grams * row.proteinG) / 100),
+    carbsG: redondear((grams * row.carbsG) / 100),
+    fatG: redondear((grams * row.fatG) / 100),
+    grams,
+    consistent: true,
+  };
 }
 
 /**
@@ -522,11 +615,22 @@ export function validate(
     if (!inRange(confidence, 0, 1)) continue;
     if (!UNITS.includes(unit)) continue;
 
+    // El orden es el de confianza: lo que la persona ya dio por bueno, después
+    // la tabla oficial, después los valores del modelo controlados, y por
+    // último los totales a la vieja usanza.
     const same = unchanged(kept, name, quantity, unit);
+    const table = same ? null : fromTable(i);
     const totals: Totals | null = same
       ? { ...same, grams: null, consistent: true }
+      : table && table !== 'mismatch'
+      ? table
       : fromPer100(i) ?? fromTotals(i);
     if (!totals) continue;
+    // Eligió una fila que no se parece a lo que él mismo estimó: alguna de las
+    // dos está mal, y no hay forma de saber cuál. El número sale, pero marcado.
+    if (table === 'mismatch') {
+      confidence = Math.min(confidence, CORRECTED_CONFIDENCE);
+    }
     if (!inRange(totals.kcal, 0, 3000)) continue;
     if (!inRange(totals.proteinG, 0, 500)) continue;
     if (!inRange(totals.carbsG, 0, 500)) continue;
