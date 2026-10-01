@@ -154,7 +154,10 @@ export const SARA2: readonly Sara2Food[] = ${JSON.stringify(salida, null, 0)
 `;
 
 if (process.argv.includes('--check')) {
-  const actual = existsSync(SALIDA) ? readFileSync(SALIDA, 'utf8') : '';
+  // Sin los \r: en Windows git puede haberlo sacado con CRLF.
+  const actual = existsSync(SALIDA)
+    ? readFileSync(SALIDA, 'utf8').replace(/\r\n/g, '\n')
+    : '';
   if (actual !== ts) {
     console.error(`${SALIDA} está desactualizado: corré node tool/extraer_sara2.mjs`);
     process.exit(1);
