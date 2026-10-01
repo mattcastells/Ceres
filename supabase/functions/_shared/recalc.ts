@@ -121,7 +121,16 @@ ${
 - Si la corrección da un peso, una cantidad o una preparación, aplicala a
   **ese** ítem: el peso va en \`grams\`, y la preparación cambia sus valores
   cada 100 g. Subí su \`confidence\`, porque es información que vos no podías
-  medir.`
+  medir.
+- Interpretá la corrección aunque no traiga números: "era una capa finita" o
+  "le puse poquito" bajan los gramos de ese ítem a una porción chica real (una
+  capa fina untada son ~10 g); "la empanada era de verdura" cambia sus valores
+  cada 100 g; "el café tenía azúcar" agrega el azúcar (una cucharadita, 5 g,
+  si no dice cuánto).
+- "Comí la mitad" es la mitad de todo. Pero si la corrección es una impresión
+  sobre el total ("me parece mucho", "no era tanto"), revisá los ítems que la
+  explican —los que más kcal aportan o los de porción más dudosa— y bajá
+  esos, en vez de recortar todo parejo.`
     : `- Lo que la corrección no menciona vuelve tal cual: mismo nombre, misma
   cantidad y los mismos números. No la reestimes.
 - Si la corrección da un peso, una cantidad o una preparación, aplicala y
