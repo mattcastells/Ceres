@@ -30,17 +30,32 @@ reintenta nunca (la cuota es del proyecto entero) y un JSON ilegible a `temperat
 tampoco (es determinista: trae lo mismo). La política vive probada en
 `_shared/estimation.test.ts`, que corre en CI.
 
-**Contrato.** Se pide salida estructurada con `responseMimeType: application/json` y
-`responseSchema` = `gemini-output-schema.json`. La respuesta se valida contra el schema
-antes de persistir; si no valida → `ERR_AI_INVALID_RESPONSE`.
+**Contrato.** Se pide salida estructurada con `responseMimeType: application/json` y un
+`responseSchema` (`RESPONSE_SCHEMA` en `_shared/estimation.ts`). Desde v4 el modelo no
+devuelve las kcal de cada ítem sino `grams` (peso comestible tal como está en el plato) y
+los valores cada 100 g (`kcalPer100g`, `proteinPer100g`, `carbsPer100g`, `fatPer100g`,
+`alcoholPer100g` opcional). `validate` hace la cuenta, controla que las kcal cierren con
+4·P + 4·C + 9·G + 7·alcohol (±20 %, o ±15 kcal/100 g; si no cierran, las corrige y baja la
+confianza a 0,5) y contra el `kcal` total que también da el modelo (si difieren más de 1,5×
+y más de 50 kcal, el modelo mezcló los campos y se usa su total, que es lo que daba v3).
+Devuelve a la app los ítems con el contrato de siempre (`gemini-output-schema.json`). Si no
+queda nada utilizable → `ERR_AI_INVALID_RESPONSE`.
 
-Prompt (v3), resumido — vive versionado en `supabase/functions/analyze-meal-photo/prompts/v3.txt`:
+**Volver a v3.** v4 salió sin medirse contra comidas de calorías conocidas. v3 sigue en el
+código: `supabase secrets set GEMINI_PROMPT_VERSION=v3 --project-ref ifincvqdsotorvmwzpos`
+vuelve al prompt y al contrato anteriores sin desplegar, y `GEMINI_PROMPT_VERSION=v4` (o
+borrar el secreto) vuelve a v4. `ai_analyses.prompt_version` dice con cuál salió cada análisis.
 
-> Sos un asistente de estimación nutricional. Analizá la foto y devolvé los alimentos
-> visibles. Para cada uno estimá la cantidad en gramos o mililitros usando referencias
-> visuales (tamaño del plato, cubiertos, mano). Si no podés estimar con confianza, bajá el
-> valor de `confidence`. No inventes alimentos que no se ven. No devuelvas texto fuera del
-> JSON. Si no hay comida, devolvé `items: []`.
+Prompt (v4), resumido — vive versionado en `supabase/functions/analyze-meal-photo/prompts/v4.ts`
+(y su par de texto en `analyze-meal-text/prompts/text_v2.ts`):
+
+> Analizá la foto y devolvé los alimentos visibles. Para cada uno: preparación; porción
+> estimada desde una referencia de tamaño conocido (plato 26 cm, tenedor 19 cm, vaso 250 ml…),
+> qué parte ocupa y qué altura tiene; gramos tal como está en el plato (cocido si está
+> cocido); valores cada 100 g de tabla para ese alimento en ese estado. Las estimaciones a ojo
+> tienden a pasarse: ante la duda, el tamaño más probable, no el más generoso. Grasa agregada
+> solo si se ve; lo frito ya trae su aceite. No inventes alimentos que no se ven. Si no hay
+> comida, devolvé `items: []`.
 
 **Límites.** 20 análisis/día y 5/min por usuario (tabla `rate_limits`); imagen ≤ 8 MB,
 1024 px lado mayor; timeout 25 s.

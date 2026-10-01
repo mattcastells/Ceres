@@ -125,7 +125,7 @@ Todas devuelven el sobre de error de `09-api-contracts.md` §2 y registran en Se
 // supabase/functions/analyze-meal-photo/index.ts
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
-const PROMPT_VERSION = "v3";
+const PROMPT_VERSION = "v4";
 const DAILY_QUOTA = 20;
 
 Deno.serve(async (req) => {

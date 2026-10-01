@@ -138,6 +138,16 @@ jobs:
             --format=esm --platform=node --outfile=/tmp/estimation.test.mjs
           node /tmp/estimation.test.mjs
 
+      # Desde el prompt v4 las kcal de cada ítem no las dice el modelo: salen de
+      # gramos × valores cada 100 g, con un control contra los macros. Un `/ 100`
+      # de menos no tira error, multiplica las calorías de todo el mundo.
+      - name: Probar la cuenta de kcal de cada ítem
+        run: |
+          npx --yes esbuild@0.24.0 --bundle \
+            supabase/functions/_shared/validate.test.ts \
+            --format=esm --platform=node --outfile=/tmp/validate.test.mjs
+          node /tmp/validate.test.mjs
+
   database:
     name: Probar las políticas RLS
     runs-on: ubuntu-latest

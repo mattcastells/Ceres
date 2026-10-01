@@ -90,7 +90,10 @@ const redondear = (v: number) => Math.round(v * 10) / 10;
 export const recalculatedFrom = (
   items: CurrentItem[],
   correction: string,
-  { withPhoto }: { withPhoto: boolean },
+  // `perHundred` es el contrato v4: el modelo da gramos y valores cada 100 g, y
+  // los números de lo que no cambió los repone `validate`. Con v3 el modelo
+  // sigue devolviendo totales y tiene que copiarlos él.
+  { withPhoto, perHundred }: { withPhoto: boolean; perHundred: boolean },
 ) => `
 Esto es un **recálculo**, no un análisis nuevo. La comida ya está cargada así:
 
@@ -110,11 +113,21 @@ ${
 
 Devolvé la comida **completa** ya corregida:
 
-- Lo que la corrección no menciona vuelve tal cual: mismo nombre, misma
+${
+  perHundred
+    ? `- Lo que la corrección no menciona vuelve tal cual: mismo nombre, misma
+  cantidad y misma unidad. No la reestimes; sus números los conservamos
+  nosotros.
+- Si la corrección da un peso, una cantidad o una preparación, aplicala a
+  **ese** ítem: el peso va en \`grams\`, y la preparación cambia sus valores
+  cada 100 g. Subí su \`confidence\`, porque es información que vos no podías
+  medir.`
+    : `- Lo que la corrección no menciona vuelve tal cual: mismo nombre, misma
   cantidad y los mismos números. No la reestimes.
 - Si la corrección da un peso, una cantidad o una preparación, aplicala y
   recalculá los macros de **ese** ítem con ese dato; subí su \`confidence\`,
-  porque es información que vos no podías medir.
+  porque es información que vos no podías medir.`
+}
 - Si nombra algo que falta, agregalo. Si dice que algo no estaba, no lo
   devuelvas.
 - \`title\` describe la comida corregida **entera**, con la misma regla de

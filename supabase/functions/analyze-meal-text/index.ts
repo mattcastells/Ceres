@@ -11,6 +11,7 @@
 
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { PROMPT_TEXT_V1 } from './prompts/text_v1.ts';
+import { PROMPT_TEXT_V2 } from './prompts/text_v2.ts';
 import {
   CORS,
   DAILY_QUOTA,
@@ -26,6 +27,10 @@ import {
   validateTitle,
 } from '../_shared/estimation.ts';
 import { parseCurrentItems, recalculatedFrom } from '../_shared/recalc.ts';
+
+// text_v1 va con el contrato v3 y sigue acá para poder volver sin desplegar:
+// ver `PROMPT_VERSION`.
+const PROMPT = PROMPT_VERSION === 'v3' ? PROMPT_TEXT_V1 : PROMPT_TEXT_V2;
 
 /** Una descripción más larga que esto no es una comida, es un relato. */
 const MAX_DESCRIPTION = 400;
@@ -117,10 +122,11 @@ Deno.serve(async (req) => {
       geminiKey,
       [{
         text: currentItems.length > 0
-          ? `${PROMPT_TEXT_V1}\n${recalculatedFrom(currentItems, description, {
+          ? `${PROMPT}\n${recalculatedFrom(currentItems, description, {
             withPhoto: false,
+            perHundred: PROMPT_VERSION === 'v4',
           })}`
-          : `${PROMPT_TEXT_V1}\n\nDescripción: ${description}`,
+          : `${PROMPT}\n\nDescripción: ${description}`,
       }],
     );
 
@@ -161,7 +167,7 @@ Deno.serve(async (req) => {
     return timedOutResponse('cargá la comida a mano');
   }
 
-  const items = validate(parsed);
+  const items = validate(parsed, currentItems);
   if (items === null) {
     await registrar('failed', 'ERR_AI_INVALID_RESPONSE');
     return fail(

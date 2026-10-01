@@ -13,7 +13,8 @@
 // estiman la misma cosa y solo cambia qué se le manda al modelo.
 
 import { createClient } from 'jsr:@supabase/supabase-js@2';
-import { PROMPT_V3, describedBy } from './prompts/v3.ts';
+import { PROMPT_V3, describedBy as describedByV3 } from './prompts/v3.ts';
+import { PROMPT_V4, describedBy as describedByV4 } from './prompts/v4.ts';
 import {
   CORS,
   DAILY_QUOTA,
@@ -29,6 +30,10 @@ import {
   validateTitle,
 } from '../_shared/estimation.ts';
 import { parseCurrentItems, recalculatedFrom } from '../_shared/recalc.ts';
+
+// v3 sigue acá para poder volver sin desplegar: ver `PROMPT_VERSION`.
+const PROMPT = PROMPT_VERSION === 'v3' ? PROMPT_V3 : PROMPT_V4;
+const describedBy = PROMPT_VERSION === 'v3' ? describedByV3 : describedByV4;
 
 /** Mismo techo que `analyze-meal-text`: más que esto no es una aclaración. */
 const MAX_DESCRIPTION = 400;
@@ -140,12 +145,13 @@ Deno.serve(async (req) => {
   } = await callGemini(
       geminiKey,
       [
-        { text: PROMPT_V3 },
+        { text: PROMPT },
         { inlineData: { mimeType: 'image/jpeg', data: base64 } },
         ...(currentItems.length > 0
           ? [{
             text: recalculatedFrom(currentItems, description, {
               withPhoto: true,
+              perHundred: PROMPT_VERSION === 'v4',
             }),
           }]
           : description
@@ -194,7 +200,7 @@ Deno.serve(async (req) => {
     return timedOutResponse('cargá la comida a mano');
   }
 
-  const items = validate(parsed);
+  const items = validate(parsed, currentItems);
   if (items === null) {
     // Queda registrado el fallo: es lo que permite saber si el prompt empeoró
     // sin depender de que alguien lo reporte.

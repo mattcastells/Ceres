@@ -9,8 +9,26 @@
 // Duplicar la validación sería peor que duplicar cualquier otra cosa: es la
 // que impide que un "9000 kcal" entre al historial de alguien.
 
+import type { CurrentItem } from './recalc.ts';
+
 export const GEMINI_MODEL = Deno.env.get('GEMINI_MODEL') ?? 'gemini-3.6-flash';
-export const PROMPT_VERSION = Deno.env.get('GEMINI_PROMPT_VERSION') ?? 'v3';
+/**
+ * Qué versión del prompt y del contrato con el modelo corre: `v4` o `v3`.
+ *
+ * Es un interruptor y no solo una etiqueta. v4 cambió **qué** se le pregunta al
+ * modelo (gramos y valores cada 100 g en vez de kcal; ver [RESPONSE_SCHEMA]) y
+ * salió sin haberse medido contra comidas de calorías conocidas. Si empeora,
+ * volver tiene que ser un `supabase secrets set GEMINI_PROMPT_VERSION=v3`, sin
+ * desplegar y sin tocar código. Cualquier otro valor —vacío, un dedazo— corre
+ * v4: un interruptor mal escrito no puede dejar el análisis sin prompt.
+ *
+ * Se guarda en `ai_analyses.prompt_version`, que es lo que permite comparar las
+ * dos después.
+ */
+export const PROMPT_VERSION: 'v3' | 'v4' =
+  (Deno.env.get('GEMINI_PROMPT_VERSION') ?? '').trim().toLowerCase() === 'v3'
+    ? 'v3'
+    : 'v4';
 
 /**
  * Cuota diaria por usuario (D-18).
@@ -184,12 +202,76 @@ export function ok(payload: unknown): Response {
 }
 
 /**
- * Mismo contrato que `docs/handoff/gemini-output-schema.json`, en el dialecto
- * que entiende Gemini. Se pasa como `responseSchema` para que el modelo no
- * pueda devolver otra forma, y **igual** se valida después: que el proveedor
- * prometa un formato no es garantía de que lo cumpla.
+ * Lo que se le pide al modelo, en el dialecto que entiende Gemini. Se pasa como
+ * `responseSchema` para que no pueda devolver otra forma, y **igual** se valida
+ * después: que el proveedor prometa un formato no es garantía de que lo cumpla.
+ *
+ * En v4 las kcal del ítem no son el número que dice el modelo: el modelo da
+ * cuántos gramos hay en el plato y cuánto tiene el alimento cada 100 g, y la
+ * cuenta la hace [validate]. Son dos preguntas que el modelo contesta con
+ * distinta calidad —la porción es una inferencia sobre la foto; la densidad es
+ * un dato de tabla— y pedírselas juntas, como un total redondo, es de donde
+ * salían los "a ojo" que se pasaban. Separadas, cada una se puede revisar por
+ * su lado.
+ *
+ * El `kcal` que igual se le pide es un control, no el resultado: si no coincide
+ * con la cuenta, el modelo mezcló los campos (ver [fromPer100]).
+ *
+ * Hacia la app no cambia nada: [validate] devuelve los mismos campos de
+ * siempre (`kcal`, `proteinG`, …), que es el contrato de
+ * `docs/handoff/gemini-output-schema.json`.
+ *
+ * `propertyOrdering` no es decorativo: el modelo escribe en ese orden, y la
+ * referencia visual va **antes** que los gramos para que el peso salga de la
+ * referencia y no al revés.
  */
-export const RESPONSE_SCHEMA = {
+const RESPONSE_SCHEMA_V4 = {
+  type: 'OBJECT',
+  required: ['title', 'items', 'overallConfidence'],
+  propertyOrdering: ['title', 'items', 'overallConfidence'],
+  properties: {
+    title: { type: 'STRING' },
+    items: {
+      type: 'ARRAY',
+      maxItems: 12,
+      items: {
+        type: 'OBJECT',
+        required: [
+          'name', 'grams', 'quantity', 'unit',
+          'kcalPer100g', 'proteinPer100g', 'carbsPer100g', 'fatPer100g',
+          'kcal', 'confidence',
+        ],
+        propertyOrdering: [
+          'name', 'preparation', 'visualReference', 'grams', 'quantity',
+          'unit', 'kcalPer100g', 'proteinPer100g', 'carbsPer100g',
+          'fatPer100g', 'alcoholPer100g', 'kcal', 'confidence',
+        ],
+        properties: {
+          name: { type: 'STRING' },
+          preparation: { type: 'STRING' },
+          visualReference: { type: 'STRING' },
+          grams: { type: 'NUMBER' },
+          quantity: { type: 'NUMBER' },
+          unit: {
+            type: 'STRING',
+            enum: ['g', 'ml', 'unidad', 'taza', 'cucharada', 'rebanada', 'porcion'],
+          },
+          kcalPer100g: { type: 'NUMBER' },
+          proteinPer100g: { type: 'NUMBER' },
+          carbsPer100g: { type: 'NUMBER' },
+          fatPer100g: { type: 'NUMBER' },
+          alcoholPer100g: { type: 'NUMBER' },
+          kcal: { type: 'INTEGER' },
+          confidence: { type: 'NUMBER' },
+        },
+      },
+    },
+    overallConfidence: { type: 'NUMBER' },
+  },
+};
+
+/** El contrato de antes de v4: el modelo dice las kcal y los macros totales. */
+const RESPONSE_SCHEMA_V3 = {
   type: 'OBJECT',
   required: ['title', 'items', 'overallConfidence'],
   properties: {
@@ -224,6 +306,10 @@ export const RESPONSE_SCHEMA = {
   },
 };
 
+/** El contrato que corresponde a [PROMPT_VERSION]. */
+export const RESPONSE_SCHEMA =
+  PROMPT_VERSION === 'v3' ? RESPONSE_SCHEMA_V3 : RESPONSE_SCHEMA_V4;
+
 export interface AnalysisItem {
   name: string;
   quantity: number;
@@ -240,14 +326,182 @@ export interface AnalysisItem {
 const UNITS = ['g', 'ml', 'unidad', 'taza', 'cucharada', 'rebanada', 'porcion'];
 
 /**
- * Valida la respuesta contra el contrato y descarta los ítems que no cumplen.
+ * Cuánto pueden diferir las kcal cada 100 g de lo que dan sus macros antes de
+ * que se las corrija: 20 %, o 15 kcal en los alimentos que casi no tienen.
+ *
+ * Holgado a propósito. Las tablas cuentan los carbohidratos con la fibra
+ * adentro, y la fibra casi no aporta, así que una legumbre o un pan integral ya
+ * dan algo por debajo de 4·P + 4·C + 9·G aun estando bien. Lo que se quiere
+ * atrapar es otra cosa: el número que no sale de ninguna tabla.
+ */
+const ATWATER_TOLERANCE = 0.2;
+const ATWATER_FLOOR_KCAL = 15;
+
+/** Techo de confianza para un ítem cuyas kcal hubo que corregir. */
+const CORRECTED_CONFIDENCE = 0.5;
+
+/**
+ * Cuánto pueden diferir la cuenta y el `kcal` que dijo el modelo antes de
+ * sospechar que mezcló los campos: una vez y media, y más de 50 kcal (en un
+ * ítem chico una diferencia de proporción no mueve el día de nadie).
+ */
+const CROSS_CHECK_RATIO = 1.5;
+const CROSS_CHECK_FLOOR_KCAL = 50;
+
+const inRange = (v: number, min: number, max: number) =>
+  Number.isFinite(v) && v >= min && v <= max;
+
+const redondear = (v: number) => Math.round(v * 10) / 10;
+
+interface Totals {
+  kcal: number;
+  proteinG: number;
+  carbsG: number;
+  fatG: number;
+  /** Los gramos con que se hizo la cuenta, si se hizo. */
+  grams: number | null;
+  /** `false` si las kcal no cerraban con los macros y hubo que corregirlas. */
+  consistent: boolean;
+}
+
+/**
+ * Los totales del ítem a partir de gramos × valores cada 100 g.
+ *
+ * Es la cuenta que antes hacía el modelo de memoria y redondeando para arriba.
+ * Acá además se controla que las kcal cierren con los macros (4·P + 4·C + 9·G +
+ * 7·alcohol): si no cierran, una de las dos está inventada, y los macros —tres
+ * números que tienen que sumar menos de 100 g— son más difíciles de inventar
+ * bien que uno solo. Entonces las kcal se llevan al borde de la tolerancia, no
+ * al valor exacto de Atwater, para no castigar a los alimentos con fibra.
+ */
+function fromPer100(i: Record<string, unknown>): Totals | null {
+  const grams = Number(i.grams);
+  const kcal100 = Number(i.kcalPer100g);
+  const p100 = Number(i.proteinPer100g);
+  const c100 = Number(i.carbsPer100g);
+  const f100 = Number(i.fatPer100g);
+  const a100 = i.alcoholPer100g == null ? 0 : Number(i.alcoholPer100g);
+
+  if (!inRange(grams, 0.1, 5000)) return null;
+  // 900 es grasa pura: nada de lo que se come tiene más.
+  if (!inRange(kcal100, 0, 900)) return null;
+  if (!inRange(p100, 0, 100)) return null;
+  if (!inRange(c100, 0, 100)) return null;
+  if (!inRange(f100, 0, 100)) return null;
+  if (!inRange(a100, 0, 50)) return null;
+  // En 100 g no entran más de 100 g de nada. Un poco de margen por redondeo.
+  if (p100 + c100 + f100 + a100 > 105) return null;
+
+  const atwater = 4 * p100 + 4 * c100 + 9 * f100 + 7 * a100;
+  const tolerance = Math.max(ATWATER_FLOOR_KCAL, atwater * ATWATER_TOLERANCE);
+  const kcalFixed = Math.min(
+    Math.max(kcal100, atwater - tolerance),
+    atwater + tolerance,
+  );
+  const computed = (grams * kcalFixed) / 100;
+
+  // El control contra el `kcal` que dijo el modelo. El error que se busca no
+  // es de puntería sino de casilla: el total del plato escrito donde iba el
+  // valor cada 100 g. Ese error no lo ve Atwater —los macros vienen igual de
+  // corridos y cierran entre sí— y multiplica por gramos/100 sin avisar: 450
+  // kcal "cada 100 g" sobre 180 g son 810. Cuando la cuenta y el total del
+  // modelo no se parecen, no se sabe cuál de los dos está mal, y se elige el
+  // total del modelo: es el número que daba v3, así que en el peor caso v4
+  // queda igual que antes, nunca peor por esto.
+  const claimed = Number(i.kcal);
+  if (
+    Number.isFinite(claimed) && claimed > 0 && computed > 0 &&
+    Math.abs(computed - claimed) > CROSS_CHECK_FLOOR_KCAL &&
+    (computed / claimed > CROSS_CHECK_RATIO ||
+      claimed / computed > CROSS_CHECK_RATIO)
+  ) {
+    const factor = claimed / computed;
+    return {
+      kcal: Math.round(claimed),
+      proteinG: redondear((grams * p100 * factor) / 100),
+      carbsG: redondear((grams * c100 * factor) / 100),
+      fatG: redondear((grams * f100 * factor) / 100),
+      grams,
+      consistent: false,
+    };
+  }
+
+  return {
+    kcal: Math.round(computed),
+    proteinG: redondear((grams * p100) / 100),
+    carbsG: redondear((grams * c100) / 100),
+    fatG: redondear((grams * f100) / 100),
+    grams,
+    consistent: kcalFixed === kcal100,
+  };
+}
+
+/**
+ * Los totales tal como los dio el modelo: el contrato de antes de v4.
+ *
+ * Queda como red. Si un modelo ignora el schema y contesta a la vieja usanza,
+ * mejor una estimación sin control que perder el análisis entero.
+ */
+function fromTotals(i: Record<string, unknown>): Totals | null {
+  const kcal = Number(i.kcal);
+  const proteinG = Number(i.proteinG);
+  const carbsG = Number(i.carbsG);
+  const fatG = Number(i.fatG);
+  if (!inRange(kcal, 0, 3000)) return null;
+  if (!inRange(proteinG, 0, 500)) return null;
+  if (!inRange(carbsG, 0, 500)) return null;
+  if (!inRange(fatG, 0, 500)) return null;
+  return {
+    kcal: Math.round(kcal),
+    proteinG,
+    carbsG,
+    fatG,
+    grams: null,
+    consistent: true,
+  };
+}
+
+const normalizar = (s: string) => s.trim().toLowerCase().replace(/\s+/g, ' ');
+
+/**
+ * El ítem de la comida ya cargada que el modelo devolvió sin tocar, si es eso.
+ *
+ * En un recálculo, lo que la corrección no menciona tiene que volver **igual**
+ * (ver `recalculatedFrom`). Antes eso dependía de que el modelo copiara bien los
+ * números; ahora el modelo da gramos y valores cada 100 g, y rehacer la cuenta
+ * movería un par de kcal en ítems que la persona ya había dado por buenos. Se
+ * resuelve acá: mismo nombre, misma unidad, misma cantidad → mismos números.
+ */
+function unchanged(
+  kept: CurrentItem[],
+  name: string,
+  quantity: number,
+  unit: string,
+): CurrentItem | undefined {
+  const key = normalizar(name);
+  return kept.find((k) =>
+    normalizar(k.name) === key &&
+    k.unit === unit &&
+    Math.abs(k.quantity - quantity) <= 0.01 * Math.max(1, quantity)
+  );
+}
+
+/**
+ * Valida la respuesta, hace la cuenta de cada ítem y descarta los que no
+ * cumplen.
  *
  * Devuelve `null` solo si la respuesta entera es inservible. Un ítem con un
  * número imposible se tira y los demás siguen: perder un alimento es mejor que
  * perder el análisis completo, y **muchísimo** mejor que meterle a alguien un
  * "9000 kcal" al historial.
+ *
+ * `kept` son los ítems de la comida cuando esto es un recálculo: los que vuelven
+ * sin cambios conservan sus números exactos.
  */
-export function validate(raw: unknown): AnalysisItem[] | null {
+export function validate(
+  raw: unknown,
+  kept: CurrentItem[] = [],
+): AnalysisItem[] | null {
   if (!raw || typeof raw !== 'object') return null;
   const rawItems = (raw as { items?: unknown }).items;
   if (!Array.isArray(rawItems)) return null;
@@ -260,33 +514,42 @@ export function validate(raw: unknown): AnalysisItem[] | null {
     const name = typeof i.name === 'string' ? i.name.trim() : '';
     if (!name || name.length > 120) continue;
 
-    const quantity = Number(i.quantity);
-    const kcal = Number(i.kcal);
-    const proteinG = Number(i.proteinG);
-    const carbsG = Number(i.carbsG);
-    const fatG = Number(i.fatG);
-    const confidence = Number(i.confidence);
+    let quantity = Number(i.quantity);
+    let confidence = Number(i.confidence);
     const unit = typeof i.unit === 'string' ? i.unit : '';
 
-    const inRange = (v: number, min: number, max: number) =>
-      Number.isFinite(v) && v >= min && v <= max;
-
     if (!inRange(quantity, 0.1, 5000)) continue;
-    if (!inRange(kcal, 0, 3000)) continue;
-    if (!inRange(proteinG, 0, 500)) continue;
-    if (!inRange(carbsG, 0, 500)) continue;
-    if (!inRange(fatG, 0, 500)) continue;
     if (!inRange(confidence, 0, 1)) continue;
     if (!UNITS.includes(unit)) continue;
+
+    const same = unchanged(kept, name, quantity, unit);
+    const totals: Totals | null = same
+      ? { ...same, grams: null, consistent: true }
+      : fromPer100(i) ?? fromTotals(i);
+    if (!totals) continue;
+    if (!inRange(totals.kcal, 0, 3000)) continue;
+    if (!inRange(totals.proteinG, 0, 500)) continue;
+    if (!inRange(totals.carbsG, 0, 500)) continue;
+    if (!inRange(totals.fatG, 0, 500)) continue;
+
+    // Si la unidad es gramos, la cantidad que se muestra tiene que ser la misma
+    // con la que se hizo la cuenta: "150 g · 400 kcal" calculado sobre 180 g
+    // sería un número que no se puede verificar mirando la pantalla.
+    if (unit === 'g' && totals.grams !== null) {
+      quantity = Math.round(totals.grams);
+    }
+    if (!totals.consistent) {
+      confidence = Math.min(confidence, CORRECTED_CONFIDENCE);
+    }
 
     clean.push({
       name,
       quantity,
       unit,
-      kcal: Math.round(kcal),
-      proteinG,
-      carbsG,
-      fatG,
+      kcal: totals.kcal,
+      proteinG: totals.proteinG,
+      carbsG: totals.carbsG,
+      fatG: totals.fatG,
       confidence,
       preparation: typeof i.preparation === 'string'
         ? i.preparation.slice(0, 60)
