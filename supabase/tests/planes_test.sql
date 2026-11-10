@@ -11,7 +11,7 @@
 create extension if not exists pgtap with schema extensions;
 
 begin;
-select plan(10);
+select plan(12);
 
 insert into auth.users (
   id, instance_id, aud, role, email, encrypted_password,
@@ -26,7 +26,7 @@ values
    'pro@demo.ceres.test', crypt('x', gen_salt('bf')), now(), now(), now()),
   ('cccccccc-cccc-cccc-cccc-cccccccccccc',
    '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
-   'gratis@demo.ceres.test', crypt('x', gen_salt('bf')), now(), now(), now()),
+   'gratis@demo.ceres.app', crypt('x', gen_salt('bf')), now(), now(), now()),
   ('dddddddd-dddd-dddd-dddd-dddddddddddd',
    '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
    'paciente@demo.ceres.test', crypt('x', gen_salt('bf')), now(), now(), now());
@@ -89,6 +89,17 @@ select set_config('request.jwt.claims',
   '{"sub":"cccccccc-cccc-cccc-cccc-cccccccccccc","role":"authenticated"}', true);
 select is((select count(*)::int from public.organizations), 0, 'Alguien de afuera no la ve');
 select is((select count(*)::int from public.my_organization()), 0, 'Ni su tablero');
+
+-- ── Compra simulada ──────────────────────────────────────────────────────
+select set_config('request.jwt.claims',
+  '{"sub":"cccccccc-cccc-cccc-cccc-cccccccccccc","role":"authenticated"}', true);
+select is(public.demo_switch_plan('premium'), 'premium',
+  'Una cuenta demo se pasa a Premium sin cobro');
+
+select set_config('request.jwt.claims',
+  '{"sub":"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa","role":"authenticated"}', true);
+select throws_ok($$select public.demo_switch_plan('free')$$, 'P0001', 'ERR_FORBIDDEN',
+  'Una cuenta real no cambia de plan desde el cliente');
 
 select * from finish();
 rollback;
