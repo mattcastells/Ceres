@@ -7,10 +7,12 @@
 
 import 'package:ceres/core/error/app_error.dart';
 import 'package:ceres/core/theme/app_theme.dart';
+import 'package:ceres/data/local/local_auth_gateway.dart';
 import 'package:ceres/data/local/local_store.dart';
 import 'package:ceres/data/remote/plan_client.dart';
 import 'package:ceres/data/repositories/local_repository.dart';
 import 'package:ceres/domain/models/plan.dart';
+import 'package:ceres/domain/repositories/auth_gateway.dart';
 import 'package:ceres/presentation/components/plan/ad_banner.dart';
 import 'package:ceres/presentation/components/plan/ai_gate.dart';
 import 'package:ceres/presentation/providers/app_providers.dart';
@@ -59,12 +61,14 @@ Future<ProviderContainer> _boot(
     store.seed();
     void Function() notify = () {};
     final repository = LocalRepository(store, onChanged: () => notify());
-    if (email != null) {
-      await repository.updateProfile(repository.profile.copyWith(email: email));
-    }
+    // El mail va solo en la sesión, como en la app real: el perfil que se
+    // trae del servidor no lo tiene.
     container = ProviderContainer(
       overrides: <Override>[
         repositoryProvider.overrideWithValue(repository),
+        authGatewayProvider.overrideWithValue(LocalAuthGateway(
+          initial: email == null ? null : AuthAccount(id: 'cuenta-de-prueba', email: email),
+        )),
         isCloudEnabledProvider.overrideWithValue(cloud),
         if (client != null) planClientProvider.overrideWithValue(client),
       ],

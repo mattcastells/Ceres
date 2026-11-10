@@ -70,7 +70,13 @@ class _PlansScreenState extends ConsumerState<PlansScreen> {
     final nm = context.nm;
     final plan = ref.watch(planProvider);
     final cloud = ref.watch(isCloudEnabledProvider);
-    final isDemo = isDemoAccountEmail(ref.watch(profileProvider).email);
+    // El mail sale de la sesión y no del perfil local: el perfil que se trae
+    // del servidor no lo tiene (la tabla `profiles` no guarda correos), así
+    // que en una cuenta que entró por "Ya tengo cuenta" venía vacío.
+    final isDemo = isDemoAccountEmail(
+      ref.watch(authGatewayProvider).currentAccount?.email ??
+          ref.watch(profileProvider).email,
+    );
 
     return NmScreen(
       title: 'Planes',
