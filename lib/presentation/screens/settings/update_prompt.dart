@@ -30,6 +30,10 @@ import 'update_dialog.dart';
 /// `package_info`— no se dice nada: esto es un extra silencioso, no una función
 /// que pueda fallar a la vista.
 Future<void> maybePromptForUpdate(BuildContext context, WidgetRef ref) async {
+  // La variante de demostración (`tool/demo/`, `CERES_DEMO=true` en el
+  // `--dart-define-from-file`) no ofrece actualizar: la versión publicada es la
+  // app real, no esta, y un aviso en medio de la defensa no ayuda a nadie.
+  if (const bool.fromEnvironment('CERES_DEMO')) return;
   final UpdateStatus status;
   try {
     final current = await ref.read(installedVersionProvider.future);

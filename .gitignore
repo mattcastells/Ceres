@@ -39,3 +39,10 @@ coverage/
 .flutter-plugins-dependencies
 android/local.properties
 android/.cxx/
+
+# Demo local (tool/demo/): el directorio de trabajo de la base de la demo, la
+# configuración con la clave de Gemini, y la instantánea de una cuenta real
+# (datos de salud y fotos en claro: no se versiona nunca).
+.demo/
+tool/demo/.env.demo
+tool/demo/instantanea/

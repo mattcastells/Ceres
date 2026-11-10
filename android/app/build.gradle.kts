@@ -53,6 +53,15 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+
+        // La variante de demostración (`tool/demo/`). Con `CERES_DEMO=1` en el
+        // entorno, el APK se instala como **otra app** ("Ceres Demo",
+        // `io.ceres.app.demo`) al lado de la real: un APK de debug con el mismo
+        // id no se puede instalar encima del release firmado, y desinstalar la
+        // real para la demo se llevaría sus datos locales.
+        val demo = System.getenv("CERES_DEMO") == "1"
+        if (demo) applicationIdSuffix = ".demo"
+        manifestPlaceholders["appLabel"] = if (demo) "Ceres Demo" else "Ceres"
     }
 
     signingConfigs {
