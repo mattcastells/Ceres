@@ -156,6 +156,7 @@ Deno.serve(async (req) => {
       tokens_in: diagnostics.tokensIn,
       tokens_out: diagnostics.tokensOut,
       tokens_thinking: diagnostics.tokensThinking,
+      tokens_cached: diagnostics.tokensCached,
     });
     if (error) console.error('ai_analyses insert falló:', error.message);
   };
@@ -213,6 +214,7 @@ Deno.serve(async (req) => {
     tokens_in: diagnostics.tokensIn,
     tokens_out: diagnostics.tokensOut,
     tokens_thinking: diagnostics.tokensThinking,
+    tokens_cached: diagnostics.tokensCached,
   });
   if (insertError) {
     // La estimación es buena y se devuelve igual: no se le va a negar a nadie

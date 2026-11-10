@@ -158,6 +158,15 @@ jobs:
             --format=esm --platform=node --outfile=/tmp/sara2.test.mjs
           node /tmp/sara2.test.mjs
 
+      # Los informes con IA citan números (promedios, días dentro del objetivo,
+      # cambio de peso esperado) que el modelo **no** calcula: salen de
+      # `metrics.ts`. Si uno de esos está mal, el informe lo repite con
+      # seguridad, así que se ejecuta como la cuenta de kcal.
+      - name: Probar los números de los informes
+        run: |
+          npx --yes esbuild@0.24.0 --bundle             supabase/functions/care-report/metrics.test.ts             --format=esm --platform=node --outfile=/tmp/metrics.test.mjs
+          node /tmp/metrics.test.mjs
+
   database:
     name: Probar las políticas RLS
     runs-on: ubuntu-latest
@@ -168,7 +177,7 @@ jobs:
         with:
           version: 2.110.0
 
-      # Levanta Postgres y aplica las 32 migraciones desde cero: si una
+      # Levanta Postgres y aplica todas las migraciones desde cero: si una
       # migración no corre en una base limpia, acá se ve.
       #
       # `storage-api` ya no se excluye: la migración 18 crea los buckets y

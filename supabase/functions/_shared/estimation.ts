@@ -705,6 +705,12 @@ export interface GeminiDiagnostics {
   tokensOut: number | null;
   /** De los de salida, los que se fueron en razonar. Se facturan igual. */
   tokensThinking: number | null;
+  /**
+   * De los de entrada, los que Gemini sirvió desde su caché (el prefijo que se
+   * repite en cada pedido: las reglas y la tabla SARA 2). Se cobran a una
+   * fracción; sin este número no hay forma de saber si el caché está actuando.
+   */
+  tokensCached: number | null;
 }
 
 export interface GeminiOutcome {
@@ -764,8 +770,8 @@ function parseRetryDelay(body: string): number | null {
 /**
  * Le manda las partes a Gemini y devuelve el JSON ya parseado.
  *
- * Reintenta una vez: si el JSON vino inválido, el segundo intento va con
- * `temperature: 0` y es determinista, así que insistir más no aportaría nada.
+ * Reintenta hasta completar `MAX_ATTEMPTS`: si el JSON vino inválido, el
+ * siguiente intento va con `temperature: 0`.
  *
  * **Un 429 no se reintenta.** Antes sí: esperaba 2 s y mandaba la llamada de
  * nuevo. Las dos mitades de esa idea estaban mal. La ventana del proveedor es
@@ -803,6 +809,7 @@ export async function callGemini(
     tokensIn: null,
     tokensOut: null,
     tokensThinking: null,
+    tokensCached: null,
   };
 
   for (let intento = 0; intento < MAX_ATTEMPTS; intento++) {
@@ -1005,6 +1012,7 @@ function readDiagnostics(payload: unknown, into: GeminiDiagnostics): void {
   into.tokensIn = count('promptTokenCount');
   into.tokensOut = count('candidatesTokenCount');
   into.tokensThinking = count('thoughtsTokenCount');
+  into.tokensCached = count('cachedContentTokenCount');
 }
 
 /**

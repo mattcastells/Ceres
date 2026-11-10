@@ -1,4 +1,4 @@
--- El contexto del día y las notas de la profesional (migraciones 40, 41 y 42).
+-- El contexto del día, las devoluciones y los informes (migraciones 40, 41 y 48).
 --
 -- Va aparte de `care_access_test.sql` y no adentro porque aquel termina
 -- revocando el acceso, y todo lo que se agregue después de esa línea prueba
@@ -10,10 +10,10 @@
 --   2. La profesional las lee, pero **no las puede escribir**: la promesa de la
 --      migración 32 —los datos del paciente son de solo lectura— sigue en pie
 --      aunque ahora exista una escritura en el panel.
---   3. Las notas son de quien las escribe. **El paciente no las ve.** Es lo que
---      se pidió explícitamente: nada de lo que anote la nutricionista aparece
---      en la app de quien la contrató.
---   4. Revocar corta la escritura de notas pero no borra las que ya están.
+--   3. Un borrador de devolución es de quien lo escribe: **el paciente no lo
+--      ve** hasta que se publica, y publicada no la puede editar.
+--   4. Revocar corta la escritura de devoluciones pero no borra lo escrito.
+--   6. Los informes y el tablero del equipo solo muestran lo concedido.
 --   5. `tracking_since` contesta lo mismo que la app, y solo a quien tiene
 --      acceso.
 --
@@ -22,7 +22,7 @@
 create extension if not exists pgtap with schema extensions;
 
 begin;
-select plan(18);
+select plan(26);
 
 -- ── Ana (paciente), Nutri (profesional) y Otra (una desconocida) ─────────
 insert into auth.users (
@@ -69,7 +69,7 @@ select set_config('request.jwt.claims',
   '{"sub":"bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb","role":"authenticated"}', true);
 
 select matches(public.ensure_care_code(),
-  '^NT-[23456789ABCDEFGHJKMNPQRSTUVWXYZ]{6}$',
+  '^CE-[23456789ABCDEFGHJKMNPQRSTUVWXYZ]{6}$',
   'La profesional pide su código');
 
 reset role;
@@ -194,47 +194,136 @@ select is(
   'tracking_since es el día del registro más viejo, no el de la comida'
 );
 
--- ── Las notas ────────────────────────────────────────────────────────────
-insert into public.care_notes (author_id, patient_id, local_date, body)
-values ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+-- ── Las devoluciones ─────────────────────────────────────────────────────
+-- Un borrador es privado: es lo que antes eran las notas de la profesional.
+insert into public.care_feedback (id, author_id, patient_id, local_date, body)
+values ('eeeeeeee-0000-0000-0000-000000000001',
+        'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
         'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', current_date - 3,
         'Semana con angina. No leer la caída de actividad como abandono.');
 
 select is(
-  (select count(*)::int from public.care_notes),
+  (select count(*)::int from public.care_feedback),
   1,
-  'La profesional escribe su nota'
+  'La profesional escribe un borrador'
 );
 
--- **Lo que pidió el dueño de la cuenta**: nada de lo que anote la
--- nutricionista aparece del lado del paciente. Ni en la app, ni por API, ni
--- porque la nota sea "sobre él".
 select set_config('request.jwt.claims',
   '{"sub":"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa","role":"authenticated"}', true);
 
 select is(
-  (select count(*)::int from public.care_notes),
+  (select count(*)::int from public.care_feedback),
   0,
-  'Ana NO ve las notas que la profesional escribió sobre ella'
+  'Ana NO ve un borrador: hasta que se publica, es de quien lo escribe'
+);
+
+select set_config('request.jwt.claims',
+  '{"sub":"bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb","role":"authenticated"}', true);
+
+update public.care_feedback set published_at = now()
+ where id = 'eeeeeeee-0000-0000-0000-000000000001';
+
+select set_config('request.jwt.claims',
+  '{"sub":"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa","role":"authenticated"}', true);
+
+select is(
+  (select count(*)::int from public.care_feedback),
+  1,
+  'Publicada, Ana la ve'
+);
+
+-- Ana no puede reescribir lo que le escribió su nutricionista. Igual que con
+-- el contexto del día, se comprueba que el dato queda igual y no que tire.
+update public.care_feedback set body = 'otra cosa'
+ where id = 'eeeeeeee-0000-0000-0000-000000000001';
+
+select is(
+  (select body from public.care_feedback
+    where id = 'eeeeeeee-0000-0000-0000-000000000001'),
+  'Semana con angina. No leer la caída de actividad como abandono.',
+  'Ana no puede editar la devolución'
+);
+
+select public.mark_care_feedback_read('eeeeeeee-0000-0000-0000-000000000001');
+
+select isnt(
+  (select read_at from public.care_feedback
+    where id = 'eeeeeeee-0000-0000-0000-000000000001'),
+  null,
+  'Pero sí marcarla como leída'
+);
+
+-- Un informe semanal propio sí; uno "profesional" sobre otra persona, no.
+insert into public.care_reports (
+  requested_by, patient_id, kind, period_from, period_to, content,
+  model, prompt_version)
+values ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+        'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'patient_weekly',
+        current_date - 7, current_date - 1, '{}', 'test', 'test');
+
+select is(
+  (select count(*)::int from public.care_reports),
+  1,
+  'Ana guarda su informe semanal'
+);
+
+select throws_ok(
+  $$insert into public.care_reports (
+      requested_by, patient_id, kind, period_from, period_to, content,
+      model, prompt_version)
+    values ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+            'cccccccc-cccc-cccc-cccc-cccccccccccc', 'professional',
+            current_date - 7, current_date - 1, '{}', 'test', 'test')$$,
+  '42501',
+  null,
+  'Pero no un informe sobre alguien que no le dio acceso'
 );
 
 select set_config('request.jwt.claims',
   '{"sub":"cccccccc-cccc-cccc-cccc-cccccccccccc","role":"authenticated"}', true);
 
 select is(
-  (select count(*)::int from public.care_notes),
+  (select count(*)::int from public.care_feedback)
+    + (select count(*)::int from public.care_reports),
   0,
-  'Una desconocida tampoco'
+  'Una desconocida no ve devoluciones ni informes ajenos'
 );
 
--- Y nadie puede escribir sobre alguien que no le dio acceso.
 select throws_ok(
-  $$insert into public.care_notes (author_id, patient_id, body)
+  $$insert into public.care_feedback (author_id, patient_id, body)
     values ('cccccccc-cccc-cccc-cccc-cccccccccccc',
             'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'hola')$$,
   '42501',
   null,
-  'Sin permiso vigente no se puede anotar sobre nadie'
+  'Sin permiso vigente no se le escribe a nadie'
+);
+
+-- ── El tablero del equipo ────────────────────────────────────────────────
+select set_config('request.jwt.claims',
+  '{"sub":"bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb","role":"authenticated"}', true);
+
+select is(
+  (select last_meal_date from public.care_overview()
+    where patient_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'),
+  (current_date - 10)::date,
+  'El tablero muestra la última comida de Ana'
+);
+
+-- Ana no comparte el peso: el tablero lo deja en null, no en un número.
+select is(
+  (select weight_last_30 from public.care_overview()
+    where patient_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'),
+  null,
+  'Sin la categoría de cuerpo, el peso no aparece'
+);
+
+select set_config('request.jwt.claims',
+  '{"sub":"cccccccc-cccc-cccc-cccc-cccccccccccc","role":"authenticated"}', true);
+
+select is(
+  (select count(*)::int from public.care_overview()),
+  0,
+  'A una desconocida el tablero no le muestra a nadie'
 );
 
 -- ── Revocar corta la escritura, no borra lo escrito ──────────────────────
@@ -248,23 +337,19 @@ select public.revoke_care_access(
 select set_config('request.jwt.claims',
   '{"sub":"bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb","role":"authenticated"}', true);
 
--- El texto es de quien lo escribió: borrárselo al revocar sería borrarle su
--- propio historial de trabajo.
 select is(
-  (select count(*)::int from public.care_notes),
+  (select count(*)::int from public.care_feedback),
   1,
-  'Revocado, sigue viendo las notas que escribió'
+  'Revocado, sigue viendo lo que escribió'
 );
 
--- Pero seguir anotando sobre alguien que cortó el acceso es justamente lo que
--- el corte tiene que impedir.
 select throws_ok(
-  $$insert into public.care_notes (author_id, patient_id, body)
+  $$insert into public.care_feedback (author_id, patient_id, body)
     values ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
             'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'una más')$$,
   '42501',
   null,
-  'Pero no puede escribir ninguna nueva'
+  'Pero no puede escribir una nueva'
 );
 
 select * from finish();

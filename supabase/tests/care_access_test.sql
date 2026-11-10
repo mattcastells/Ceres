@@ -77,7 +77,7 @@ select set_config('request.jwt.claims',
 
 select matches(
   public.ensure_care_code(),
-  '^NT-[23456789ABCDEFGHJKMNPQRSTUVWXYZ]{6}$',
+  '^CE-[23456789ABCDEFGHJKMNPQRSTUVWXYZ]{6}$',
   'La profesional pide su código y sale con el formato dictable'
 );
 
