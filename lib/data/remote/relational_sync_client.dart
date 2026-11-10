@@ -756,8 +756,15 @@ class RelationalSyncClient {
       // aceptan los proxies. El pull entero fallaba, `refresh` devolvía false
       // en silencio y el teléfono dejaba de reconciliar — justo en las cuentas
       // con más datos, que son las que más lo necesitan.
+      //
+      // De a **cien**, como la poda del push, y no de a doscientos. Cada id
+      // viaja entre comillas codificadas (`%22…%22`): doscientos eran ~8,7 kB
+      // de URL, justo arriba de los 8 kB que acepta el Kong de una base
+      // Supabase local. Ahí el pull moría con "URI too long", en silencio, y
+      // la cuenta entraba al alta como si no tuviera nada. Producción tolera
+      // más, pero no hay razón para depender de eso.
       final itemsPorComida = <String, List<Map<String, dynamic>>>{};
-      const porTanda = 200;
+      const porTanda = 100;
       final idsDeComidas = meals.map((m) => m['id'] as String).toList();
       for (var i = 0; i < idsDeComidas.length; i += porTanda) {
         final tanda = idsDeComidas.sublist(
