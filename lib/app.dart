@@ -103,6 +103,7 @@ class _CeresAppState extends ConsumerState<CeresApp>
       // dejarla abierta de noche y volver a la mañana dejaba Inicio en "Ayer" y
       // el desayuno se cargaba en el día anterior.
       ref.read(selectedDateProvider.notifier).refreshOnResume();
+      ref.read(currentDayProvider.notifier).refresh();
       _publishToWidget();
       unawaited(_pullFromTables());
     }

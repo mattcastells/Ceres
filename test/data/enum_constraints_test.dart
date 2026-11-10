@@ -102,6 +102,14 @@ const Set<String> _noLasEscribeLaApp = <String>{
   // El estado del acceso profesional lo pone el servidor: la app llama a
   // `grant_care_access` / `revoke_care_access` y nunca manda el literal.
   'care_grants_status',
+  // Devoluciones, informes, planes y organizaciones (migraciones 48 y 49): la
+  // app los lee; los escriben el panel, la Edge Function `care-report` y los
+  // scripts de `tool/demo/`.
+  'account_plans_plan',
+  'care_feedback_kind',
+  'care_feedback_source',
+  'care_reports_kind',
+  'org_members_role',
   'foods_source', // el cliente manda 'user' fijo, no el enum
   'goals_macro_method',
   'pals_status',

@@ -23,7 +23,7 @@ import '../../components/system/nm_screen.dart';
 import '../../components/system/overlays.dart';
 import '../../components/system/surfaces.dart';
 import '../../providers/app_providers.dart';
-import 'duplicate_dialog.dart';
+import 'overlap_warning.dart';
 
 const _uuid = Uuid();
 

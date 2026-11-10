@@ -49,9 +49,12 @@ const _uuid = Uuid();
 
 /// Implementación local-first de todos los repositorios sobre [LocalStore].
 ///
-/// Cada mutación: escribe en la base local, deja `sync_status` según el estado
-/// de conexión y avisa por [onChanged] para que la UI se actualice de
-/// inmediato (escritura optimista, D-08).
+/// Cada mutación: escribe en la base local y avisa por [onChanged] para que la
+/// UI se actualice de inmediato (escritura optimista, D-08). Lo que sale al
+/// servidor lo deciden el respaldo y la sincronización con las tablas, no un
+/// `sync_status` por registro: el modo "sin conexión" que lo ponía en
+/// `pending` era un interruptor de desarrollo que nunca detectó nada, y se
+/// sacó entero.
 class LocalRepository
     implements
         CeresRepositories,
@@ -67,8 +70,7 @@ class LocalRepository
         SummaryRepository,
         HealthRepository,
         AiPhotoRepository,
-        BackupRepository,
-        ConnectivityRepository {
+        BackupRepository {
   LocalRepository(
     this.store, {
     required this.onChanged,
@@ -586,7 +588,7 @@ class LocalRepository
     );
 
     final withStatus = meal.copyWith(
-      syncStatus: store.writeStatus,
+      syncStatus: SyncStatus.synced,
       photoPath: photoPath ?? meal.photoPath,
     );
     final index = store.meals.indexWhere((m) => m.id == meal.id);
@@ -705,7 +707,7 @@ class LocalRepository
       source: MealSource.duplicate,
       createdAt: DateTime.now(),
       updatedAt: DateTime.now(),
-      syncStatus: store.writeStatus,
+      syncStatus: SyncStatus.synced,
     );
     store.meals.add(copy);
     await _commit();
@@ -850,6 +852,29 @@ class LocalRepository
         durationMinutes: draft.durationMinutes,
       );
     }
+
+    // Una actividad que trajo sus calorías del proveedor (Apollo, un reloj)
+    // las conserva al editarla mientras no cambie lo que las determina: tipo,
+    // duración y distancia. Cambiarle el nombre o una nota y que sus kcal
+    // medidas pasaran a ser las del MET era perder el mejor dato que había.
+    // Si sí cambió algo de eso, la medición ya no describe la actividad y se
+    // recalcula por MET, dicho como tal (`metRecalculated`).
+    final existing = draft.id == null ? null : activityById(draft.id!);
+    final fromProvider =
+        existing != null &&
+        existing.estimationMethod == EstimationMethod.provider;
+    if (fromProvider &&
+        existing.activityTypeId == draft.activityTypeId &&
+        existing.durationMinutes == draft.durationMinutes &&
+        existing.distanceMeters == draft.distanceMeters) {
+      return ActivityEstimate(
+        calories: existing.estimatedCalories,
+        method: EstimationMethod.provider,
+        metValue: existing.metValue,
+        weightKg: existing.weightKgUsed,
+        durationMinutes: draft.durationMinutes,
+      );
+    }
     if (weightKg == null) {
       return const ActivityEstimate(
         calories: 0,
@@ -866,7 +891,9 @@ class LocalRepository
     }
 
     var met = type.metFor(draft.intensity);
-    var method = EstimationMethod.met;
+    var method = fromProvider
+        ? EstimationMethod.metRecalculated
+        : EstimationMethod.met;
 
     if (draft.usePaceEstimate &&
         draft.distanceMeters != null &&
@@ -898,9 +925,22 @@ class LocalRepository
   @override
   Future<Activity> saveActivity(ActivityDraft draft) async {
     final estimated = estimate(draft);
-    final credit = profile.effectiveCreditPercentage;
-    final enabled = profile.exerciseCreditEnabled;
     final existing = draft.id == null ? null : activityById(draft.id!);
+
+    // D-05: el porcentaje del ajuste se congela al guardar, y cambiar la
+    // configuración solo toca hoy y lo que viene. Editar una actividad de un
+    // día cerrado le volvía a aplicar el porcentaje **de hoy**, que es
+    // exactamente lo que la regla prohíbe. Ahí se usa el que quedó congelado;
+    // y si lo congelado fue "sin ajuste" —aplicadas en cero con calorías de
+    // por medio—, sigue sin ajuste.
+    final frozen =
+        existing != null && dateOnly(draft.startedAt).isBefore(today());
+    final credit = frozen
+        ? existing.exerciseCreditPercentage
+        : profile.effectiveCreditPercentage;
+    final enabled = frozen
+        ? !(existing.appliedCalories == 0 && existing.estimatedCalories > 0)
+        : profile.exerciseCreditEnabled;
 
     final calories = estimated.calories;
     final applied = calculateAppliedExerciseCalories(
@@ -928,6 +968,11 @@ class LocalRepository
       originalCalories: draft.overrideCalories == null
           ? existing?.originalCalories
           : (existing?.originalCalories ??
+                // Lo que se pisa es lo que había: si eran las del proveedor,
+                // esas, no un MET que nunca se mostró.
+                (existing?.estimationMethod == EstimationMethod.provider
+                    ? existing!.estimatedCalories
+                    : null) ??
                 estimate(
                   ActivityDraft(
                     activityTypeId: draft.activityTypeId,
@@ -945,10 +990,19 @@ class LocalRepository
       weightKgUsed: estimated.weightKg,
       overrideReason: draft.overrideReason,
       sourceType: existing?.sourceType ?? ActivitySourceType.manual,
+      // Lo que el formulario no edita viaja tal cual. Antes se perdía al
+      // guardar: sin `externalSource`/`externalId` la próxima importación no
+      // reconocía la actividad como suya y la volvía a traer duplicada, y la
+      // foto y el dispositivo desaparecían.
+      externalSource: existing?.externalSource,
+      externalId: existing?.externalId,
+      sourceUpdatedAt: existing?.sourceUpdatedAt,
+      photoPath: existing?.photoPath,
+      deviceName: existing?.deviceName,
       userEdited: existing != null || draft.overrideCalories != null,
       notes: draft.notes,
       isFavorite: draft.isFavorite,
-      syncStatus: store.writeStatus,
+      syncStatus: SyncStatus.synced,
       createdAt: existing?.createdAt ?? DateTime.now(),
       updatedAt: DateTime.now(),
     );
@@ -1200,7 +1254,7 @@ class LocalRepository
   /// para el otro caso— era inalcanzable.
   @override
   Future<List<Food>> searchOnline(String query) async {
-    if (!FeatureFlags.onlineFoodCatalog || store.offline) {
+    if (!FeatureFlags.onlineFoodCatalog) {
       return const <Food>[];
     }
     if (query.trim().length < 2) return const <Food>[];
@@ -1251,7 +1305,7 @@ class LocalRepository
   Future<Food?> lookupBarcode(String ean) async {
     final local = byBarcode(ean);
     if (local != null) return local;
-    if (!FeatureFlags.onlineFoodCatalog || store.offline) {
+    if (!FeatureFlags.onlineFoodCatalog) {
       throw const AppError(
         code: ApiErrorCode.offline,
         message: 'Sin conexión no podemos buscar el código en el catálogo.',
@@ -1379,7 +1433,7 @@ class LocalRepository
       loggedAt: DateTime.now(),
       source: source,
       notes: notes,
-      syncStatus: store.writeStatus,
+      syncStatus: SyncStatus.synced,
     );
     store.weightLogs = <WeightLog>[
       ...store.weightLogs.where((w) => !isSameDay(w.localDate, date)),
@@ -1440,7 +1494,7 @@ class LocalRepository
       quality: quality,
       loggedAt: DateTime.now(),
       notes: notes,
-      syncStatus: store.writeStatus,
+      syncStatus: SyncStatus.synced,
       // Cargar de nuevo una noche borrada la revive en su misma fila.
     );
     if (index >= 0) {
@@ -1738,7 +1792,7 @@ class LocalRepository
           note: note,
           tags: tags,
           updatedAt: DateTime.now(),
-          syncStatus: store.writeStatus,
+          syncStatus: SyncStatus.synced,
         ),
       );
     }
@@ -1788,7 +1842,7 @@ class LocalRepository
       note: note,
       loggedAt: DateTime.now(),
       updatedAt: DateTime.now(),
-      syncStatus: store.writeStatus,
+      syncStatus: SyncStatus.synced,
     );
     store.alcoholLogs.add(log);
     await _commit();
@@ -2032,90 +2086,13 @@ class LocalRepository
     await _commit();
   }
 
-  /// La descartada pasa a `deleted_at` con motivo `duplicate_merge`; sin
-  /// acción del usuario queda `needs_review` (S-14).
-  @override
-  Future<void> resolveDuplicate(
-    DuplicateCandidate candidate,
-    DuplicateResolution resolution,
-  ) async {
-    switch (resolution) {
-      case DuplicateResolution.keepIncoming:
-        await deleteActivity(candidate.existing.id);
-        _markReviewed(candidate.incoming.id);
-      case DuplicateResolution.keepExisting:
-        await deleteActivity(candidate.incoming.id);
-      case DuplicateResolution.keepBoth:
-        _markReviewed(candidate.incoming.id);
-      case DuplicateResolution.defer:
-        break;
-    }
-    await _commit();
-  }
-
-  void _markReviewed(String id) {
-    store.activities = store.activities
-        .map(
-          (a) => a.id == id && a.syncStatus == SyncStatus.needsReview
-              ? a.copyWith(syncStatus: SyncStatus.synced)
-              : a,
-        )
-        .toList();
-  }
-
-  @override
-  List<DuplicateCandidate> get pendingReviews {
-    final out = <DuplicateCandidate>[];
-    final needsReview = store.activities.where(
-      (a) => !a.isDeleted && a.syncStatus == SyncStatus.needsReview,
-    );
-    for (final incoming in needsReview) {
-      for (final existing in store.activities) {
-        if (existing.id == incoming.id ||
-            existing.isDeleted ||
-            existing.sourceType == ActivitySourceType.imported) {
-          continue;
-        }
-        final score = duplicateScore(
-          DuplicateInput(
-            activityTypeId: incoming.activityTypeId,
-            startedAt: incoming.startedAt,
-            durationMinutes: incoming.durationMinutes,
-            estimatedCalories: incoming.estimatedCalories,
-            distanceMeters: incoming.distanceMeters,
-          ),
-          DuplicateInput(
-            activityTypeId: existing.activityTypeId,
-            startedAt: existing.startedAt,
-            durationMinutes: existing.durationMinutes,
-            estimatedCalories: existing.estimatedCalories,
-            distanceMeters: existing.distanceMeters,
-          ),
-        );
-        if (score.score >= DuplicateThresholds.suspicious) {
-          out.add(
-            DuplicateCandidate(
-              incoming: incoming,
-              existing: existing,
-              score: score,
-            ),
-          );
-        }
-      }
-    }
-    return out;
-  }
-
   // ── Análisis de foto ───────────────────────────────────────────────────
 
-  /// Cuota de 20 análisis por día (D-18).
-  @override
-  int get quotaLimit => 20;
-
-  int _quotaUsed = 0;
-
-  @override
-  int get quotaUsed => _quotaUsed;
+  // La cuota diaria (D-18) la cuenta y la hace cumplir el servidor, que
+  // contesta `ERR_QUOTA_EXCEEDED` con el mensaje para mostrar. Acá había un
+  // contador en memoria —ni diario ni compartido entre equipos, y que sumaba
+  // también las sugerencias y los recálculos— que apagaba botones con un
+  // "te quedan N" inventado: se fue.
 
   @override
   Future<AiAnalysis> analyzeText({required String description}) async {
@@ -2128,7 +2105,6 @@ class LocalRepository
       );
     }
     final analysis = await client.analyzeText(description: description);
-    _quotaUsed++;
     return analysis;
   }
 
@@ -2171,7 +2147,6 @@ class LocalRepository
       ],
       restrictionsNote: profile.dietaryNote,
     );
-    _quotaUsed++;
     return options;
   }
 
@@ -2213,7 +2188,6 @@ class LocalRepository
       goalType: goalType,
       formulaTarget: formulaTarget,
     );
-    _quotaUsed++;
     return proposal;
   }
 
@@ -2250,7 +2224,6 @@ class LocalRepository
         photoPath: remotePath,
         description: description,
       );
-      _quotaUsed++;
 
       // La ruta del bucket viaja de vuelta con el análisis, y de ahí la toma la
       // pantalla de revisión para que la comida se guarde apuntando a **esta**
@@ -2266,7 +2239,6 @@ class LocalRepository
 
     // Sin servidor: resultado fijo. Solo se llega acá con `NM_AI_PHOTO`
     // encendido a mano en una compilación sin Supabase.
-    _quotaUsed++;
     final now = DateTime.now();
     return AiAnalysis(
       id: _uuid.v4(),
@@ -2353,7 +2325,6 @@ class LocalRepository
       instruction: instruction,
       photoPath: remotePath,
     );
-    _quotaUsed++;
     return analysis;
   }
 
@@ -2446,50 +2417,5 @@ class LocalRepository
       );
     }
     return document;
-  }
-
-  // ── Conectividad ───────────────────────────────────────────────────────
-
-  /// ⚠️ Hoy devuelve **siempre `false`**.
-  ///
-  /// Lo único que ponía `offline` en true era el interruptor de "simular modo
-  /// sin conexión", que se sacó de Configuración por ser una herramienta de
-  /// desarrollo peligrosa en manos de quien usa la app. No hay detección real
-  /// de conectividad: cuando la haya, este getter es el lugar donde enchufarla
-  /// y todo lo que ya lo consulta —el banner, el estado `pending` de cada
-  /// escritura, el corte del catálogo online— empieza a funcionar solo.
-  ///
-  /// Se deja explícito para que nadie lea un `if (isOffline)` y crea que hay
-  /// algo detectando la red.
-  @override
-  bool get isOffline => store.offline;
-
-  @override
-  int get pendingCount => store.pendingCount;
-
-  @override
-  Future<void> flushQueue() async {
-    store.meals = store.meals
-        .map(
-          (m) => m.syncStatus == SyncStatus.pending
-              ? m.copyWith(syncStatus: SyncStatus.synced)
-              : m,
-        )
-        .toList();
-    store.activities = store.activities
-        .map(
-          (a) => a.syncStatus == SyncStatus.pending
-              ? a.copyWith(syncStatus: SyncStatus.synced)
-              : a,
-        )
-        .toList();
-    store.weightLogs = store.weightLogs
-        .map(
-          (w) => w.syncStatus == SyncStatus.pending
-              ? w.copyWith(syncStatus: SyncStatus.synced)
-              : w,
-        )
-        .toList();
-    await _commit();
   }
 }

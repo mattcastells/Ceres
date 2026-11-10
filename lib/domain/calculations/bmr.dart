@@ -45,6 +45,15 @@ int bmrMifflinStJeor({
   return roundHalfUp(value);
 }
 
+/// La fecha de nacimiento más vieja que aceptan las fórmulas: hoy menos
+/// [BodyRanges.maxAgeYears]. Es el `firstDate` de los selectores de
+/// nacimiento; con el 1920 genérico se podía elegir alguien de 105 años y
+/// `bmrMifflinStJeor` lanzaba adentro de un `build`.
+DateTime earliestBirthDate({DateTime? on}) {
+  final ref = on ?? DateTime.now();
+  return DateTime(ref.year - BodyRanges.maxAgeYears, ref.month, ref.day);
+}
+
 /// Edad en años enteros a la fecha de referencia.
 int ageFromBirthDate(DateTime birthDate, {DateTime? on}) {
   final ref = on ?? DateTime.now();

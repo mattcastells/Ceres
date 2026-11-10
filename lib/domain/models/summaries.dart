@@ -110,8 +110,6 @@ class DailySummary {
   List<Meal> mealsFor(MealSlot slot) =>
       meals.where((m) => m.slot == slot).toList();
 
-  int kcalFor(MealSlot slot) =>
-      mealsFor(slot).fold(0, (acc, m) => acc + m.totalKcal);
 
   bool get hasRecords => meals.isNotEmpty || activities.isNotEmpty;
 

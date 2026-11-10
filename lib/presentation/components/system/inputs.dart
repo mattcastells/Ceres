@@ -585,11 +585,19 @@ class NmDateField extends StatelessWidget {
         InkWell(
           borderRadius: NmRadius.brMd,
           onTap: () async {
+            final first = firstDate ?? DateTime(1920);
+            final last = lastDate ?? DateTime.now();
+            // `showDatePicker` lanza si la fecha inicial queda fuera del
+            // rango, y un valor viejo —un nacimiento sincronizado de antes de
+            // que existiera el tope— puede estarlo.
+            var initial = value ?? initialDate ?? DateTime.now();
+            if (initial.isBefore(first)) initial = first;
+            if (initial.isAfter(last)) initial = last;
             final picked = await showDatePicker(
               context: context,
-              initialDate: value ?? initialDate ?? DateTime.now(),
-              firstDate: firstDate ?? DateTime(1920),
-              lastDate: lastDate ?? DateTime.now(),
+              initialDate: initial,
+              firstDate: first,
+              lastDate: last,
               locale: const Locale('es', 'AR'),
             );
             if (picked != null) onChanged(picked);

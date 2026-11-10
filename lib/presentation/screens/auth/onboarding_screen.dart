@@ -271,6 +271,25 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     final repo = ref.read(repositoryProvider);
     setState(() => _saving = true);
 
+    // Con `finally`: si una escritura lanza, el botón vuelve a estar
+    // disponible. Antes `_saving` quedaba en true para siempre y el paso no
+    // tenía cómo seguir — en una pantalla de la que no se sale.
+    var advance = false;
+    try {
+      await _saveStep(repo);
+      advance = _step < OnboardingScreen.totalSteps - 1;
+    } finally {
+      if (mounted) {
+        setState(() {
+          _saving = false;
+          if (advance) _step++;
+        });
+      }
+    }
+  }
+
+  /// Lo que escribe cada paso al dejarlo. El último cierra el alta.
+  Future<void> _saveStep(CeresRepositories repo) async {
     switch (_step) {
       case 0:
         await repo.updateProfile(
@@ -301,14 +320,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         break;
       default:
         await _finish(repo);
-        return;
     }
-
-    if (!mounted) return;
-    setState(() {
-      _saving = false;
-      _step++;
-    });
   }
 
   Future<void> _finish(CeresRepositories repo) async {
@@ -650,6 +662,7 @@ class _StepIdentity extends StatelessWidget {
           value: birthDate,
           error: error,
           helper: age == null ? null : '$age años',
+          firstDate: earliestBirthDate(),
           lastDate: DateTime.now(),
           // No es una suposición sobre nadie: es dónde abrir el calendario para
           // que el primer gesto sea elegir y no retroceder treinta años.

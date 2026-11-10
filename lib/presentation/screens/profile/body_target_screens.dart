@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../../core/error/app_error.dart';
 import '../../../core/router/routes.dart';
 import '../../../core/theme/nm_theme.dart';
 import '../../../core/theme/text_styles.dart';
@@ -63,24 +64,45 @@ class _BodyProfileScreenState extends ConsumerState<BodyProfileScreen> {
         ? null
         : ageFromBirthDate(profile.birthDate!);
 
+    // El aviso de "tu objetivo pasaría de X a Y" solo tiene sentido si el
+    // objetivo guardado salió de la fórmula: uno escrito a mano o aceptado de
+    // la IA no se mueve porque cambie el peso. Y se calcula con la **misma**
+    // función que el objetivo guardado —por fracción del gasto, como
+    // `TargetScreen`—; con `calorieTarget` por kilos daba otro número y el
+    // aviso aparecía aunque no hubiera nada que actualizar.
     int? suggested;
-    if (profile.birthDate != null && profile.heightCm != null && weightKg != null) {
-      final bmrValue = bmrMifflinStJeor(
-        weightKg: weightKg,
-        heightCm: profile.heightCm!,
-        ageYears: age!,
-        sex: profile.biologicalSex,
-      );
-      final tdeeValue = tdee(
-        bmr: bmrValue,
-        activityLevel: profile.activityLevel,
-      );
-      suggested = calorieTarget(
-        tdee: tdeeValue,
-        goalType: goal?.goalType ?? GoalType.maintain,
-        rateKgPerWeek: goal?.rateKgPerWeek ?? 0,
-        sex: profile.biologicalSex,
-      ).target;
+    if (goal != null &&
+        goal.targetMethod == TargetMethod.calculated &&
+        profile.birthDate != null &&
+        profile.heightCm != null &&
+        weightKg != null) {
+      try {
+        final bmrValue = bmrMifflinStJeor(
+          weightKg: weightKg,
+          heightCm: profile.heightCm!,
+          ageYears: age!,
+          sex: profile.biologicalSex,
+        );
+        final tdeeValue = tdee(
+          bmr: bmrValue,
+          activityLevel: profile.activityLevel,
+        );
+        final pace = GoalPace.nearestForRate(
+          rateKgPerWeek: goal.rateKgPerWeek,
+          goalType: goal.goalType,
+          tdee: tdeeValue,
+        );
+        suggested = calorieTargetForPace(
+          tdee: tdeeValue,
+          goalType: goal.goalType,
+          fractionOfTdee: pace.fractionFor(goal.goalType),
+          sex: profile.biologicalSex,
+        ).target.target;
+      } on CalculationError {
+        // Un dato fuera de rango (una edad de más de 100, un peso cargado
+        // mal) no puede tirar la pantalla en `build`: sin sugerencia y listo.
+        suggested = null;
+      }
     }
 
     return NmScreen(
@@ -113,6 +135,7 @@ class _BodyProfileScreenState extends ConsumerState<BodyProfileScreen> {
             label: 'Fecha de nacimiento',
             value: profile.birthDate,
             helper: age == null ? null : '$age años',
+            firstDate: earliestBirthDate(),
             lastDate: DateTime.now(),
             onChanged: (v) {
               if (ageFromBirthDate(v) < 13) {

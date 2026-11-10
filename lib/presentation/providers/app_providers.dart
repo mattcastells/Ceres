@@ -69,7 +69,10 @@ class SelectedDate extends Notifier<DateTime> {
 
   void shift(int days) {
     _elegidoAt = DateTime.now();
-    state = state.add(Duration(days: days));
+    // Por calendario y no sumando 24 h: el día del cambio de hora dura 23 o
+    // 25, y `add` dejaba la fecha con una hora colgada —las 23:00 del día
+    // anterior— que después no era igual a ningún `dateOnly`.
+    state = DateTime(state.year, state.month, state.day + days);
   }
 
   bool get isToday => isSameDay(state, DateTime.now());
@@ -91,6 +94,27 @@ class SelectedDate extends Notifier<DateTime> {
 
 final selectedDateProvider = NotifierProvider<SelectedDate, DateTime>(
   SelectedDate.new,
+);
+
+/// El día de hoy, como estado: cambia cuando pasa la medianoche y la app
+/// vuelve a primer plano.
+///
+/// Historial y Progreso calculaban su ventana con `today()` al construirse y
+/// la conservaban mientras no cambiara otra cosa: abiertos de noche y vistos a
+/// la mañana, terminaban en ayer. Mirando esto se recalculan solos cuando el
+/// día cambia, y solo entonces.
+class CurrentDay extends Notifier<DateTime> {
+  @override
+  DateTime build() => today();
+
+  void refresh() {
+    final now = today();
+    if (now != state) state = now;
+  }
+}
+
+final currentDayProvider = NotifierProvider<CurrentDay, DateTime>(
+  CurrentDay.new,
 );
 
 /// Rango del tab Progreso.
@@ -116,10 +140,6 @@ final profileProvider = Provider<UserProfile>((ref) {
   return ref.watch(repositoryProvider).profile;
 });
 
-final hasSessionProvider = Provider<bool>((ref) {
-  ref.watch(appRevisionProvider);
-  return ref.watch(repositoryProvider).hasSession;
-});
 
 final currentGoalProvider = Provider<Goal?>((ref) {
   ref.watch(appRevisionProvider);
@@ -154,7 +174,7 @@ final todaySummaryProvider = Provider<DailySummary>((ref) {
 
 final historyProvider = Provider.family<List<HistoryDay>, int>((ref, days) {
   ref.watch(appRevisionProvider);
-  final to = today();
+  final to = ref.watch(currentDayProvider);
   return ref
       .watch(repositoryProvider)
       .history(from: to.subtract(Duration(days: days - 1)), to: to);
@@ -163,7 +183,7 @@ final historyProvider = Provider.family<List<HistoryDay>, int>((ref, days) {
 final progressProvider = Provider<ProgressSummary>((ref) {
   ref.watch(appRevisionProvider);
   final range = ref.watch(progressRangeProvider);
-  final to = today();
+  final to = ref.watch(currentDayProvider);
   return ref
       .watch(repositoryProvider)
       .progress(from: to.subtract(Duration(days: range.days - 1)), to: to);
@@ -204,20 +224,15 @@ final restoreOutcomeProvider = Provider<RestoreOutcome>(
 );
 
 // `offlineProvider` y `pendingCountProvider` se sacaron: ninguna pantalla los
-// leía. Envolvían `isOffline` —que es siempre false desde que se quitó el
-// interruptor de desarrollo— y el conteo de pendientes, que tampoco se muestra
-// en ningún lado. Un provider sin consumidores es una promesa de que algo se
-// está mirando; los datos siguen en el repositorio para cuando haga falta.
+// leía. Envolvían `isOffline` —que era siempre false desde que se quitó el
+// interruptor de desarrollo— y el conteo de pendientes. Después se fueron
+// también del repositorio: no había detección de red que los alimentara.
 
 final integrationProvider = Provider((ref) {
   ref.watch(appRevisionProvider);
   return ref.watch(repositoryProvider).integration;
 });
 
-final pendingReviewsProvider = Provider<List<DuplicateCandidate>>((ref) {
-  ref.watch(appRevisionProvider);
-  return ref.watch(repositoryProvider).pendingReviews;
-});
 
 final daysWithRecordsProvider = Provider<Set<String>>((ref) {
   ref.watch(appRevisionProvider);

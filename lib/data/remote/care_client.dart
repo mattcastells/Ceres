@@ -155,17 +155,6 @@ class CareClient {
     }
   }
 
-  /// El código propio para ejercer de profesional, creándolo si no existe.
-  ///
-  /// Lo usa el backoffice, no la app. Está acá porque el cliente es el mismo y
-  /// duplicarlo del otro lado sería duplicar también el día que cambie.
-  Future<String?> ensureMyCode() async {
-    try {
-      return await _db.rpc<String>('ensure_care_code').timeout(timeout);
-    } on Exception {
-      return null;
-    }
-  }
 
   static const AppError _offline = AppError(
     code: ApiErrorCode.offline,

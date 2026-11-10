@@ -28,7 +28,6 @@ import '../../components/system/surfaces.dart';
 import '../../providers/app_providers.dart';
 import '../../providers/auth_providers.dart';
 import '../../providers/update_providers.dart';
-import '../activity/duplicate_dialog.dart';
 
 /// Configuración (raíz).
 class SettingsScreen extends ConsumerWidget {
@@ -331,7 +330,6 @@ class _IntegrationsScreenState extends ConsumerState<IntegrationsScreen> {
     final nm = context.nm;
     final repo = ref.watch(repositoryProvider);
     final integration = ref.watch(integrationProvider);
-    final pending = ref.watch(pendingReviewsProvider);
 
     if (!repo.isPlatformSupported || !FeatureFlags.healthConnectSync) {
       return NmScreen(
@@ -503,43 +501,6 @@ class _IntegrationsScreenState extends ConsumerState<IntegrationsScreen> {
               ],
             ),
           ),
-          if (pending.isNotEmpty) ...<Widget>[
-            const SizedBox(height: NmSpace.s6),
-            const NmSectionHeader(title: 'Necesitan tu confirmación'),
-            for (final candidate in pending)
-              Padding(
-                padding: const EdgeInsets.only(bottom: NmSpace.s2),
-                child: NmCard(
-                  onTap: () => showDuplicateDialog(context, ref, candidate),
-                  child: Row(
-                    children: <Widget>[
-                      Icon(
-                        PhosphorIcons.warning(),
-                        size: NmIconSize.md,
-                        color: nm.caution,
-                      ),
-                      const SizedBox(width: NmSpace.s3),
-                      Expanded(
-                        child: Text(
-                          '${candidate.incoming.displayName} · '
-                          '${timeOfDay(candidate.incoming.startedAt)} '
-                          'se parece a un registro tuyo',
-                          style: NmTextStyles.from(
-                            NmType.bodySm,
-                            color: nm.text,
-                          ),
-                        ),
-                      ),
-                      NmButton.ghost(
-                        label: 'Revisar',
-                        onPressed: () =>
-                            showDuplicateDialog(context, ref, candidate),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-          ],
           const SizedBox(height: NmSpace.s6),
           const InfoNote(
             text: 'Usamos las calorías activas del proveedor, no el total: el '

@@ -75,8 +75,19 @@ class _MealFormScreenState extends ConsumerState<MealFormScreen> {
         if (meal != null) controller.edit(meal);
         return;
       }
-      // Si ya hay un borrador de esta misma comida, se retoma.
-      if (current == null || current.editingMealId != null) {
+      // Si ya hay un borrador de esta misma comida, se retoma. "La misma" es
+      // mismo momento del día y mismo día cuando la ruta los trae: antes se
+      // retomaba cualquier borrador nuevo, así que abrir la cena mostraba los
+      // ítems del almuerzo que habían quedado colgados. Sin parámetros —el
+      // caso de las sugerencias y de "cargar a mano", que arman el borrador y
+      // recién después navegan— se retoma el que haya.
+      final resume =
+          current != null &&
+          current.editingMealId == null &&
+          (widget.slot == null || widget.slot == current.slot) &&
+          (widget.date == null ||
+              dateOnly(widget.date!) == dateOnly(current.date));
+      if (!resume) {
         controller.start(
           slot: widget.slot ?? MealSlot.forHour(DateTime.now().hour),
           date: widget.date ?? ref.read(selectedDateProvider),
@@ -95,8 +106,12 @@ class _MealFormScreenState extends ConsumerState<MealFormScreen> {
 
     setState(() => _saving = true);
     final repo = ref.read(repositoryProvider);
+    // Al editar se conserva cuándo se creó la comida: `toMeal` sin fecha pone
+    // la de ahora, y corregir un gramo la hacía pasar por recién cargada.
+    final editingId = draft.editingMealId;
     final meal = draft.toMeal(
       syncStatus: SyncStatus.synced,
+      createdAt: editingId == null ? null : repo.mealById(editingId)?.createdAt,
     );
     await repo.saveMeal(meal);
     ref.read(mealDraftProvider.notifier).clear();
@@ -155,7 +170,7 @@ class _MealFormScreenState extends ConsumerState<MealFormScreen> {
       return const Scaffold(body: Center(child: NmSpinner()));
     }
 
-    return Scaffold(
+    final Widget form = Scaffold(
       backgroundColor: nm.bg,
       appBar: NmModalHeader(
         title: widget.mealId == null ? 'Nueva comida' : 'Editar comida',
@@ -442,6 +457,17 @@ class _MealFormScreenState extends ConsumerState<MealFormScreen> {
           ],
         ),
       ),
+    );
+
+    // El atrás del sistema pasa por el mismo `_discard` que la X: antes salía
+    // sin preguntar y dejaba el borrador vivo, listo para aparecer en la
+    // próxima comida que se abriera.
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _discard();
+      },
+      child: form,
     );
   }
 }

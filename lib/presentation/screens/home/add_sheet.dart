@@ -124,8 +124,10 @@ class _MainPane extends ConsumerWidget {
             icon: PhosphorIcons.cookingPot(),
             label: '¿Qué como?',
             subtitle: 'Tres platos que entran en lo que te queda del día',
-            enabled:
-                FeatureFlags.aiPhotoAnalysis && SupabaseConfig.isConfigured,
+            // Depende del servidor y de nada más: las sugerencias son su propia
+            // Edge Function. Colgarlas de `aiPhotoAnalysis` —el flag de la
+            // foto— apagaba "¿Qué como?" por algo que no tiene nada que ver.
+            enabled: SupabaseConfig.isConfigured,
             disabledNote: 'Las sugerencias necesitan servidor configurado',
             onTap: () => onGo(Routes.mealSuggestions),
           ),
@@ -146,8 +148,10 @@ class _MainPane extends ConsumerWidget {
           ),
           ActionRow(
             icon: PhosphorIcons.personSimpleRun(),
-            label: 'Agregar ejercicio',
-            subtitle: 'Nueve formas de registrarlo',
+            label: 'Agregar actividad',
+            // Sin número: cuántas opciones hay depende de si ya hay recientes
+            // y favoritas, así que "nueve" mentía casi siempre.
+            subtitle: 'Buscar, repetir, cargar a mano o importar',
             onTap: onActivity,
             trailing: Icon(PhosphorIcons.caretRight(), size: NmIconSize.md),
           ),
@@ -157,7 +161,9 @@ class _MainPane extends ConsumerWidget {
             subtitle: 'Uno por día: si ya cargaste, se actualiza',
             onTap: () {
               Navigator.of(context).pop();
-              showWeightSheet(context);
+              // Al día elegido, como sueño y medidas: sin `date` el peso caía
+              // siempre en hoy aunque se estuviera mirando otro día.
+              showWeightSheet(context, date: date);
             },
           ),
           ActionRow(
@@ -233,7 +239,7 @@ class _ActivityPane extends ConsumerWidget {
     );
 
     return NmSheet(
-      title: 'Agregar ejercicio',
+      title: 'Agregar actividad',
       onBack: onBack,
       child: Column(
         mainAxisSize: MainAxisSize.min,

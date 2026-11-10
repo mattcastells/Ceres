@@ -35,7 +35,17 @@ import '../../presentation/screens/settings/settings_screens.dart';
 import '../../presentation/screens/settings/updates_screen.dart';
 import '../../presentation/screens/settings/water_goal_screen.dart';
 import '../../presentation/shell/app_shell.dart';
+import '../utils/dates.dart';
 import 'routes.dart';
+
+/// La fecha de un parámetro de ruta, o `null` si no viene o no se entiende.
+///
+/// Las rutas se pueden abrir desde un enlace `ceres://` escrito por cualquiera,
+/// y `DateTime.parse` sobre "ayer" o un `date=` vacío lanzaba adentro del
+/// `builder`: la app se caía por un link mal armado. Una fecha que no se
+/// entiende vale lo mismo que una que no vino.
+DateTime? _dateParam(String? raw) =>
+    raw == null ? null : DateTime.tryParse(raw);
 
 /// El router con todas las rutas de la arquitectura de información
 /// (02-information-architecture.md).
@@ -197,7 +207,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: ':date',
             builder: (context, state) => DayDetailScreen(
-              date: DateTime.parse(state.pathParameters['date']!),
+              date: _dateParam(state.pathParameters['date']) ?? today(),
             ),
           ),
         ],
@@ -286,9 +296,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           slot: state.uri.queryParameters['slot'] == null
               ? null
               : MealSlot.fromWire(state.uri.queryParameters['slot']!),
-          date: state.uri.queryParameters['date'] == null
-              ? null
-              : DateTime.parse(state.uri.queryParameters['date']!),
+          date: _dateParam(state.uri.queryParameters['date']),
           // "Escanear alimento" del menú Agregar entra por acá: el escáner
           // necesita una comida abierta debajo, si no lo que se escanea no
           // tiene dónde caer.
@@ -365,9 +373,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           mode: ActivityFormMode.fromWire(state.uri.queryParameters['mode']),
           activityTypeId: state.uri.queryParameters['activityTypeId'],
           templateId: state.uri.queryParameters['templateId'],
-          date: state.uri.queryParameters['date'] == null
-              ? null
-              : DateTime.parse(state.uri.queryParameters['date']!),
+          date: _dateParam(state.uri.queryParameters['date']),
         ),
       ),
       GoRoute(

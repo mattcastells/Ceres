@@ -23,6 +23,7 @@ import '../../components/system/surfaces.dart';
 import '../../components/water/alcohol_card.dart';
 import '../../components/water/water_card.dart';
 import '../../providers/app_providers.dart';
+import '../../providers/auth_providers.dart';
 import '../profile/calorie_target_sheet.dart';
 import '../weight/weight_sheet.dart';
 import 'add_sheet.dart';
@@ -77,8 +78,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               child: RefreshIndicator(
                 color: nm.accent,
                 backgroundColor: nm.surface,
+                // Lo mismo que hace volver a la app: traer de las tablas lo
+                // cargado desde otro dispositivo. Antes llamaba a
+                // `flushQueue`, que marcaba como sincronizado lo local y no
+                // traía nada — el gesto prometía actualizar y no actualizaba.
+                // Sin servidor (`relationalSyncProvider` null) o sin sesión no
+                // hay de dónde traer y el indicador se cierra solo.
                 onRefresh: () async {
-                  await repo.flushQueue();
+                  if (!repo.hasSession) return;
+                  await ref
+                      .read(relationalSyncProvider)
+                      ?.refresh(
+                        apply: repo.importDocument,
+                        // Lo pidió la persona: el intervalo mínimo es para
+                        // las vueltas automáticas, no para esto.
+                        minInterval: Duration.zero,
+                      );
                 },
                 child: SingleChildScrollView(
                   physics: const AlwaysScrollableScrollPhysics(),

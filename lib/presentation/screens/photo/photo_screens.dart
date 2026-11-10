@@ -29,7 +29,6 @@ import '../../components/feedback/analysis_progress.dart';
 import '../../components/feedback/feedback.dart';
 import '../../components/food/food_widgets.dart';
 import '../../components/food/meal_photo.dart';
-import '../../components/food/photo_viewer.dart';
 import '../../components/system/buttons.dart';
 import '../../components/system/dictation.dart';
 import '../../components/system/inputs.dart';
@@ -167,9 +166,6 @@ class _PhotoCaptureScreenState extends ConsumerState<PhotoCaptureScreen> {
   @override
   Widget build(BuildContext context) {
     final nm = context.nm;
-    final repo = ref.watch(repositoryProvider);
-    final remaining = repo.quotaLimit - repo.quotaUsed;
-    final quotaExhausted = remaining <= 0;
 
     return Scaffold(
       backgroundColor: nm.bg,
@@ -227,17 +223,10 @@ class _PhotoCaptureScreenState extends ConsumerState<PhotoCaptureScreen> {
                         ),
                 ),
               ),
-              const SizedBox(height: NmSpace.s4),
-              if (quotaExhausted)
-                const InfoNote(
-                  tone: NmNoteTone.caution,
-                  text: 'Llegaste al límite diario de análisis por foto. '
-                      'Podés registrar la comida a mano.',
-                )
-              else if (remaining <= 5)
-                InfoNote(
-                  text: 'Te quedan $remaining análisis por foto hoy.',
-                ),
+              // Sin aviso de cuota acá: la cuenta la lleva el servidor, y si se
+              // llegó al límite lo dice al analizar, con la salida de cargarla
+              // a mano. El contador local no sabía de qué día era ni de los
+              // otros usos de la IA, y apagaba los botones sin motivo.
               const SizedBox(height: NmSpace.s4),
               Row(
                 children: <Widget>[
@@ -245,9 +234,7 @@ class _PhotoCaptureScreenState extends ConsumerState<PhotoCaptureScreen> {
                     child: NmButton.secondary(
                       label: 'Galería',
                       icon: PhosphorIcons.images(),
-                      onPressed: quotaExhausted
-                          ? null
-                          : () => _capture(ImageSource.gallery),
+                      onPressed: () => _capture(ImageSource.gallery),
                     ),
                   ),
                   const SizedBox(width: NmSpace.s3),
@@ -256,9 +243,7 @@ class _PhotoCaptureScreenState extends ConsumerState<PhotoCaptureScreen> {
                       label: 'Sacar foto',
                       icon: PhosphorIcons.camera(),
                       loading: _busy,
-                      onPressed: quotaExhausted
-                          ? null
-                          : () => _capture(ImageSource.camera),
+                      onPressed: () => _capture(ImageSource.camera),
                     ),
                   ),
                 ],
@@ -712,7 +697,10 @@ class _PhotoAnalyzingScreenState extends ConsumerState<PhotoAnalyzingScreen>
                   child: Stack(
                     fit: StackFit.expand,
                     children: <Widget>[
-                      if (path != null)
+                      // Al terminar, `path` pasa a la ruta del bucket justo
+                      // antes de saltar a la revisión: ese último frame no
+                      // tiene archivo que leer y queda el fondo liso.
+                      if (path != null && !PhotoSyncService.isRemotePath(path))
                         Opacity(
                           opacity: 0.45,
                           child: Image.file(File(path), fit: BoxFit.cover),
@@ -1059,19 +1047,11 @@ class _PhotoReviewScreenState extends ConsumerState<PhotoReviewScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: <Widget>[
-                          if (path != null)
-                            ClipRRect(
-                              borderRadius: NmRadius.brMd,
-                              child: ZoomablePhoto(
-                                file: File(path),
-                                child: Image.file(
-                                  File(path),
-                                  height: 160,
-                                  width: double.infinity,
-                                  fit: BoxFit.cover,
-                                ),
-                              ),
-                            ),
+                          // Después del análisis `path` es la ruta del bucket
+                          // (`uid/xxx.jpg`), no un archivo del teléfono: con
+                          // `Image.file` quedaba un recuadro vacío. `MealPhoto`
+                          // resuelve las dos y ya trae el zoom.
+                          if (path != null) MealPhoto(path: path, height: 160),
                           const SizedBox(height: NmSpace.s4),
                           AiEstimateBanner(
                             confidenceAvg: analysis.confidenceAvg,

@@ -18,6 +18,7 @@ import 'package:ceres/presentation/screens/meal/meal_form_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -41,6 +42,53 @@ Widget _wrap(ProviderContainer container) => UncontrolledProviderScope(
     home: const MealFormScreen(slot: MealSlot.lunch),
   ),
 );
+
+const _milanesa = MealItem(
+  id: 'i-1',
+  name: 'Milanesa',
+  quantity: 1,
+  unit: 'unidad',
+  kcal: 289,
+  proteinG: 23,
+  carbsG: 14,
+  fatG: 15,
+  position: 0,
+);
+
+/// El formulario abierto encima de otra pantalla, con go_router de verdad:
+/// `_discard` cierra con `context.pop()`, que sin router no tiene a dónde ir.
+Widget _routed(ProviderContainer container, {required MealSlot slot}) {
+  final router = GoRouter(
+    routes: <RouteBase>[
+      GoRoute(
+        path: '/',
+        builder: (context, _) => Scaffold(
+          body: Center(
+            child: ElevatedButton(
+              onPressed: () => context.push('/meal'),
+              child: const Text('abrir'),
+            ),
+          ),
+        ),
+        routes: <RouteBase>[
+          GoRoute(
+            path: 'meal',
+            builder: (context, state) =>
+                MealFormScreen(slot: slot, date: today()),
+          ),
+        ],
+      ),
+    ],
+  );
+  return UncontrolledProviderScope(
+    container: container,
+    child: MaterialApp.router(
+      theme: NmAppTheme.dark(),
+      locale: const Locale('es', 'AR'),
+      routerConfig: router,
+    ),
+  );
+}
 
 Future<void> _settle(WidgetTester tester) async {
   await tester.pump();
@@ -281,5 +329,113 @@ void main() {
     expect(draft.items.map((i) => i.name), <String>['Pan']);
     expect(draft.source, MealSource.manual);
     expect(draft.photoPath, isNull);
+  });
+
+  // El bug: un borrador nuevo se retomaba sin mirar de qué comida era. Quedaba
+  // uno del almuerzo —el atrás del sistema salía sin descartarlo— y al abrir
+  // la cena aparecían sus ítems, con el chip en Almuerzo.
+  testWidgets('no retoma el borrador de otro momento del día', (tester) async {
+    late ProviderContainer container;
+    await tester.runAsync(() async {
+      container = await _boot();
+    });
+    addTearDown(container.dispose);
+    container.read(mealDraftProvider.notifier)
+      ..start(slot: MealSlot.dinner, date: today())
+      ..addItem(_milanesa);
+
+    await tester.pumpWidget(_wrap(container)); // abre Almuerzo
+    await _settle(tester);
+
+    final draft = container.read(mealDraftProvider)!;
+    expect(draft.slot, MealSlot.lunch);
+    expect(draft.items, isEmpty);
+  });
+
+  testWidgets('no retoma el borrador de otro día', (tester) async {
+    late ProviderContainer container;
+    await tester.runAsync(() async {
+      container = await _boot();
+    });
+    addTearDown(container.dispose);
+    container.read(mealDraftProvider.notifier)
+      ..start(
+        slot: MealSlot.lunch,
+        date: today().subtract(const Duration(days: 1)),
+      )
+      ..addItem(_milanesa);
+
+    await tester.pumpWidget(_routed(container, slot: MealSlot.lunch));
+    await tester.tap(find.text('abrir'));
+    await _settle(tester);
+
+    final draft = container.read(mealDraftProvider)!;
+    expect(dateOnly(draft.date), today());
+    expect(draft.items, isEmpty);
+  });
+
+  testWidgets('sí retoma el de la misma comida', (tester) async {
+    late ProviderContainer container;
+    await tester.runAsync(() async {
+      container = await _boot();
+    });
+    addTearDown(container.dispose);
+    container.read(mealDraftProvider.notifier)
+      ..start(slot: MealSlot.lunch, date: today())
+      ..addItem(_milanesa);
+
+    await tester.pumpWidget(_wrap(container));
+    await _settle(tester);
+
+    expect(container.read(mealDraftProvider)!.items.single.name, 'Milanesa');
+  });
+
+  testWidgets('el atrás del sistema pregunta y descarta como la X', (
+    tester,
+  ) async {
+    late ProviderContainer container;
+    await tester.runAsync(() async {
+      container = await _boot();
+    });
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(_routed(container, slot: MealSlot.lunch));
+    await tester.tap(find.text('abrir'));
+    await _settle(tester);
+    container.read(mealDraftProvider.notifier).addItem(_milanesa);
+    await _settle(tester);
+
+    // Lo que hace el botón atrás de Android.
+    await tester.binding.handlePopRoute();
+    await _settle(tester);
+    expect(find.text('¿Descartar la comida?'), findsOneWidget);
+
+    await tester.tap(find.text('Descartar'));
+    await _settle(tester);
+
+    expect(container.read(mealDraftProvider), isNull);
+    expect(find.text('abrir'), findsOneWidget);
+  });
+
+  testWidgets('el atrás del sistema con la comida vacía sale sin preguntar', (
+    tester,
+  ) async {
+    late ProviderContainer container;
+    await tester.runAsync(() async {
+      container = await _boot();
+    });
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(_routed(container, slot: MealSlot.lunch));
+    await tester.tap(find.text('abrir'));
+    await _settle(tester);
+    expect(container.read(mealDraftProvider), isNotNull);
+
+    await tester.binding.handlePopRoute();
+    await _settle(tester);
+
+    expect(find.text('¿Descartar la comida?'), findsNothing);
+    expect(container.read(mealDraftProvider), isNull);
+    expect(find.text('abrir'), findsOneWidget);
   });
 }
