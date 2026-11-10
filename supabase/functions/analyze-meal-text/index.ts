@@ -27,6 +27,7 @@ import {
   validate,
   validateTitle,
 } from '../_shared/estimation.ts';
+import { requireAiPlan } from '../_shared/plan.ts';
 import { parseCurrentItems, recalculatedFrom } from '../_shared/recalc.ts';
 
 // Cada prompt de texto va con un contrato: text_v1 con v3, text_v2 con v4 y
@@ -66,6 +67,11 @@ Deno.serve(async (req) => {
   const { data: userData, error: userError } = await supabase.auth.getUser();
   const user = userData?.user;
   if (userError || !user) return fail('ERR_UNAUTHENTICATED', 'Tu sesión venció.', 401);
+
+  // Todo lo que usa IA es premium (migración 49). Va antes de leer el pedido y
+  // de la cuota: al plan gratis no se le descuenta nada.
+  const planBlock = await requireAiPlan(supabase);
+  if (planBlock) return planBlock;
 
   let description: string;
   // Los ítems que la comida ya tiene. Cuando vienen, esto es el recálculo de

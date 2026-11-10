@@ -38,6 +38,7 @@ import {
   rateLimitedResponse,
   timedOutResponse,
 } from '../_shared/estimation.ts';
+import { requireAiPlan } from '../_shared/plan.ts';
 
 /**
  * Los mismos topes que `CalorieTargetRules` en Dart.
@@ -209,6 +210,11 @@ Deno.serve(async (req) => {
   const { data: userData, error: userError } = await supabase.auth.getUser();
   const user = userData?.user;
   if (userError || !user) return fail('ERR_UNAUTHENTICATED', 'Tu sesión venció.', 401);
+
+  // Todo lo que usa IA es premium (migración 49). Va antes de leer el pedido y
+  // de la cuota: al plan gratis no se le descuenta nada.
+  const planBlock = await requireAiPlan(supabase);
+  if (planBlock) return planBlock;
 
   let stats: Stats | null = null;
   try {

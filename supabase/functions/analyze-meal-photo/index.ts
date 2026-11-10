@@ -30,6 +30,7 @@ import {
   validate,
   validateTitle,
 } from '../_shared/estimation.ts';
+import { requireAiPlan } from '../_shared/plan.ts';
 import { parseCurrentItems, recalculatedFrom } from '../_shared/recalc.ts';
 
 // Las versiones anteriores siguen acá para poder volver sin desplegar: ver
@@ -75,6 +76,11 @@ Deno.serve(async (req) => {
   if (userError || !user) {
     return fail('ERR_UNAUTHENTICATED', 'Tu sesión venció.', 401);
   }
+
+  // Todo lo que usa IA es premium (migración 49). Va antes de leer el pedido y
+  // de la cuota: al plan gratis no se le descuenta nada.
+  const planBlock = await requireAiPlan(supabase);
+  if (planBlock) return planBlock;
 
   let photoPath: string;
   // Lo que la persona escribió sobre la foto, si escribió algo. Es opcional a

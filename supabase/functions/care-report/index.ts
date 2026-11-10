@@ -23,6 +23,7 @@ import {
   rateLimitedResponse,
   timedOutResponse,
 } from '../_shared/estimation.ts';
+import { effectivePlan } from '../_shared/plan.ts';
 import {
   PROMPT_FEEDBACK_DRAFT,
   PROMPT_PATIENT_WEEKLY,
@@ -93,6 +94,17 @@ Deno.serve(async (req) => {
     return fail('ERR_VALIDATION', 'Falta indicar el paciente.');
   }
   if (kind === 'patient_weekly') patientId = user.id;
+
+  // ── Plan ───────────────────────────────────────────────────────────────
+  // El resumen semanal es IA del paciente: premium (o paciente de una Pro).
+  // Los informes de consulta y de equipo son del panel profesional.
+  const plan = await effectivePlan(supabase);
+  if (kind === 'patient_weekly' && plan === 'free') {
+    return fail('ERR_PLAN_REQUIRED', 'El resumen semanal con IA es parte de Ceres Premium.', 402, { plan });
+  }
+  if (kind !== 'patient_weekly' && (plan === 'free' || plan === 'patient')) {
+    return fail('ERR_PLAN_REQUIRED', 'Los informes con IA son parte del plan Pro.', 402, { plan });
+  }
 
   // ── Zona horaria y período ─────────────────────────────────────────────
   const { data: me } = await supabase
