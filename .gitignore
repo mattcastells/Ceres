@@ -21,6 +21,7 @@ node_modules/
 build/
 ios/Pods/
 android/.gradle/
+android/.kotlin/
 *.iml
 
 # Estado local del IDE
