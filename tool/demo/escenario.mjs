@@ -10,10 +10,12 @@ export const ORGANIZACION = {
   ai_monthly_quota: 1800,
 };
 
-// Las profesionales. `owner` es la que se usa en la demo.
+// Las profesionales. `owner` es la que se usa en la demo. El código es fijo
+// para poder tenerlo anotado en la defensa (solo letras y números que se
+// dictan sin confundir: sin 0/O, 1/I/L).
 export const PROFESIONALES = [
-  { key: 'valentina', name: 'Lic. Valentina Ruiz', email: 'valentina', sex: 'female', birth: '1988-04-12', height: 165, role: 'owner' },
-  { key: 'martin', name: 'Lic. Martín Sosa', email: 'martin', sex: 'male', birth: '1985-09-03', height: 178, role: 'professional' },
+  { key: 'valentina', name: 'Lic. Valentina Ruiz', email: 'valentina', sex: 'female', birth: '1988-04-12', height: 165, role: 'owner', code: 'CE-VRUZ26' },
+  { key: 'martin', name: 'Lic. Martín Sosa', email: 'martin', sex: 'male', birth: '1985-09-03', height: 178, role: 'professional', code: 'CE-MSSA27' },
 ];
 
 // Cada paciente tiene un patrón: es lo que el tablero y los informes tienen

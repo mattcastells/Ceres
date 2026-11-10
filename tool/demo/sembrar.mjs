@@ -245,7 +245,7 @@ console.log('· Profesionales y organización');
 const codigos = {};
 for (const pro of PROFESIONALES) {
   await crearCuenta(pro, 'pro');
-  const code = 'CE-' + Array.from({ length: 6 }, () => '23456789ABCDEFGHJKMNPQRSTUVWXYZ'[Math.floor(Math.random() * 31)]).join('');
+  const code = pro.code;
   await api('PATCH', `/rest/v1/profiles?id=eq.${ids[pro.key]}`, { care_code: code }, { Prefer: 'return=minimal' });
   codigos[pro.key] = code;
 }

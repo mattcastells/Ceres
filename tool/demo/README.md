@@ -8,8 +8,8 @@ no se toca**, y lo que se haga en un ensayo no le llega a la cuenta real.
 
 | Quién | Mail | Plan | Para qué |
 | --- | --- | --- | --- |
-| Lic. Valentina Ruiz | `valentina@demo.ceres.app` | Pro, dueña del consultorio | El panel: equipo, devoluciones, informes, organización |
-| Lic. Martín Sosa | `martin@demo.ceres.app` | Pro | Segunda profesional del consultorio |
+| Lic. Valentina Ruiz | `valentina@demo.ceres.app` | Pro, dueña del consultorio · código **`CE-VRUZ26`** | El panel: equipo, devoluciones, informes, organización |
+| Lic. Martín Sosa | `martin@demo.ceres.app` | Pro · código `CE-MSSA27` | Segunda profesional del consultorio |
 | Vos | tu mail real | Premium | Tus 105+ días reales, copiados de una instantánea |
 | Lucía, Diego, Carla, Pablo… (10) | `<nombre>@demo.ceres.app` | Gratis → IA pagada por Valentina | Pacientes con patrones distintos (abajo) |
 | Tomás, Julieta | `tomas@`, `julieta@demo.ceres.app` | Gratis | Ven anuncios y no tienen IA; son tus pals |
@@ -46,7 +46,7 @@ Los pacientes están armados para que el panel tenga algo que contar:
    cuentas y el código de Valentina.
 
 6. En la app del emulador, entrar con tu mail y, en **Perfil → Mi
-   nutricionista**, cargar el código de Valentina. Desde ahí aparecés en su
+   nutricionista**, cargar el código de Valentina (`CE-VRUZ26`, fijo). Desde ahí aparecés en su
    panel. (Esto mismo se puede hacer en vivo en la defensa.)
 
 Panel: http://localhost:3100, con `valentina@demo.ceres.app`.
