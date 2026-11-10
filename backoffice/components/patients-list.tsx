@@ -1,7 +1,18 @@
 import Link from 'next/link';
 import { SignOut } from '@/components/sign-out';
 import { MyCode } from '@/components/my-code';
-import { fechaCorta } from '@/lib/format';
+import { TeamReport } from '@/components/team-report';
+import { conSigno, diasEntre, fechaCorta, miles } from '@/lib/format';
+import {
+  alertasDe,
+  cambioPeso30,
+  diasDesde,
+  ordenarEquipo,
+  pideAtencion,
+  type Alerta,
+  type OverviewRow,
+} from '@/lib/team';
+import type { CareReport } from '@/lib/queries';
 
 export type PatientRow = {
   grant_id: string;
@@ -16,52 +27,86 @@ export type PatientRow = {
 };
 
 /**
- * A quién puede seguir esta cuenta.
+ * El equipo: a quién sigue esta cuenta y cómo viene cada uno.
  *
  * La lista sale de `care_patients`, la vista de columnas contadas: acá no se
  * consulta `profiles` ni se filtra por permisos en el cliente. Lo que muestra
  * es exactamente lo que la base devuelve, y lo que la base devuelve es lo que
  * cada paciente concedió.
  *
- * Cada ficha contesta **quién dejó de registrar**, que es la pregunta con la
- * que se abre esta pantalla cuando hay más de tres pacientes. Antes había que
- * entrar a cada uno para enterarse de que hacía nueve días que no cargaba nada,
- * y eso convertía la lista en un índice y no en un tablero.
+ * Los números de cada ficha salen de **una sola llamada** a `care_overview()`
+ * (migración 48), que los calcula en la base respetando las categorías
+ * concedidas. Reemplaza a la consulta de comidas de la última semana para todos
+ * los pacientes, que no estaba paginada: PostgREST corta en mil filas sin
+ * avisar, y a partir de unos 25 pacientes activos la semana de los últimos de
+ * la lista salía vacía —"sin cargar"— cuando sí habían cargado.
+ *
+ * La pantalla contesta **a quién le escribo hoy**: arriba va quien pide
+ * atención (`lib/team.ts`), y cada ficha dice por qué en una frase. Sin
+ * semáforos ni puntajes: comer por encima del objetivo se menciona, pero no es
+ * una alarma (README, "lo que la pantalla no califica").
  */
 export function PatientsList({
   patients,
-  diasConCarga,
-  ultimos,
+  overview,
+  hoy,
   error,
+  plan = null,
+  hasOrg = false,
+  teamReport = null,
 }: {
   patients: PatientRow[];
-  /** Fechas `YYYY-MM-DD` de los últimos siete días, de la más vieja a hoy. */
-  ultimos: string[];
-  /** Por paciente, qué días de `ultimos` tienen alguna comida cargada. */
-  diasConCarga: Record<string, string[]>;
+  /** Filas de `care_overview()`. `null` = la llamada falló: la lista se
+   *  muestra igual, sin números. */
+  overview: OverviewRow[] | null;
+  hoy: string;
   error?: boolean;
+  plan?: string | null;
+  hasOrg?: boolean;
+  teamReport?: CareReport | null;
 }) {
-  const orden = [...patients].sort((a, b) =>
-    (a.patient_name ?? '').localeCompare(b.patient_name ?? '', 'es'),
+  const porId = new Map((overview ?? []).map((r) => [r.patient_id, r]));
+
+  const filas = ordenarEquipo(
+    patients.map((p) => {
+      const o = porId.get(p.patient_id) ?? null;
+      return {
+        patient: p,
+        o,
+        nombre: p.patient_name || 'Sin nombre',
+        alertas: o ? alertasDe(o, hoy) : [],
+      };
+    }),
   );
-  const resumen = resumenDeLaSemana(patients, diasConCarga);
+
+  const atencion = filas.filter((f) => pideAtencion(f.alertas)).length;
+  const nombres = Object.fromEntries(filas.map((f) => [f.patient.patient_id, f.nombre]));
 
   return (
     <>
       <header className="topbar">
         <div className="topbar-inner topbar-inner--plain">
           <div className="topbar-id">
-            <h1>Pacientes</h1>
-            <SignOut />
+            <div>
+              <h1>Tu equipo</h1>
+              <p className="topbar-sub caption">
+                {patients.length} {patients.length === 1 ? 'paciente' : 'pacientes'}
+                {atencion > 0 && ` · ${atencion} para mirar hoy`}
+              </p>
+            </div>
+            <nav className="row topbar-nav">
+              {hasOrg && <Link href="/organizacion">Organización</Link>}
+              <SignOut />
+            </nav>
           </div>
         </div>
       </header>
 
       <main className="page">
-        <MyCode />
+        <MyCode plan={plan} />
 
         {error && (
-          <p style={{ color: 'var(--danger)', marginTop: 'var(--s6)' }}>
+          <p className="form-error" style={{ marginTop: 'var(--s6)' }}>
             No pudimos cargar la lista. Probá de nuevo en un rato.
           </p>
         )}
@@ -76,16 +121,33 @@ export function PatientsList({
           </div>
         )}
 
-        {orden.length > 0 && (
+        {patients.length > 0 && (
+          <TeamReport initial={teamReport} nombres={nombres} plan={plan} />
+        )}
+
+        {overview === null && patients.length > 0 && !error && (
+          // Mejor la lista sin números que ninguna lista: no saber quién dejó
+          // de registrar es peor que la lista completa, pero mucho mejor que no
+          // poder entrar a ninguna ficha.
+          <p className="caption" style={{ marginTop: 'var(--s6)' }}>
+            No pudimos traer los números del equipo. La lista está completa; los
+            datos de cada paciente están en su ficha.
+          </p>
+        )}
+
+        {filas.length > 0 && (
           <>
-            <div className="section-header">{resumen}</div>
+            <div className="section-header">
+              {atencion > 0 ? 'Primero, quien pide atención' : 'Pacientes'}
+            </div>
             <div className="grid grid--auto">
-              {orden.map((p) => (
+              {filas.map((f) => (
                 <Card
-                  key={p.grant_id}
-                  patient={p}
-                  ultimos={ultimos}
-                  cargados={diasConCarga[p.patient_id] ?? []}
+                  key={f.patient.grant_id}
+                  patient={f.patient}
+                  o={f.o}
+                  alertas={f.alertas}
+                  hoy={hoy}
                 />
               ))}
             </div>
@@ -98,17 +160,28 @@ export function PatientsList({
 
 function Card({
   patient: p,
-  ultimos,
-  cargados,
+  o,
+  alertas,
+  hoy,
 }: {
   patient: PatientRow;
-  ultimos: string[];
-  cargados: string[];
+  o: OverviewRow | null;
+  alertas: Alerta[];
+  hoy: string;
 }) {
   const cats = categorias(p);
-  const set = new Set(cargados);
-  const ultimaCarga = [...cargados].sort().pop() ?? null;
-  const desde = ultimaCarga ? diasAtras(ultimaCarga, ultimos) : null;
+  const ultima = o ? diasDesde(o.last_meal_date, hoy) : null;
+  const peso = o ? cambioPeso30(o) : null;
+  // Los denominadores salen de la ventana efectiva, como en la ficha: quien
+  // empezó hace cuatro días registró 4 de 4, no 4 de 7. Ver `lib/tracking.ts`.
+  const antiguedad = o?.tracking_since
+    ? diasEntre(o.tracking_since.slice(0, 10), hoy) + 1
+    : null;
+  const de7 = antiguedad === null ? 7 : Math.max(Math.min(7, antiguedad), 0);
+  const de14 = antiguedad === null ? 14 : Math.max(Math.min(14, antiguedad), 0);
+  const pct =
+    o?.avg_kcal_7 && o.target_kcal ? Math.round((o.avg_kcal_7 / o.target_kcal) * 100) : null;
+  const sinLeer = o?.unread_feedback ?? 0;
 
   return (
     <Link href={`/paciente/${p.patient_id}`} className="card card-link plist">
@@ -119,47 +192,82 @@ function Card({
         )}
       </div>
 
-      {/* La semana de un vistazo. Siete puntos y no un número: "hace 3 días" no
-          distingue a quien carga salteado de quien dejó de cargar el martes, y
-          eso es lo que cambia de qué se habla en la consulta. */}
-      {p.share_meals ? (
-        <div className="plist-week">
-          <div className="week-dots" aria-hidden>
-            {ultimos.map((d) => (
-              <span
-                key={d}
-                className="week-dot"
-                data-on={set.has(d) ? '1' : '0'}
-                title={`${fechaCorta(d)} · ${set.has(d) ? 'con comidas' : 'sin registro'}`}
-              />
-            ))}
-          </div>
-          <span className="caption">
-            {desde === null
-              ? 'sin cargar en la última semana'
-              : desde === 0
-                ? 'cargó hoy'
-                : desde === 1
-                  ? 'cargó ayer'
-                  : `última carga hace ${desde} días`}
-          </span>
+      {alertas.length > 0 && (
+        <div className="chips">
+          {alertas.map((a) => (
+            <span key={a.id} className={a.tono === 'atencion' ? 'chip chip--warn' : 'chip chip--on'}>
+              {a.texto}
+            </span>
+          ))}
         </div>
-      ) : (
-        <p className="caption plist-week" style={{ margin: 0 }}>
-          Las comidas no están compartidas.
-        </p>
       )}
 
-      <div className="chips">
+      {o && (
+        <dl className="team-stats">
+          {p.share_meals && (
+            <>
+              <div>
+                <dt className="caption">Última comida</dt>
+                <dd className="tnum">
+                  {ultima === null
+                    ? '—'
+                    : ultima === 0
+                      ? 'hoy'
+                      : ultima === 1
+                        ? 'ayer'
+                        : `hace ${ultima} días`}
+                </dd>
+              </div>
+              <div>
+                <dt className="caption">Días con comidas</dt>
+                <dd className="tnum">
+                  {o.days_logged_7 ?? 0}
+                  <span className="muted"> de {de7}</span>
+                  <span className="caption"> · {o.days_logged_14 ?? 0} de {de14}</span>
+                </dd>
+              </div>
+              <div>
+                <dt className="caption">Calorías, últimos 7 días</dt>
+                <dd className="tnum">
+                  {o.avg_kcal_7 ? `${miles(o.avg_kcal_7)} kcal` : '—'}
+                  {pct !== null && (
+                    <span
+                      className="caption"
+                      // El mismo ámbar del resto del panel para lo que pasó el
+                      // objetivo, y nada para lo que quedó debajo: ni verde de
+                      // logro ni rojo de alarma.
+                      style={pct > 100 ? { color: 'var(--caution)' } : undefined}
+                    >
+                      {' '}· {pct} % de {miles(o.target_kcal!)}
+                    </span>
+                  )}
+                </dd>
+              </div>
+            </>
+          )}
+          {p.share_body && (
+            <div>
+              <dt className="caption">Peso, 30 días</dt>
+              <dd className="tnum">{peso === null ? '—' : `${conSigno(peso)} kg`}</dd>
+            </div>
+          )}
+          <div>
+            <dt className="caption">Devoluciones</dt>
+            <dd className="tnum">
+              {sinLeer > 0 ? `${sinLeer} sin leer` : <span className="muted">al día</span>}
+            </dd>
+          </div>
+        </dl>
+      )}
+
+      <div className="chips" style={{ marginTop: 'auto' }}>
         {cats.map((c) => (
-          <span key={c} className="chip chip--on">
+          <span key={c} className="chip">
             {c}
           </span>
         ))}
         {cats.length === 0 && (
-          <span className="chip" style={{ color: 'var(--caution)' }}>
-            Sin categorías: no vas a ver datos
-          </span>
+          <span className="chip chip--warn">Sin categorías: no vas a ver datos</span>
         )}
       </div>
 
@@ -172,41 +280,13 @@ function Card({
   );
 }
 
-/** La línea que encabeza la lista: cuántos son y, si los hay, cuántos se
- *  quedaron sin cargar nada en la semana. Es la respuesta corta a la pregunta
- *  con la que se abre la pantalla; quiénes son lo dice cada ficha. Solo cuenta
- *  a quienes comparten las comidas: de los demás no se sabe si cargaron. */
-function resumenDeLaSemana(
-  patients: PatientRow[],
-  diasConCarga: Record<string, string[]>,
-): string {
-  const n = patients.length;
-  const sinCargar = patients.filter(
-    (p) => p.share_meals && (diasConCarga[p.patient_id] ?? []).length === 0,
-  ).length;
-  const partes = [`${n} ${n === 1 ? 'paciente' : 'pacientes'}`];
-  if (sinCargar > 0) {
-    partes.push(`${sinCargar} sin cargar en la última semana`);
-  }
-  return partes.join(' · ');
-}
-
 function categorias(p: PatientRow): string[] {
   return [
     p.share_meals && 'Comidas',
     p.share_photos && 'Fotos',
     p.share_body && 'Peso y medidas',
-    p.share_wellbeing && 'Actividad, agua, sueño y contexto',
+    p.share_wellbeing && 'Hábitos y contexto',
   ].filter(Boolean) as string[];
-}
-
-/** Cuántos días atrás cae una fecha, contando sobre la ventana ya calculada.
- *
- *  Se cuenta con el índice y no restando `Date`s para no volver a meter el huso
- *  en el medio: la ventana ya viene del día local del paciente. */
-function diasAtras(fecha: string, ultimos: string[]): number | null {
-  const i = ultimos.indexOf(fecha);
-  return i === -1 ? null : ultimos.length - 1 - i;
 }
 
 function edad(birthDate: string): number {

@@ -1551,6 +1551,411 @@ details[open] > summary .chev {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
+ * Lo que la profesional escribe y lo que redacta la IA (noviembre de 2026).
+ *
+ * Mismas reglas que el resto: ningún color nuevo —todo sale de los tokens con
+ * `color-mix`— y ningún verde de "bien" ni rojo de "mal". Lo único con acento
+ * es lo que lleva el ámbar de siempre: lo estimado o redactado por IA (como
+ * en la app) y lo que pide atención en el tablero.
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Formularios ────────────────────────────────────────────────────────── */
+
+textarea {
+  font: inherit;
+  color: var(--text);
+  background: var(--surface-raised);
+  border: 1px solid var(--divider);
+  border-radius: var(--radius-sm);
+  padding: var(--s3) var(--s4);
+  width: 100%;
+  resize: vertical;
+  line-height: 1.5;
+}
+
+textarea:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* El calendario nativo del `input type=date` en oscuro sale con el ícono
+ * negro sobre la carta oscura si no se le avisa el esquema. */
+input[type='date'] {
+  color-scheme: inherit;
+}
+
+/* Un botón secundario que no compite con el principal: "Editar", "Borrar",
+ * "Cancelar" al lado de "Publicar". */
+.button--quiet {
+  border-color: var(--divider);
+  color: var(--text-muted);
+}
+
+.button--quiet:hover:not(:disabled) {
+  color: var(--text);
+  border-color: var(--text-muted);
+}
+
+.button--link {
+  border: 0;
+  padding: 0;
+  font-size: 12.5px;
+  color: var(--accent-text);
+}
+
+/* El segmentado del período (`.seg`), con botones en vez de enlaces: el tipo
+ * de lo que se escribe no navega. */
+.seg--buttons > button {
+  border: 0;
+  border-radius: 999px;
+  padding: 2px var(--s4);
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.seg--buttons > button[aria-pressed='true'] {
+  background: var(--surface-raised);
+  color: var(--text);
+}
+
+/* Un error de una acción. Es el `danger` de los tokens, y es el único lugar
+ * del panel donde aparece: "no se guardó" sí es una alarma. */
+.form-error {
+  color: var(--danger);
+  font-size: 13px;
+  margin: var(--s3) 0 0;
+}
+
+/* ── El aviso de arriba de una pestaña ──────────────────────────────────── */
+
+.aviso {
+  border-left: 3px solid color-mix(in srgb, var(--caution) 60%, transparent);
+}
+
+/* ── El código y el plan ────────────────────────────────────────────────── */
+
+.my-code {
+  margin-top: var(--s6);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s4);
+  flex-wrap: wrap;
+}
+
+.my-code-value {
+  font-size: 22px;
+  letter-spacing: 0.06em;
+  margin-top: var(--s1);
+}
+
+.badge {
+  font-size: 11px;
+  line-height: 1.6;
+  letter-spacing: 0.04em;
+  padding: 0 var(--s3);
+  border-radius: 999px;
+  color: var(--accent-text);
+  background: color-mix(in srgb, var(--accent) 20%, transparent);
+}
+
+.topbar-nav {
+  gap: var(--s5);
+  flex-wrap: wrap;
+}
+
+/* ── El tablero del equipo ──────────────────────────────────────────────── */
+
+.team-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--s3) var(--s5);
+  margin: 0;
+}
+
+.team-stats dt {
+  margin-bottom: 1px;
+}
+
+.team-stats dd {
+  margin: 0;
+}
+
+.team-ai {
+  margin-top: var(--s6);
+}
+
+.team-prioridades {
+  margin: var(--s3) 0 0;
+  padding-left: var(--s6);
+}
+
+.team-prioridades li {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.team-prioridades li + li {
+  margin-top: var(--s4);
+}
+
+/* ── Lo que redacta la IA ───────────────────────────────────────────────── */
+
+.ai-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s5);
+  flex-wrap: wrap;
+}
+
+.ai-toolbar > button {
+  flex: none;
+}
+
+/* Del ancho de su texto también dentro de una carta flex o grid, que si no la
+ * estira a lo ancho como una barra. */
+.ai-tag {
+  display: inline-block;
+  justify-self: start;
+  align-self: flex-start;
+  width: fit-content;
+  margin-top: var(--s2);
+}
+
+.ai-resumen {
+  margin: var(--s3) 0 0;
+  font-size: 16px;
+  line-height: 1.55;
+}
+
+.ai-lista {
+  margin: var(--s3) 0 0;
+  padding-left: var(--s6);
+  line-height: 1.55;
+}
+
+.ai-lista li + li {
+  margin-top: var(--s2);
+}
+
+.ai-alertas {
+  list-style: none;
+  margin: var(--s5) 0 0;
+  padding: 0;
+  display: grid;
+  gap: var(--s3);
+}
+
+/* "Para mirar" con la banda ámbar del contexto del día; un dato, sin banda de
+ * color. Ninguna en rojo: el informe propone qué mirar, no diagnostica. */
+.ai-alerta {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: var(--s2) var(--s4);
+  border-left: 2px solid var(--divider);
+  background: var(--surface-raised);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+
+.ai-alerta--atencion {
+  border-left-color: color-mix(in srgb, var(--caution) 70%, transparent);
+}
+
+/* La barra de "trabajando". Se mueve sola porque la función no informa
+ * progreso: dice "sigue vivo", no "va por la mitad". */
+.ai-progress {
+  display: grid;
+  gap: var(--s3);
+}
+
+.ai-progress-bar {
+  height: 4px;
+  border-radius: 999px;
+  background: var(--surface-raised);
+  overflow: hidden;
+  position: relative;
+}
+
+.ai-progress-bar > span {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 35%;
+  border-radius: 999px;
+  background: var(--chart-intake);
+  animation: nm-progreso 1.4s ease-in-out infinite;
+}
+
+@keyframes nm-progreso {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(300%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ai-progress-bar > span {
+    animation: none;
+    width: 100%;
+    opacity: 0.5;
+  }
+}
+
+/* ── Devoluciones ───────────────────────────────────────────────────────── */
+
+.fb-editor,
+.fb-ia {
+  display: grid;
+  gap: var(--s4);
+}
+
+.fb-ia {
+  margin-top: var(--s4);
+}
+
+.fb-actions {
+  flex-wrap: wrap;
+}
+
+.fb-list {
+  display: grid;
+  gap: var(--s3);
+}
+
+.fb-item {
+  display: grid;
+  gap: var(--s3);
+}
+
+/* El texto como lo escribió: los saltos de línea son de ella. */
+.fb-body {
+  margin: 0;
+  white-space: pre-wrap;
+  line-height: 1.55;
+}
+
+/* ── Tablas de datos (alimentos, semanas, organización) ─────────────────── */
+
+.tabla-datos th.num,
+.tabla-datos td.num {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.tabla-datos td {
+  vertical-align: top;
+}
+
+.pct-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s3);
+}
+
+.pct-cell > .split-track {
+  width: 56px;
+  display: inline-block;
+}
+
+/* ── Balance contra peso ────────────────────────────────────────────────── */
+
+.balance-row {
+  display: grid;
+  grid-template-columns: 170px auto minmax(0, 1fr);
+  align-items: baseline;
+  gap: var(--s5);
+  padding: var(--s3) 0;
+}
+
+.balance-row + .balance-row {
+  border-top: 1px solid var(--divider);
+}
+
+.balance-value {
+  font-size: 19px;
+  white-space: nowrap;
+}
+
+@media (max-width: 620px) {
+  .balance-row {
+    grid-template-columns: 1fr auto;
+  }
+  .balance-row > :last-child {
+    grid-column: 1 / -1;
+  }
+}
+
+/* ── Horarios: una tira por día ─────────────────────────────────────────── */
+
+/* Divs posicionados en porcentaje y no un SVG: no hay texto adentro de la
+ * tira que se deforme, y así no hace falta medir la caja. */
+.hstrip {
+  display: grid;
+  gap: 3px;
+}
+
+.hstrip-row {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr);
+  align-items: center;
+  gap: var(--s4);
+}
+
+.hstrip-track {
+  position: relative;
+  height: 14px;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--text) 4%, transparent);
+}
+
+.hstrip-track--axis {
+  background: none;
+  height: 16px;
+}
+
+.hstrip-tick {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+}
+
+.hstrip-tick:first-child {
+  transform: none;
+}
+
+.hstrip-tick:last-child {
+  transform: translateX(-100%);
+}
+
+.hstrip-span {
+  position: absolute;
+  top: 6px;
+  height: 2px;
+  background: color-mix(in srgb, var(--chart-intake) 45%, transparent);
+}
+
+.hstrip-dot {
+  position: absolute;
+  top: 3px;
+  width: 8px;
+  height: 8px;
+  margin-left: -4px;
+  border-radius: 50%;
+  background: var(--chart-intake);
+}
+
+/* ── Organización ───────────────────────────────────────────────────────── */
+
+.usage-track {
+  margin-top: var(--s4);
+  height: 10px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
  * Movimiento.
  *
  * Todo lo que aparece, aparece en unos 200 ms y no de golpe: lo que se abre

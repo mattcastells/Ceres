@@ -20,12 +20,24 @@ Los **datos del paciente** son de solo lectura. No hay una sola política de
 escritura sobre ellos para el profesional, así que no es una convención de la
 interfaz: es que la base no tiene por dónde.
 
-**El panel no escribe nada.** Hubo una pestaña de notas propias de la profesional
-(`care_notes`, migración 42) y se sacó en agosto de 2026 porque no se usaba; la
-tabla, sus políticas y sus tests (`supabase/tests/care_contexto_test.sql`)
-siguen en la base, sin pantalla que los use. Si algún día vuelve, las dos reglas
-que tenía eran: las lee solo quien las escribió —el paciente no las ve, ni en la
-app ni por API—, y revocar el acceso no las borra pero corta la escritura.
+**Lo único que el panel escribe es texto propio de la profesional.** Desde
+noviembre de 2026 (migraciones 48 y 49) escribe dos cosas, y ninguna es un dato
+del paciente:
+
+- **Devoluciones e indicaciones** (`care_feedback`), desde la pestaña
+  Devoluciones. Mientras no se publican son borradores privados —es la regla de
+  las viejas notas (`care_notes`), que se fueron en la misma migración: una nota
+  para mí es un borrador que no publico nunca—. Borrar es `deleted_at`, porque
+  la base no deja un `DELETE`. Escribir exige un acceso vigente: revocado, lo
+  escrito se sigue viendo pero no se toca. "Leída" la marca el paciente desde la
+  app (`mark_care_feedback_read`); el panel no puede.
+- **Informes con IA** (`care_reports`), que no escribe el panel sino la Edge
+  Function `care-report` con la sesión de quien los pide. Cada uno lo lee solo
+  quien lo pidió.
+
+Las dos se escriben desde islas de cliente (`components/feedback-panel.tsx`,
+`components/ai-report.tsx`, `components/team-report.tsx`) con la sesión del
+navegador y la publishable key: las mismas políticas de siempre deciden.
 
 ## El período efectivo, que es de donde salen todos los denominadores
 
@@ -48,9 +60,12 @@ Ver [`docs/contexto-diario.md`](../docs/contexto-diario.md).
 
 ## Cómo se conceden los accesos
 
-1. La profesional entra al panel y ve su código (`NT-XXXXXX`) arriba de todo.
+1. La profesional entra al panel y ve su código (`CE-XXXXXX`) arriba de todo.
    Lo crea `ensure_care_code` la primera vez y después devuelve siempre el
-   mismo.
+   mismo. Los códigos `NT-` de antes del renombre siguen valiendo. Si la
+   llamada falla, la tarjeta lo dice y deja reintentar —antes se quedaba en
+   "…" para siempre—. Al lado va el plan de la cuenta (`effective_plan()`),
+   porque es lo que decide si los botones de IA del panel funcionan.
 2. El paciente lo carga en la app, en **Perfil → Mi nutricionista**, y elige qué
    categorías prende: comidas, fotos, peso y medidas, actividad/agua/sueño.
 3. El paciente puede cambiar qué ve o cortar el acceso cuando quiera, desde la
@@ -103,8 +118,11 @@ npm run build
 
 `npm test` corre `lib/*.test.ts` con el runner de Node, que lee TypeScript
 directo desde la 22. No hay Vitest ni Jest a propósito: lo único que se prueba
-acá es aritmética pura —la ventana efectiva—, y un runner entero para eso es más
-peso del que resuelve. Lo que sí necesita es que los imports de esos archivos
+acá es aritmética pura —la ventana efectiva, el objetivo de cada día
+(`goals.ts`), los avisos del equipo (`team.ts`), el análisis de consulta
+(`analysis.ts`) y la lectura de errores de `care-report`—, y un runner entero
+para eso es más peso del que resuelve. Por eso esas cuentas viven en `lib/` y
+no adentro de los componentes. Lo que sí necesita es que los imports de esos archivos
 nombren la extensión (`'./format.ts'`), porque Node resuelve ESM por ruta exacta
 y sin bundler.
 
@@ -125,7 +143,7 @@ bundle roto en memoria aunque el servidor ya esté sano.
 
 Es lo esperado hasta que alguien te dé acceso. El circuito completo es:
 
-1. Entrás al panel → arriba aparece tu código `NT-XXXXXX`
+1. Entrás al panel → arriba aparece tu código `CE-XXXXXX`
 2. El paciente lo carga en la app: **Perfil → Mi nutricionista → Dar acceso con
    un código**
 3. Recargás el panel
@@ -145,21 +163,47 @@ Después del primer deploy, agregá la URL de Vercel en Supabase → Authenticat
 → URL Configuration → Redirect URLs. Sin eso el login entra pero la sesión no
 vuelve a la app.
 
-## La lista de pacientes
+## El equipo (la pantalla de inicio)
 
-Cada ficha de la lista trae **la última semana en siete puntitos**. Es la
-pregunta con la que se abre esta pantalla cuando hay más de tres pacientes
-—quién dejó de registrar— y antes había que entrar a cada uno para enterarse.
-Son siete puntos y no un "hace 3 días" porque el número no distingue a quien
-carga salteado de quien dejó de cargar el martes, que es lo que cambia de qué
-se habla en la consulta.
+La lista de pacientes pasó a ser **el tablero del equipo**: contesta "¿a quién
+le escribo hoy?". Cada ficha trae la última comida, los días con comidas de los
+últimos 7 y 14, el promedio de calorías de la semana contra el objetivo, el
+cambio de peso de 30 días y las devoluciones sin leer, y arriba unas fichas de
+aviso cortas ("5 días sin registrar", "promedio 15 % sobre el objetivo", "no
+comparte comidas"). Quien pide atención va primero; dentro de cada grupo, por
+nombre, para que nadie salte de lugar cada mañana.
 
-Sale de **una sola consulta** para todos los pacientes, acotada a siete días y
-a dos columnas (`user_id, local_date`). Una por paciente sería una cascada que
-crece con la cartera, y traer las comidas enteras sería bajar el detalle de
-cada ítem para dibujar siete cuadraditos. Si esa consulta falla, la lista se
-muestra igual sin la semana: no saber quién dejó de registrar es peor que la
-lista completa, pero es mucho mejor que no poder entrar a ninguna ficha.
+- **Los números salen de `care_overview()`** (migración 48), una sola llamada
+  para todo el equipo que corre con los permisos de quien mira: una categoría
+  no compartida viene en `null`, no en cero. Reemplaza a la consulta de la
+  semana que había antes —siete días de comidas de todos los pacientes en un
+  solo pedido— que no estaba paginada: PostgREST corta en mil filas sin avisar,
+  y a partir de unos 25 pacientes activos los últimos de la lista aparecían
+  "sin cargar" cuando sí habían cargado. Con eso se fueron los siete puntitos
+  de la semana; lo que decían ("carga salteado" contra "dejó de cargar") lo
+  dicen ahora los dos números de días y el aviso "registró 4 de los últimos 14
+  días".
+- **Los avisos se calculan en el navegador** (`lib/team.ts`, con test) y
+  respetan la ventana efectiva: alguien que empezó anteayer no "lleva días sin
+  registrar". Solo "dejó de registrar" lleva el ámbar de atención; comer por
+  encima del objetivo se menciona en gris, porque el panel no pinta el exceso
+  (ver "lo que la pantalla no califica"). Un promedio muy por debajo del
+  objetivo también se menciona: suele ser sub-registro, no un logro.
+- **Si `care_overview()` falla, la lista se muestra igual sin números**: no
+  saber quién dejó de registrar es peor que la lista completa, pero es mucho
+  mejor que no poder entrar a ninguna ficha.
+
+Arriba de las fichas está **"Analizar el equipo con IA"** (`components/team-report.tsx`):
+la Edge Function `care-report` con `kind: 'team'` redacta un resumen, hasta cinco
+pacientes para contactar primero —con enlace a la ficha— y patrones del equipo,
+sobre los mismos números de `care_overview()`. Se muestra el último guardado en
+`care_reports` y se regenera solo a pedido.
+
+El enlace **Organización** del encabezado aparece solo si `my_organization()`
+devuelve filas, y lleva a `/organizacion`: el nombre del consultorio, el fondo
+de IA del mes (usado contra cupo) y las profesionales con su rol y cuántos
+pacientes siguen. Son conteos y nada más: la organización paga la IA de los
+pacientes, pero eso no le abre sus datos.
 
 ## Cómo está armada la ficha del paciente
 
@@ -172,11 +216,51 @@ maqueta HTML parecida que se desincroniza al primer cambio. `PatientsList`
 está partido igual y por lo mismo.
 
 Una ficha son 30 días de comidas, o 365, y en una sola tira eso es imposible de
-leer. La pantalla se reparte en **seis pestañas**, en el orden en que se usan
-en una consulta: Resumen, Día a día, Hábitos, Comidas, Fotos, Cuerpo. **Cuatro
-de ellas son exactamente las cuatro categorías con las que se concede el
-permiso** (`share_wellbeing`, `share_meals`, `share_photos`, `share_body`): así
-"esta pestaña está apagada" y "esto no me lo compartieron" son la misma frase.
+leer. La pantalla se reparte en **ocho pestañas**, en el orden en que se usan
+en una consulta: Resumen, Informe con IA, Devoluciones, Día a día, Hábitos,
+Comidas, Fotos, Cuerpo. **Cuatro de ellas son exactamente las cuatro categorías
+con las que se concede el permiso** (`share_wellbeing`, `share_meals`,
+`share_photos`, `share_body`): así "esta pestaña está apagada" y "esto no me lo
+compartieron" son la misma frase. Informe y Devoluciones no tienen punto ámbar
+porque no dependen de una categoría: son de la profesional.
+
+- **Informe con IA** (`components/ai-report.tsx`): las dos últimas semanas
+  cerradas, redactadas por `care-report` (`kind: 'professional'`). Muestra el
+  último informe guardado y se regenera a pedido, con una barra y los segundos
+  que van mientras tanto (tarda entre 10 y 40 s; sin eso se lee como colgado y
+  se vuelve a tocar). **Lo calculado y lo redactado van rotulados por
+  separado**: los números salen de `care-report/metrics.ts` —código con test— y
+  viajan en `content.metricas`; el texto del modelo lleva la etiqueta ámbar
+  "Redactado con IA · revisalo", que es el ámbar con el que la app marca toda
+  estimación. Un error de la función se muestra con su mensaje, que ya está
+  escrito para eso ("Llegaste a los 40 informes de hoy").
+- **Devoluciones** (`components/feedback-panel.tsx`): escribir, editar,
+  publicar y borrar devoluciones (sobre un día o generales) e indicaciones (lo
+  que el paciente ve en Inicio hasta que se saca), y "Proponer borrador" con IA
+  con un foco opcional, que la función ya guarda como borrador privado y la
+  pantalla abre en el editor. Nada de lo que propone la IA se publica solo.
+
+El Resumen suma dos piezas de **análisis de consulta**
+(`docs/panel-proximas-features.md`), y Comidas otras dos. Son aritmética sobre
+lo que la ficha ya trajo, sin IA, en `lib/analysis.ts` con test:
+
+- **¿Los números cierran?** El déficit registrado contra el TDEE del objetivo de
+  cada día, proyectado a los días entre el primer y el último pesaje, puesto
+  contra lo que marcó la balanza. Sin semáforo: es una hipótesis a chequear, y
+  la brecha típica —bajó menos de lo esperado— se explica en palabras (comidas
+  sin registrar antes que metabolismo).
+- **Semana contra semana**, de lunes a domingo sobre la ventana efectiva, con la
+  semana incompleta marcada como tal.
+- **Lo que más se repite**: los alimentos que aparecen dos veces o más,
+  agrupados por nombre normalizado, con la parte de las kcal del período.
+- **Horarios**: primera y última comida, ventana y cuánto varía el arranque, y
+  una tira por día con un punto por comida.
+
+**Cada día se compara contra su objetivo** (`lib/goals.ts`). La app no edita un
+objetivo: lo cierra y abre otro, y antes el panel usaba el último para todo el
+período —el día de julio contra la meta de octubre—. Ahora `fetchGoals` trae
+los que se solapan con el período, y el gráfico de calorías, el calendario y el
+modal del día comparan cada día con el suyo.
 
 Por eso el contexto del día —enfermedad, descanso, alcohol— entró en
 `share_wellbeing` en vez de estrenar una quinta categoría, que habría roto la
@@ -199,7 +283,7 @@ al lado del número que sí se lee. Los dos gráficos grandes siguen debajo.
 Tres decisiones que conviene no deshacer sin querer:
 
 - **Cambiar de pestaña no vuelve al servidor.** Todo se pide una sola vez en
-  `page.tsx` y las seis llegan renderizadas; `components/tabs.tsx` solo cambia
+  `page.tsx` y las ocho llegan renderizadas; `components/tabs.tsx` solo cambia
   cuál está visible, y deja la pestaña en la URL con `replaceState` para que
   recargar caiga donde uno estaba. Si cada pestaña fuera una navegación, ir de
   "Comidas" a "Cuerpo" volvería a pedir comidas, peso y medidas y a firmar de
@@ -296,8 +380,23 @@ abrir nada.
   comidas son 360—, pero un año pasa las dos mil: la ficha habría mostrado medio
   año largo como si fuera el año entero, con los promedios y el conteo de días
   calculados sobre lo que llegó. `fetchMeals` pagina de a mil con un orden total
-  (`local_date`, `logged_at`, `id`) para que las páginas no se pisen. Un dato
-  faltante que se ve igual de bien que uno completo es peor que un error.
+  (`local_date`, `eaten_at`, `id`) para que las páginas no se pisen. Un dato
+  faltante que se ve igual de bien que uno completo es peor que un error. Por
+  lo mismo, **una página que falla lanza** en vez de cortar el bucle con lo que
+  llegó, y si se llega al tope duro (`TOPE_COMIDAS`, 6.000) la ficha lo dice
+  arriba de Resumen, Día a día y Comidas.
+
+**Toda consulta de `lib/queries.ts` lanza si la base devuelve un error.**
+supabase-js no lanza: devuelve `{ data: null, error }`, y un `data ?? []`
+convierte el error en un vacío creíble —"no registró agua este mes"—. La
+auditoría de noviembre de 2026 encontró que ninguna `fetch*` lo miraba. La
+página atrapa todo junto y muestra "No se pudo abrir la ficha" con el mensaje de
+PostgREST, que nombra la tabla.
+
+**Agua, sueño, contexto y alcohol se recortan a la ventana efectiva** antes de
+contarse. `tracking_since` sale de comidas, actividad y peso, así que podía
+haber agua anotada antes del "primer día", y se contaba contra los días de la
+ventana: "12 de 10 días".
 - **El día a día viaja como datos, no como HTML.** Cuando era una lista de
   `<details>`, cada día mandaba la tabla de ítems de cada comida ya renderizada
   —la ficha del año pesaba 4,5 MB en crudo— y por eso se cortaba en 120 días.

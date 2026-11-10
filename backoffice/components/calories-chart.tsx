@@ -5,7 +5,11 @@ import { fechaCorta, fechaMedia, miles } from '@/lib/format';
 import { ejeLindo, useChartWidth } from '@/lib/chart';
 import { useAbrirDia } from '@/components/day-modal';
 
-export type DayKcal = { date: string; kcal: number };
+/** Un día del gráfico. `target` es el objetivo **de ese día**: si viene, la
+ *  barra se compara contra él y no contra el `target` del gráfico. Hace falta
+ *  porque el objetivo cambia dentro de un período (`lib/goals.ts`), y una
+ *  barra de julio en ámbar por pasarse de la meta de octubre es un dato falso. */
+export type DayKcal = { date: string; kcal: number; target?: number | null };
 
 /**
  * Calorías por día contra el objetivo.
@@ -52,7 +56,7 @@ export function CaloriesChart({
   const innerH = H - PAD.top - PAD.bottom;
 
   const { max, ticks } = ejeLindo(
-    Math.max(...days.map((d) => d.kcal), target ?? 0),
+    Math.max(...days.map((d) => Math.max(d.kcal, d.target ?? 0)), target ?? 0),
     5,
   );
   const inicio = days[0]?.date ?? '';
@@ -67,6 +71,16 @@ export function CaloriesChart({
 
   const y = (v: number) => PAD.top + innerH - (v / max) * innerH;
   const point = hover === null ? null : days[hover];
+
+  // El objetivo de cada barra, y si fue uno solo en todo el período. Con uno
+  // solo se dibuja la raya de punta a punta como siempre; si cambió, la raya va
+  // por tramos encima de cada barra, a la altura de la meta de ese día.
+  const objetivoDe = (d: DayKcal) => (d.target !== undefined ? d.target : target);
+  const objetivos = days.map(objetivoDe);
+  const distintos = new Set(objetivos.filter((t) => t && t > 0));
+  const unico = distintos.size <= 1;
+  const objetivoFinal =
+    [...objetivos].reverse().find((t): t is number => !!t && t > 0) ?? null;
 
   return (
     <div className="scroll-x chart" ref={box} style={{ position: 'relative' }}>
@@ -108,7 +122,8 @@ export function CaloriesChart({
           ))}
 
           {days.map((d, i) => {
-            const pasado = target !== null && target > 0 && d.kcal > target;
+            const t = objetivoDe(d);
+            const pasado = t !== null && t > 0 && d.kcal > t;
             return (
               <rect
                 key={d.date}
@@ -141,26 +156,56 @@ export function CaloriesChart({
             />
           ))}
 
-          {target !== null && target > 0 && (
+          {!unico &&
+            days.map((d, i) => {
+              const t = objetivos[i];
+              if (!t || t <= 0) return null;
+              return (
+                <line
+                  key={`obj-${d.date}`}
+                  x1={x(i) - Math.min(2, step / 4)}
+                  x2={x(i) + barW + Math.min(2, step / 4)}
+                  y1={y(t)}
+                  y2={y(t)}
+                  stroke="var(--chart-target)"
+                  strokeWidth="2"
+                />
+              );
+            })}
+
+          {!unico && objetivoFinal !== null && (
+            <text
+              x={W - PAD.right}
+              y={y(objetivoFinal) - 7}
+              textAnchor="end"
+              fontSize="11"
+              fill="var(--text-muted)"
+              className="tnum"
+            >
+              objetivo actual {miles(objetivoFinal)}
+            </text>
+          )}
+
+          {unico && objetivoFinal !== null && (
             <>
               <line
                 x1={PAD.left}
                 x2={W - PAD.right}
-                y1={y(target)}
-                y2={y(target)}
+                y1={y(objetivoFinal)}
+                y2={y(objetivoFinal)}
                 stroke="var(--chart-target)"
                 strokeWidth="2"
                 strokeDasharray="6 5"
               />
               <text
                 x={W - PAD.right}
-                y={y(target) - 7}
+                y={y(objetivoFinal) - 7}
                 textAnchor="end"
                 fontSize="11"
                 fill="var(--text-muted)"
                 className="tnum"
               >
-                objetivo {miles(target)}
+                objetivo {miles(objetivoFinal)}
               </text>
             </>
           )}
@@ -193,13 +238,18 @@ export function CaloriesChart({
         <div className="chart-tip tnum">
           <div className="caption">{fechaMedia(point.date)}</div>
           <div style={{ fontSize: 17 }}>{miles(point.kcal)} kcal</div>
-          {target !== null && target > 0 && (
-            <div className="caption">
-              {point.kcal > target
-                ? `${miles(point.kcal - target)} por encima`
-                : `${miles(target - point.kcal)} por debajo`}
-            </div>
-          )}
+          {(() => {
+            const t = objetivoDe(point);
+            if (t === null || t <= 0) return null;
+            return (
+              <div className="caption">
+                {point.kcal > t
+                  ? `${miles(point.kcal - t)} por encima`
+                  : `${miles(t - point.kcal)} por debajo`}
+                {!unico && ` de ${miles(t)}`}
+              </div>
+            );
+          })()}
         </div>
       )}
     </div>

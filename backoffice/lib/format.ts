@@ -128,6 +128,48 @@ export function hora(iso: string): string {
   });
 }
 
+/** Minutos desde la medianoche de un instante, **en el huso del paciente**.
+ *
+ *  `eaten_at` es un `timestamptz`: en Vercel, `getHours()` daría la hora UTC y
+ *  el almuerzo de las 13 aparecería a las 16. Se resuelve con el mismo huso
+ *  fijo que define el día (`TZ`, arriba) y con `formatToParts`, por lo mismo que
+ *  `isoEnTz`. `null` si el texto no es una fecha. */
+export function minutosDelDia(iso: string): number | null {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return null;
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: TZ,
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(d);
+  const h = Number(parts.find((p) => p.type === 'hour')?.value);
+  const m = Number(parts.find((p) => p.type === 'minute')?.value);
+  return Number.isFinite(h) && Number.isFinite(m) ? (h % 24) * 60 + m : null;
+}
+
+/** El día (`YYYY-MM-DD`) de un instante, en el huso de arriba. */
+export function diaDeInstante(iso: string): string {
+  return isoEnTz(new Date(iso));
+}
+
+/** "10 nov · 14:32" de un `timestamptz`, en el huso de arriba.
+ *
+ *  Se arma con las mismas piezas deterministas y no con `toLocaleString`: lo
+ *  renderizan Client Components que también pasan por el servidor, y con el
+ *  huso del servidor (UTC en Vercel) y el del navegador la hora no coincidiría
+ *  y React tiraría la hidratación. */
+export function fechaHora(iso: string): string {
+  const min = minutosDelDia(iso);
+  return `${fechaCorta(diaDeInstante(iso))}${min === null ? '' : ` · ${hhmm(min)}`}`;
+}
+
+/** "08:30" a partir de minutos desde la medianoche. */
+export function hhmm(minutos: number): string {
+  const total = Math.round(minutos);
+  return `${pad(Math.floor(total / 60) % 24)}:${pad(total % 60)}`;
+}
+
 export function horas(minutes: number): string {
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;

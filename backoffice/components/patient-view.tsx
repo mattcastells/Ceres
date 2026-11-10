@@ -2,8 +2,11 @@ import Link from 'next/link';
 import {
   METRIC_LABEL,
   QUALITY_LABEL,
+  TOPE_COMIDAS,
   type Activity,
   type AlcoholLog,
+  type CareFeedback,
+  type CareReport,
   type DayMarker,
   type Goal,
   type Meal,
@@ -22,6 +25,21 @@ import {
   rangoDeFechas,
 } from '@/lib/format';
 import type { Ventana } from '@/lib/tracking';
+import { currentGoal, goalForDay, targetsByDay } from '@/lib/goals';
+import {
+  alimentosFrecuentes,
+  balanceEnergetico,
+  horarios as calcularHorarios,
+  semanas as calcularSemanas,
+} from '@/lib/analysis';
+import {
+  BalanceCard,
+  FrecuentesTable,
+  HorariosStrip,
+  SemanasTable,
+} from '@/components/consult-analysis';
+import { FeedbackPanel } from '@/components/feedback-panel';
+import { AiReport } from '@/components/ai-report';
 import { WeightChart } from '@/components/weight-chart';
 import { CaloriesChart } from '@/components/calories-chart';
 import { BarChart, type Point } from '@/components/bar-chart';
@@ -66,12 +84,24 @@ export type PatientData = {
   measurements: Measurement[];
   markers: DayMarker[];
   alcohol: AlcoholLog[];
-  goal: Goal | null;
+  /** Los objetivos vigentes en algún día del período, del más viejo al más
+   *  nuevo. Cada día se compara con el suyo: ver `lib/goals.ts`. */
+  goals: Goal[];
   photoUrls: Record<string, string>;
+  /** Las comidas llegaron a `TOPE_COMIDAS` y puede haber más. */
+  mealsTruncated?: boolean;
+  /** Lo que esta profesional le escribió a este paciente. */
+  feedback: CareFeedback[];
+  /** El último informe de consulta guardado, si hay. */
+  report: CareReport | null;
+  /** `effective_plan()` de quien mira; `null` si no se pudo saber. */
+  plan: string | null;
+  /** El id de quien mira: es el `author_id` de lo que escribe. */
+  viewerId: string;
 };
 
 /**
- * La ficha de un paciente, en seis pestañas.
+ * La ficha de un paciente, en ocho pestañas.
  *
  * Es una función pura de los datos: no consulta nada. Quien la usa —la página—
  * es quien pide, y por eso esta vista se puede renderizar con datos de ejemplo
@@ -79,9 +109,12 @@ export type PatientData = {
  * se despliega, no una maqueta parecida que se desincroniza al primer cambio.
  *
  * Las pestañas son las cuatro categorías que el paciente concede —comidas,
- * fotos, cuerpo, hábitos— más el resumen y el día a día. No es una división de
- * diseño: es la misma división con la que se dio el permiso, así que "esta
- * pestaña está apagada" y "esto no me lo compartieron" son la misma frase.
+ * fotos, cuerpo, hábitos— más el resumen, el día a día, y las dos que son de la
+ * profesional: el informe con IA y las devoluciones. Las de categoría no son
+ * una división de diseño: es la misma división con la que se dio el permiso,
+ * así que "esta pestaña está apagada" y "esto no me lo compartieron" son la
+ * misma frase. Las dos nuevas no tienen punto ámbar porque no dependen de una
+ * categoría: lo que escribe la profesional es suyo.
  */
 export function PatientView({ data, tab }: { data: PatientData; tab?: string }) {
   const {
@@ -92,16 +125,30 @@ export function PatientView({ data, tab }: { data: PatientData; tab?: string }) 
     ventana,
     meals,
     weights,
-    water,
     activities,
-    sleep,
     measurements,
-    markers,
-    alcohol,
-    goal,
+    goals,
     photoUrls,
   } = data;
 
+  // ⚠️ Agua, sueño, contexto y alcohol se recortan a la ventana efectiva.
+  //
+  // `tracking_since` sale de comidas, actividad y peso (ver
+  // `public.tracking_since`), así que alguien puede tener agua anotada antes de
+  // su "primer día". Esas filas llegaban con el período entero y se contaban
+  // contra los días de la ventana: la auditoría encontró "12 de 10 días" en el
+  // agua. Contar sobre la ventana y mostrar filas de afuera son dos cosas que
+  // no pueden convivir; se quedan las de adentro.
+  const enVentana = <T extends { local_date: string }>(xs: T[]) =>
+    xs.filter((x) => x.local_date >= ventana.desdeEfectivo);
+  const water = enVentana(data.water);
+  const sleep = enVentana(data.sleep);
+  const markers = enVentana(data.markers);
+  const alcohol = enVentana(data.alcohol);
+
+  // El objetivo de la cabecera y de los macros es el vigente al final del
+  // período; la comparación día por día usa el de cada día (`objetivos`).
+  const goal = currentGoal(goals, to);
   const target = goal?.base_calorie_target ?? null;
 
   // ⚠️ Dos listas de fechas, y la diferencia importa.
@@ -135,10 +182,28 @@ export function PatientView({ data, tab }: { data: PatientData; tab?: string }) 
   const promedioKcal = diasConComida
     ? Math.round(serieKcal.reduce((a, x) => a + x.value, 0) / diasConComida)
     : 0;
-  const dentro =
-    target && diasConComida
-      ? serieKcal.filter((x) => x.value <= target).length
-      : 0;
+
+  // Cada día contra **su** objetivo. Un día sin objetivo vigente no cuenta ni
+  // como dentro ni como fuera: no hay contra qué compararlo.
+  const objetivos = targetsByDay(goals, fechas);
+  const conObjetivo = serieKcal.filter((x) => objetivos.get(x.date));
+  const dentro = conObjetivo.filter((x) => x.value <= objetivos.get(x.date)!).length;
+  const objetivoCambio =
+    new Set(conObjetivo.map((x) => objetivos.get(x.date))).size > 1;
+  // El objetivo "promedio" de los días con comida: contra eso se pone el
+  // promedio de kcal cuando el objetivo cambió en el medio. Con uno solo es el
+  // mismo número.
+  const targetPromedio = conObjetivo.length
+    ? Math.round(
+        conObjetivo.reduce((a, x) => a + objetivos.get(x.date)!, 0) /
+          conObjetivo.length,
+      )
+    : target;
+  const serieCalorias = serieKcal.map((x) => ({
+    date: x.date,
+    kcal: x.value,
+    target: objetivos.get(x.date) ?? null,
+  }));
 
   const proteinaPorDia: Point[] = serieKcal.map((x) => ({
     date: x.date,
@@ -251,6 +316,9 @@ export function PatientView({ data, tab }: { data: PatientData; tab?: string }) 
       sleep: suenoPorFecha.get(d) ?? null,
       markers: marcasPorDia.get(d) ?? [],
       alcohol: alcoholPorDia.get(d) ?? [],
+      // El objetivo de ese día, para que la celda y el modal comparen contra
+      // la meta que tenía entonces y no contra la de hoy.
+      goal: goalForDay(goals, d),
     }));
 
 
@@ -265,7 +333,7 @@ export function PatientView({ data, tab }: { data: PatientData; tab?: string }) 
     <div className="topbar-id">
       <div style={{ minWidth: 0 }}>
         <p className="topbar-back caption">
-          <Link href="/">← Pacientes</Link>
+          <Link href="/">← Tu equipo</Link>
         </p>
         <h1>{p.patient_name || 'Sin nombre'}</h1>
         <p className="topbar-sub caption">
@@ -318,10 +386,41 @@ export function PatientView({ data, tab }: { data: PatientData; tab?: string }) 
   // Ver `docs/contexto-diario.md`.
   const ultimosCatorce = ventana.fechas.slice(-14);
   const pctObjetivo =
-    target && promedioKcal ? Math.round((promedioKcal / target) * 100) : null;
+    targetPromedio && promedioKcal
+      ? Math.round((promedioKcal / targetPromedio) * 100)
+      : null;
+
+  /* ── Análisis de consulta ─────────────────────────────────────────────
+     Aritmética sobre lo que ya llegó, sin IA ni consultas nuevas. Ver
+     `lib/analysis.ts` y `docs/panel-proximas-features.md`. Solo los días de
+     la ventana efectiva: los anteriores no son días sin registro. */
+  const kcalEnVentana = new Map(
+    [...kcalPorDia].filter(([d]) => d >= ventana.desdeEfectivo),
+  );
+  const balance = p.share_meals
+    ? balanceEnergetico({
+        kcalPorDia: kcalEnVentana,
+        goals,
+        weights: p.share_body ? weights : [],
+      })
+    : null;
+  const frecuentes = p.share_meals ? alimentosFrecuentes(meals) : [];
+  const horariosDelPeriodo = p.share_meals ? calcularHorarios(meals) : null;
+  const semanasDelPeriodo = calcularSemanas({
+    fechas: ventana.fechas,
+    kcalPorDia,
+    proteinaPorDia: new Map(proteinaPorDia.map((x) => [x.date, x.value])),
+    minutosPorDia: new Map(actPorDia.map((x) => [x.date, x.value])),
+    weights,
+    diasEnfermedad: new Set(enfermos.map((m) => m.local_date)),
+    diasConAlcohol: new Set(ubePorDia.keys()),
+  });
+
+  const avisoTope = data.mealsTruncated ? <AvisoTope /> : null;
 
   const resumen = (
     <>
+      {avisoTope}
       <Section
         title="Resumen del período"
         hint={`Últimos ${days} días · del ${fechaCorta(from)} al ${fechaCorta(to)}`}
@@ -335,14 +434,16 @@ export function PatientView({ data, tab }: { data: PatientData; tab?: string }) 
                   value={promedioKcal ? miles(promedioKcal) : '—'}
                   unit="kcal"
                   sub={
-                    target
-                      ? `objetivo ${miles(target)} · ${dentro} de ${diasConComida} días dentro`
+                    targetPromedio
+                      ? objetivoCambio
+                        ? `el objetivo cambió en el período · ${dentro} de ${conObjetivo.length} días dentro del suyo`
+                        : `objetivo ${miles(targetPromedio)} · ${dentro} de ${conObjetivo.length} días dentro`
                       : 'sin objetivo cargado'
                   }
                 >
                   {/* La pista contra el objetivo: ámbar si el promedio lo pasa,
                       el mismo ámbar del gráfico. */}
-                  {target && pctObjetivo !== null ? (
+                  {targetPromedio && pctObjetivo !== null ? (
                     <div className="kpi-track">
                       <div className="split-track" aria-hidden>
                         <div
@@ -544,13 +645,7 @@ export function PatientView({ data, tab }: { data: PatientData; tab?: string }) 
               <div className="card">
                 <h3>Calorías por día</h3>
                 <div style={{ marginTop: 'var(--s3)' }}>
-                  <CaloriesChart
-                    days={serieKcal.map((x) => ({
-                      date: x.date,
-                      kcal: x.value,
-                    }))}
-                    target={target}
-                  />
+                  <CaloriesChart days={serieCalorias} target={target} />
                 </div>
               </div>
             )}
@@ -563,6 +658,29 @@ export function PatientView({ data, tab }: { data: PatientData; tab?: string }) 
               </div>
             )}
           </div>
+        </Section>
+      )}
+
+      {balance && (
+        <Section
+          title="¿Los números cierran?"
+          hint="El déficit que dice el registro, puesto contra lo que marcó la balanza. Es una estimación para chequear en la consulta, no un diagnóstico."
+        >
+          <BalanceCard b={balance} shareBody={p.share_body} />
+        </Section>
+      )}
+
+      {semanasDelPeriodo.length >= 2 && (
+        <Section
+          title="Semana contra semana"
+          hint="De lunes a domingo, sobre los días desde que empezó a registrar. La semana incompleta lo dice."
+        >
+          <SemanasTable
+            semanas={semanasDelPeriodo}
+            shareMeals={p.share_meals}
+            shareBody={p.share_body}
+            shareWellbeing={p.share_wellbeing}
+          />
         </Section>
       )}
 
@@ -585,17 +703,34 @@ export function PatientView({ data, tab }: { data: PatientData; tab?: string }) 
     <NoCompartido que="Las comidas" />
   ) : (
     <>
+      {avisoTope}
       <Section
         title="Calorías por día"
         hint="Solo los días con comidas cargadas. La línea punteada es el objetivo; el día en ámbar es el que lo pasó."
       >
         <div className="card">
-          <CaloriesChart
-            days={serieKcal.map((x) => ({ date: x.date, kcal: x.value }))}
-            target={target}
-          />
+          <CaloriesChart days={serieCalorias} target={target} />
         </div>
       </Section>
+
+      {/* Lo que más se repite y a qué hora: las dos preguntas de consulta que
+          antes se contestaban de memoria teniendo el dato medido. Ver
+          `docs/panel-proximas-features.md` §2 y §3. */}
+      <Section
+        title="Lo que más se repite"
+        hint="Los alimentos que aparecen dos veces o más en el período, agrupados por nombre. Las kcal son las cargadas, con lo estimado por IA incluido."
+      >
+        <FrecuentesTable items={frecuentes} />
+      </Section>
+
+      {horariosDelPeriodo && (
+        <Section
+          title="Horarios"
+          hint="La hora que la persona eligió para cada comida, en el huso de Buenos Aires. Un punto por comida; la raya va de la primera a la última del día."
+        >
+          <HorariosStrip h={horariosDelPeriodo} />
+        </Section>
+      )}
 
       <Section
         title="Cómo se compone el día"
@@ -1013,6 +1148,8 @@ export function PatientView({ data, tab }: { data: PatientData; tab?: string }) 
 
   /* ── Día a día ──────────────────────────────────────────────────────── */
   const diario = (
+    <>
+    {avisoTope}
     <Section
       title="Día a día"
       hint="Tocá un día para ver qué comió, con el agua, el sueño y la actividad de ese día."
@@ -1038,14 +1175,43 @@ export function PatientView({ data, tab }: { data: PatientData; tab?: string }) 
         />
       )}
     </Section>
+    </>
+  );
+
+  /* ── Informe con IA y devoluciones ─────────────────────────────────────
+     Las dos pestañas que no son del paciente sino de la profesional: lo que
+     prepara para la consulta y lo que le escribe de vuelta. Son islas de
+     cliente porque escriben —son lo único que el panel escribe— y reciben ya
+     cargado lo que estaba guardado, para no pagar un informe nuevo ni una
+     consulta más por abrir la pestaña. */
+  const informe = (
+    <AiReport
+      patientId={p.patient_id}
+      patientName={p.patient_name}
+      initial={data.report}
+      plan={data.plan}
+    />
+  );
+
+  const devoluciones = (
+    <FeedbackPanel
+      patientId={p.patient_id}
+      authorId={data.viewerId}
+      initial={data.feedback}
+      hoy={to}
+      plan={data.plan}
+    />
   );
 
   // El orden es el de uso: lo que se mira primero en una consulta —el resumen,
-  // el calendario del día a día, los hábitos— y después el detalle por
+  // el informe para prepararla, lo que se le escribe después—, luego el
+  // calendario del día a día y los hábitos, y al final el detalle por
   // categoría. Las cuatro categorías del permiso siguen teniendo una pestaña
   // cada una, con su punto ámbar si no está compartida.
   const tabs: Tab[] = [
     { id: 'resumen', label: 'Resumen', content: resumen },
+    { id: 'informe', label: 'Informe con IA', content: informe },
+    { id: 'devoluciones', label: 'Devoluciones', content: devoluciones },
     { id: 'diario', label: 'Día a día', content: diario },
     {
       id: 'habitos',
@@ -1094,6 +1260,24 @@ function categoriaIMC(v: number): string {
   if (v < 35) return 'obesidad grado I';
   if (v < 40) return 'obesidad grado II';
   return 'obesidad grado III';
+}
+
+/** Las comidas llegaron al tope duro y puede haber más.
+ *
+ *  Va arriba de cada pestaña que cuenta comidas porque el tope existe para que
+ *  un dato roto no baje la tabla entera, y un tope que corta en silencio es
+ *  exactamente el corte de mil filas de PostgREST que la paginación vino a
+ *  arreglar: promedios sobre lo que llegó, presentados como el período. */
+function AvisoTope() {
+  return (
+    <div className="card aviso" role="status" style={{ marginTop: 'var(--s5)' }}>
+      <strong>Se muestran las primeras {miles(TOPE_COMIDAS)} comidas del período.</strong>{' '}
+      <span className="muted">
+        Puede haber más, y los promedios y conteos de esta ficha están hechos
+        sobre las que llegaron. Elegí un período más corto para verlo completo.
+      </span>
+    </div>
+  );
 }
 
 function NoCompartido({ que }: { que: string }) {

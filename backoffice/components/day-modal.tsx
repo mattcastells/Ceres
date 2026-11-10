@@ -195,8 +195,14 @@ export function DayModalProvider({
 
               <DayDetail
                 dia={dia}
-                targetKcal={targetKcal}
-                goal={goal}
+                // El objetivo de ese día si la bolsa lo trae; si no, el de la
+                // ficha. Ver `lib/goals.ts`.
+                targetKcal={
+                  dia.goal !== undefined
+                    ? (dia.goal?.base_calorie_target ?? null)
+                    : targetKcal
+                }
+                goal={dia.goal !== undefined ? dia.goal : goal}
                 photoUrls={photoUrls}
                 shareMeals={shareMeals}
                 sharePhotos={sharePhotos}

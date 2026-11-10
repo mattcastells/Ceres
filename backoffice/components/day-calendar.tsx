@@ -149,7 +149,11 @@ function Celda({
   onOpen: () => void;
 }) {
   const kcal = dia.meals.reduce((a, m) => a + m.total_kcal, 0);
-  const pasado = targetKcal !== null && targetKcal > 0 && kcal > targetKcal;
+  // Contra el objetivo de ese día, no el de hoy: si cambió en el período, el
+  // ámbar de julio tiene que ser el de la meta de julio.
+  const objetivo =
+    dia.goal !== undefined ? (dia.goal?.base_calorie_target ?? null) : targetKcal;
+  const pasado = objetivo !== null && objetivo > 0 && kcal > objetivo;
   const enfermo = dia.markers.some((m) => m.kind === 'sick');
   const alcohol = dia.alcohol.length > 0;
   const minutos = dia.activities.reduce((a, x) => a + x.duration_minutes, 0);

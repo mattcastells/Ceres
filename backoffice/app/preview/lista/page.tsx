@@ -1,7 +1,10 @@
-/** La lista con datos de ejemplo. **Solo en desarrollo**: ver `app/preview/page.tsx`. */
+/** El tablero del equipo con datos de ejemplo. **Solo en desarrollo**: ver
+ *  `app/preview/page.tsx`. `?ia=1` le agrega un análisis del equipo guardado. */
 import { notFound } from 'next/navigation';
 import { PatientsList, type PatientRow } from '@/components/patients-list';
-import { haceISO, hoyISO, rangoDeFechas } from '@/lib/format';
+import { haceISO, hoyISO } from '@/lib/format';
+import type { OverviewRow } from '@/lib/team';
+import type { CareReport } from '@/lib/queries';
 
 export const dynamic = 'force-dynamic';
 
@@ -39,22 +42,137 @@ const PACIENTES: PatientRow[] = [
     share_wellbeing: true,
     expires_at: '2026-12-31',
   },
+  {
+    grant_id: 'g4',
+    patient_id: 'demo4',
+    patient_name: 'Diego Ríos',
+    birth_date: '1994-07-19',
+    share_meals: true,
+    share_photos: true,
+    share_body: true,
+    share_wellbeing: true,
+    expires_at: null,
+  },
 ];
 
-export default function PreviewLista() {
+function overview(): OverviewRow[] {
+  const base = {
+    share_photos: true,
+    share_wellbeing: true,
+    weight_first_30: null,
+    weight_last_30: null,
+    unread_feedback: 0,
+  };
+  return [
+    {
+      ...base,
+      patient_id: 'demo',
+      patient_name: 'Ana Pérez',
+      share_meals: true,
+      share_body: true,
+      tracking_since: haceISO(80),
+      last_meal_date: hoyISO(),
+      days_logged_7: 6,
+      days_logged_14: 12,
+      avg_kcal_7: 2290,
+      target_kcal: 2000,
+      weight_first_30: 78.4,
+      weight_last_30: 77.2,
+      unread_feedback: 1,
+    },
+    {
+      ...base,
+      patient_id: 'demo2',
+      patient_name: 'Bruno Gómez',
+      share_meals: true,
+      share_body: true,
+      share_wellbeing: false,
+      tracking_since: haceISO(40),
+      last_meal_date: haceISO(5),
+      days_logged_7: 2,
+      days_logged_14: 6,
+      avg_kcal_7: 1400,
+      target_kcal: 2200,
+    },
+    {
+      ...base,
+      patient_id: 'demo3',
+      patient_name: 'Carla Suárez',
+      share_meals: false,
+      share_body: true,
+      tracking_since: haceISO(20),
+      last_meal_date: null,
+      days_logged_7: null,
+      days_logged_14: null,
+      avg_kcal_7: null,
+      target_kcal: null,
+      weight_first_30: 61,
+      weight_last_30: 61.4,
+    },
+    {
+      ...base,
+      patient_id: 'demo4',
+      patient_name: 'Diego Ríos',
+      share_meals: true,
+      share_body: true,
+      tracking_since: haceISO(4),
+      last_meal_date: haceISO(1),
+      days_logged_7: 4,
+      days_logged_14: 4,
+      avg_kcal_7: 1950,
+      target_kcal: 2100,
+    },
+  ];
+}
+
+function informe(): CareReport {
+  return {
+    id: 't1',
+    kind: 'team',
+    patient_id: null,
+    period_from: haceISO(13),
+    period_to: hoyISO(),
+    created_at: `${hoyISO()}T08:40:00-03:00`,
+    content: {
+      resumen:
+        'El equipo viene registrando bien en general: tres de cuatro personas cargaron esta semana. Bruno lleva cinco días sin registrar y su promedio quedó muy por debajo del objetivo.',
+      prioridades: [
+        {
+          patientId: 'demo2',
+          motivo: 'Cinco días sin registrar y un promedio de 1.400 kcal contra 2.200 de objetivo.',
+          accion: 'Escribirle para saber si pasó algo y si está anotando todo.',
+        },
+        {
+          patientId: 'demo',
+          motivo: 'Promedio un 15 % por encima del objetivo, con el peso bajando igual.',
+          accion: 'Revisar en la consulta si el objetivo sigue siendo el adecuado.',
+        },
+      ],
+      observaciones: [
+        'Los fines de semana son los días con menos registros en todo el equipo.',
+        'Una persona no comparte las comidas: su seguimiento depende del peso.',
+      ],
+    },
+  };
+}
+
+export default async function PreviewLista({
+  searchParams,
+}: {
+  searchParams: Promise<{ ia?: string }>;
+}) {
   // Solo en desarrollo, por lo mismo que `app/preview/page.tsx`.
   if (process.env.NODE_ENV === 'production') notFound();
+  const { ia } = await searchParams;
 
-  const hasta = hoyISO();
-  const ultimos = rangoDeFechas(haceISO(6), hasta);
   return (
     <PatientsList
       patients={PACIENTES}
-      ultimos={ultimos}
-      diasConCarga={{
-        demo: ultimos.filter((_, i) => i !== 2 && i !== 5),
-        demo2: ultimos.slice(0, 3),
-      }}
+      overview={overview()}
+      hoy={hoyISO()}
+      plan="pro"
+      hasOrg
+      teamReport={ia === '1' ? informe() : null}
     />
   );
 }

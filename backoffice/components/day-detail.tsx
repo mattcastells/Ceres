@@ -40,6 +40,10 @@ export type DayBundle = {
   sleep: SleepLog | null;
   markers: DayMarker[];
   alcohol: AlcoholLog[];
+  /** El objetivo vigente **ese día** (`lib/goals.ts`). `undefined` = quien
+   *  arma la bolsa no lo sabe y vale el de la ficha; `null` = ese día no
+   *  tenía objetivo. */
+  goal?: Goal | null;
 };
 
 /**

@@ -5,7 +5,9 @@ import {
   fetchActivities,
   fetchAlcohol,
   fetchDayMarkers,
-  fetchGoal,
+  fetchFeedback,
+  fetchGoals,
+  fetchLatestReport,
   fetchMeals,
   fetchMeasurements,
   fetchSleep,
@@ -36,9 +38,10 @@ const RANGES: Record<string, number> = {
  * función de los datos y no sabe de Supabase. Esa frontera es la que permite
  * mirar el diseño con datos de ejemplo sin duplicar la maqueta.
  *
- * Todo se pide junto y las cinco pestañas se renderizan de una. Cambiar de
+ * Todo se pide junto y las ocho pestañas se renderizan de una. Cambiar de
  * pestaña no vuelve al servidor; cambiar el período sí, porque ahí cambian los
- * datos.
+ * datos. Lo que la profesional escribe (devoluciones, informes) lo escriben
+ * las islas de cliente de esas pestañas, con la sesión del navegador.
  */
 export default async function PatientPage({
   params,
@@ -90,36 +93,81 @@ export default async function PatientPage({
   // calendario y siete en "días con comidas de 7", no ocho.
   const from = haceISO(days - 1);
 
-  const [
-    meals,
-    weights,
-    water,
-    activities,
-    sleep,
-    measurements,
-    goal,
-    markers,
-    alcohol,
-  ] = await Promise.all([
-    p.share_meals ? fetchMeals(supabase, id, from, to) : [],
-    p.share_body ? fetchWeights(supabase, id, from, to) : [],
-    p.share_wellbeing ? fetchWater(supabase, id, from, to) : [],
-    p.share_wellbeing ? fetchActivities(supabase, id, from, to) : [],
-    p.share_wellbeing ? fetchSleep(supabase, id, from, to) : [],
-    p.share_body ? fetchMeasurements(supabase, id, from, to) : [],
-    p.share_meals ? fetchGoal(supabase, id) : null,
-    // El contexto del día se abre con `wellbeing`, la misma llave que la
-    // actividad, el agua y el sueño.
-    p.share_wellbeing ? fetchDayMarkers(supabase, id, from, to) : [],
-    p.share_wellbeing ? fetchAlcohol(supabase, id, from, to) : [],
-  ]);
+  // El middleware ya garantizó que hay sesión; esto es para saber quién firma
+  // lo que se escriba y qué informes son suyos.
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) notFound();
 
-  const photoUrls = p.share_photos
-    ? await signPhotos(
-        supabase,
-        meals.map((m) => m.photo_path).filter((x): x is string => !!x),
-      )
-    : {};
+  // Las consultas **lanzan** si la base devuelve un error (`lib/queries.ts`).
+  // Se atrapan todas acá, juntas, y se muestran con la misma pantalla que el
+  // fallo de `care_patients`: una ficha con el agua vacía porque la consulta
+  // del agua falló es una ficha que miente.
+  let cargado;
+  try {
+    const [
+      comidas,
+      weights,
+      water,
+      activities,
+      sleep,
+      measurements,
+      goals,
+      markers,
+      alcohol,
+      feedback,
+      report,
+      plan,
+    ] = await Promise.all([
+      p.share_meals
+        ? fetchMeals(supabase, id, from, to)
+        : { meals: [], truncated: false },
+      p.share_body ? fetchWeights(supabase, id, from, to) : [],
+      p.share_wellbeing ? fetchWater(supabase, id, from, to) : [],
+      p.share_wellbeing ? fetchActivities(supabase, id, from, to) : [],
+      p.share_wellbeing ? fetchSleep(supabase, id, from, to) : [],
+      p.share_body ? fetchMeasurements(supabase, id, from, to) : [],
+      p.share_meals ? fetchGoals(supabase, id, from, to) : [],
+      // El contexto del día se abre con `wellbeing`, la misma llave que la
+      // actividad, el agua y el sueño.
+      p.share_wellbeing ? fetchDayMarkers(supabase, id, from, to) : [],
+      p.share_wellbeing ? fetchAlcohol(supabase, id, from, to) : [],
+      fetchFeedback(supabase, user.id, id),
+      fetchLatestReport(supabase, user.id, 'professional', id),
+      // El plan solo decide si se ofrecen los botones de IA; si no se puede
+      // saber, se deja intentar y la función contesta. No tumba la ficha.
+      supabase
+        .rpc('effective_plan')
+        .then(({ data }) => (typeof data === 'string' ? data : null)),
+    ]);
+
+    const photoUrls = p.share_photos
+      ? await signPhotos(
+          supabase,
+          comidas.meals.map((m) => m.photo_path).filter((x): x is string => !!x),
+        )
+      : {};
+
+    cargado = {
+      meals: comidas.meals,
+      mealsTruncated: comidas.truncated,
+      weights,
+      water,
+      activities,
+      sleep,
+      measurements,
+      goals,
+      markers,
+      alcohol,
+      feedback,
+      report,
+      plan,
+      photoUrls,
+    };
+  } catch (e) {
+    return <ErrorDeCarga detalle={e instanceof Error ? e.message : String(e)} />;
+  }
 
   return (
     <PatientView
@@ -134,16 +182,8 @@ export default async function PatientPage({
         // como huecos los días anteriores a la cuenta y nadie lo notaría.
         // Ver `docs/contexto-diario.md`.
         ventana: ventanaEfectiva(from, to, p.tracking_since),
-        meals,
-        weights,
-        water,
-        activities,
-        sleep,
-        measurements,
-        markers,
-        alcohol,
-        goal,
-        photoUrls,
+        ...cargado,
+        viewerId: user.id,
       }}
     />
   );
@@ -166,7 +206,7 @@ function ErrorDeCarga({ detalle }: { detalle: string }) {
   return (
     <div className="page">
       <p className="topbar-back caption">
-        <Link href="/">← Pacientes</Link>
+        <Link href="/">← Tu equipo</Link>
       </p>
       <h1 style={{ marginTop: 'var(--s4)' }}>No se pudo abrir la ficha</h1>
       <div className="card" style={{ marginTop: 'var(--s5)' }}>

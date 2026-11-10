@@ -18,20 +18,23 @@ import { sampleData } from './sample';
  *
  * `?medio=1` arranca la cuenta a mitad del período, que es el caso en el que se
  * ve si los denominadores respetan la ventana efectiva. Ver `lib/tracking.ts`.
+ * `?vacio=1` saca el informe y las devoluciones de ejemplo, para mirar cómo se
+ * ven esas pestañas la primera vez.
  */
 export const dynamic = 'force-dynamic';
 
 export default async function PreviewPage({
   searchParams,
 }: {
-  searchParams: Promise<{ t?: string; dias?: string; medio?: string }>;
+  searchParams: Promise<{ t?: string; dias?: string; medio?: string; vacio?: string }>;
 }) {
   if (process.env.NODE_ENV === 'production') notFound();
-  const { t, dias, medio } = await searchParams;
+  const { t, dias, medio, vacio } = await searchParams;
+  const data = sampleData(Number(dias) || 30, medio === '1');
   return (
     <PatientView
       tab={t}
-      data={sampleData(Number(dias) || 30, medio === '1')}
+      data={vacio === '1' ? { ...data, report: null, feedback: [] } : data}
     />
   );
 }

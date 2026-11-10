@@ -168,6 +168,45 @@ jobs:
           npx --yes esbuild@0.24.0 --bundle             supabase/functions/care-report/metrics.test.ts             --format=esm --platform=node --outfile=/tmp/metrics.test.mjs
           node /tmp/metrics.test.mjs
 
+  panel:
+    name: Verificar el panel web
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backoffice
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      # Node 24 y no el que trae la imagen: `npm test` corre `lib/*.test.ts`
+      # con `node --test` y sin bundler, y leer TypeScript directo es de Node
+      # 22.18 en adelante. Con el Node 20 de la imagen los tests ni arrancan.
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: backoffice/package-lock.json
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      # El panel se desplegaba en Vercel sin que nada lo compilara antes: un
+      # tipo roto aparecía recién en el deploy, y las cuentas del tablero y del
+      # análisis de consulta (`lib/*.test.ts`) no corrían en ningún lado.
+      - name: Tipos
+        run: npm run typecheck
+
+      - name: Tests
+        run: npm test
+
+      # Las dos variables son públicas por diseño (viajan al navegador), pero
+      # el build las necesita definidas. Valores de mentira: el build no se
+      # conecta a ningún lado y así no hay un proyecto real atado al CI.
+      - name: Build
+        run: npm run build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ci
+
   database:
     name: Probar las políticas RLS
     runs-on: ubuntu-latest
