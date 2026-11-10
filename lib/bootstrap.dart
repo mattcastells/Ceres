@@ -18,11 +18,14 @@ import 'data/local/local_auth_gateway.dart';
 import 'data/local/local_store.dart';
 import 'data/remote/calorie_target_client.dart';
 import 'data/remote/care_client.dart';
+import 'data/remote/care_feedback_client.dart';
+import 'data/remote/care_report_client.dart';
 import 'data/remote/cloud_backup_client.dart';
 import 'data/remote/gemini_analysis_client.dart';
 import 'data/remote/meal_suggestions_client.dart';
 import 'data/remote/pals_client.dart';
 import 'data/remote/photo_storage_client.dart';
+import 'data/remote/plan_client.dart';
 import 'data/remote/relational_sync_client.dart';
 import 'data/remote/supabase_auth_gateway.dart';
 import 'data/remote/usda_food_client.dart';
@@ -35,6 +38,7 @@ import 'domain/services/photo_sync_service.dart';
 import 'domain/services/relational_sync_service.dart';
 import 'presentation/providers/app_providers.dart';
 import 'presentation/providers/auth_providers.dart';
+import 'presentation/providers/plan_providers.dart';
 import 'presentation/providers/reminder_providers.dart';
 
 /// Arranque: base local, formatos de fecha, sesión y contenedor de providers.
@@ -243,8 +247,26 @@ Future<void> bootstrap() async {
     palPublisher.markDirty();
   }
 
+  // Plan, devoluciones e informes: los tres existen solo con servidor. Sin él
+  // la app es la de siempre —todo incluido, sin anuncios, sin nutricionista—
+  // y ninguna pantalla nueva tiene nada que mostrar.
+  final PlanClient? planClient = SupabaseConfig.isConfigured
+      ? PlanClient.fromInstance()
+      : null;
+  final CareFeedbackClient? careFeedbackClient = SupabaseConfig.isConfigured
+      ? CareFeedbackClient.fromInstance()
+      : null;
+  final CareReportClient? careReportClient = SupabaseConfig.isConfigured
+      ? CareReportClient.fromInstance()
+      : null;
+
   final container = ProviderContainer(
     overrides: <Override>[
+      if (planClient != null) planClientProvider.overrideWithValue(planClient),
+      if (careFeedbackClient != null)
+        careFeedbackClientProvider.overrideWithValue(careFeedbackClient),
+      if (careReportClient != null)
+        careReportClientProvider.overrideWithValue(careReportClient),
       repositoryProvider.overrideWithValue(repository),
       authGatewayProvider.overrideWithValue(auth),
       if (backup != null) cloudBackupProvider.overrideWithValue(backup),
@@ -258,6 +280,26 @@ Future<void> bootstrap() async {
     ],
   );
   notify = () => container.read(appRevisionProvider.notifier).bump();
+
+  // El repositorio pregunta el plan antes de cada pedido de IA. Se enlaza acá
+  // por lo mismo que `notify`: el plan vive en el contenedor, que se crea
+  // después del repositorio.
+  repository.aiAllowed = () => container.read(planProvider).includesAi;
+
+  // Cada cambio de sesión vuelve a preguntar el plan: entrar con otra cuenta
+  // no puede heredar el de la anterior. Incluye el refresco de token que hace
+  // la librería sola, que es una consulta chica una vez por hora.
+  if (planClient != null) {
+    auth.changes.listen((account) {
+      final plan = container.read(planProvider.notifier);
+      if (account == null) {
+        plan.reset();
+      } else {
+        unawaited(plan.refresh());
+      }
+      container.invalidate(careFeedbackProvider);
+    });
+  }
 
   runApp(
     UncontrolledProviderScope(

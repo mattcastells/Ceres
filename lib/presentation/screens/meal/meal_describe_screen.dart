@@ -9,6 +9,7 @@ import '../../../core/theme/nm_theme.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
 import '../../components/feedback/feedback.dart';
+import '../../components/plan/ai_gate.dart';
 import '../../components/system/buttons.dart';
 import '../../components/system/dictation.dart';
 import '../../components/system/inputs.dart';
@@ -81,6 +82,16 @@ class _MealDescribeScreenState extends ConsumerState<MealDescribeScreen> {
       context.pushReplacement(Routes.photoReview);
     } on AppError catch (error) {
       if (!mounted) return;
+      // Sin IA en el plan: lo escrito no se pierde de vista, y la salida a
+      // mano es la comida en blanco para buscar los alimentos.
+      if (handlePlanRequired(
+        context,
+        error,
+        onManual: () => context.pushReplacement(Routes.mealNew),
+      )) {
+        setState(() => _busy = false);
+        return;
+      }
       setState(() {
         _busy = false;
         _error = error;

@@ -13,9 +13,11 @@ import '../../../core/utils/dates.dart';
 import '../../../core/utils/formats.dart';
 import '../../../domain/enums/enums.dart';
 import '../../../domain/models/meal.dart';
+import '../../components/plan/ai_gate.dart';
 import '../../components/system/overlays.dart';
 import '../../components/system/surfaces.dart';
 import '../../providers/app_providers.dart';
+import '../../providers/plan_providers.dart';
 import '../photo/photo_screens.dart';
 
 /// Qué se agrega a un slot concreto (Desayuno, Almuerzo, Cena, Snacks).
@@ -51,6 +53,21 @@ class _AddToSlotSheet extends ConsumerWidget {
       context.push(location);
     }
 
+    final manualLocation =
+        '${Routes.mealNew}?slot=${slot.wire}&date=${isoDate(date)}';
+
+    /// La puerta de la IA de este sheet. Sin IA en el plan, este sheet se
+    /// cierra y en su lugar se ofrecen los planes —un sheet no abre otro
+    /// encima— con la salida a mano ya apuntada a este momento y este día.
+    bool aiOrUpsell() {
+      if (ref.read(planProvider).includesAi) return true;
+      final router = GoRouter.of(context);
+      final root = Navigator.of(context, rootNavigator: true).context;
+      Navigator.of(context).pop();
+      showAiUpsellSheet(root, onManual: () => router.push(manualLocation));
+      return false;
+    }
+
     Future<void> repeat(Meal meal) async {
       // El messenger se toma **antes** del `pop`. Después, el `context` del
       // sheet ya está desmontado y `context.mounted` da false según cómo caiga
@@ -84,9 +101,7 @@ class _AddToSlotSheet extends ConsumerWidget {
             icon: PhosphorIcons.forkKnife(),
             label: 'Buscar alimentos',
             subtitle: 'Del catálogo, de los tuyos o por código de barras',
-            onTap: () => go(
-              '${Routes.mealNew}?slot=${slot.wire}&date=${isoDate(date)}',
-            ),
+            onTap: () => go(manualLocation),
           ),
           ActionRow(
             icon: PhosphorIcons.chatText(),
@@ -95,6 +110,7 @@ class _AddToSlotSheet extends ConsumerWidget {
             enabled: FeatureFlags.aiPhotoAnalysis && SupabaseConfig.isConfigured,
             disabledNote: 'La estimación con IA necesita servidor configurado',
             onTap: () {
+              if (!aiOrUpsell()) return;
               ref.read(photoTargetProvider.notifier).state = PhotoTarget(
                 slot: slot,
                 date: date,
@@ -112,6 +128,7 @@ class _AddToSlotSheet extends ConsumerWidget {
             enabled: FeatureFlags.aiPhotoAnalysis && SupabaseConfig.isConfigured,
             disabledNote: 'El análisis con IA necesita servidor configurado',
             onTap: () {
+              if (!aiOrUpsell()) return;
               ref.read(photoTargetProvider.notifier).state = PhotoTarget(
                 slot: slot,
                 date: date,

@@ -1,9 +1,13 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../../../core/config/supabase_config.dart';
 import '../../../core/error/app_error.dart';
+import '../../../core/router/routes.dart';
 import '../../../core/theme/nm_theme.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
@@ -16,6 +20,7 @@ import '../../components/system/nm_screen.dart';
 import '../../components/system/overlays.dart';
 import '../../components/system/surfaces.dart';
 import '../../providers/auth_providers.dart';
+import '../../providers/plan_providers.dart';
 
 /// S-35 · Dar acceso a un profesional que te sigue.
 ///
@@ -72,12 +77,29 @@ class CareAccessScreen extends ConsumerWidget {
             ),
             const SizedBox(height: NmSpace.s6),
 
+            // Lo que la profesional devuelve. Vive acá además de en Inicio
+            // porque Inicio lo muestra solo cuando hay algo nuevo o vigente, y
+            // las devoluciones viejas también se buscan.
+            NmCard(
+              padding: const EdgeInsets.symmetric(vertical: NmSpace.s2),
+              child: NmListRow(
+                title: 'Devoluciones e indicaciones',
+                subtitle: _feedbackSubtitle(
+                  ref.watch(careFeedbackProvider).valueOrNull?.unreadCount ??
+                      0,
+                ),
+                leading: Icon(PhosphorIcons.chatCircleText()),
+                onTap: () => context.push(Routes.careFeedback),
+              ),
+            ),
+            const SizedBox(height: NmSpace.s6),
+
             if (grants.isEmpty)
               EmptyState(
                 compact: true,
                 icon: PhosphorIcons.stethoscope(),
                 title: 'Todavía no le diste acceso a nadie',
-                body: 'Pedile su código, que empieza con NT-, y cargalo acá.',
+                body: 'Pedile su código, que empieza con CE-, y cargalo acá.',
               )
             else ...<Widget>[
               const NmSectionHeader(title: 'Con acceso'),
@@ -140,6 +162,10 @@ class _GrantCard extends ConsumerWidget {
     try {
       await ref.read(careClientProvider)?.revoke(grant.id);
       ref.invalidate(careGrantsProvider);
+      // Dar o cortar un acceso puede cambiar el plan: con una profesional Pro
+      // del otro lado, una cuenta gratis pasa a tener la IA incluida, y al
+      // revés.
+      unawaited(ref.read(planProvider.notifier).refresh());
       if (context.mounted) NmSnackbar.show(context, 'Acceso cortado');
     } on AppError catch (error) {
       if (context.mounted) NmSnackbar.show(context, error.message);
@@ -285,6 +311,10 @@ class _GrantSheetState extends ConsumerState<_GrantSheet> {
         await client.grant(code: code, categories: _categories);
       }
       ref.invalidate(careGrantsProvider);
+      // Dar o cortar un acceso puede cambiar el plan: con una profesional Pro
+      // del otro lado, una cuenta gratis pasa a tener la IA incluida, y al
+      // revés.
+      unawaited(ref.read(planProvider.notifier).refresh());
       if (!mounted) return;
       Navigator.of(context).pop();
       NmSnackbar.show(
@@ -312,14 +342,15 @@ class _GrantSheetState extends ConsumerState<_GrantSheet> {
         children: <Widget>[
           if (!_isEditing) ...<Widget>[
             Text(
-              'Pedile el código que le muestra su panel. Empieza con NT-.',
+              'Pedile el código que le muestra su panel. Empieza con CE- '
+                  '(los más viejos, con NT-).',
               style: NmTextStyles.from(NmType.bodySm, color: nm.textMuted),
             ),
             const SizedBox(height: NmSpace.s4),
             NmTextField(
               label: 'Código',
               controller: _code,
-              hint: 'NT-K7M2QP',
+              hint: 'CE-K7M2QP',
               autofocus: true,
             ),
             const SizedBox(height: NmSpace.s5),
@@ -402,3 +433,9 @@ class _GrantSheetState extends ConsumerState<_GrantSheet> {
     );
   }
 }
+
+String _feedbackSubtitle(int unread) => switch (unread) {
+  0 => 'Lo que tu nutricionista te escribe desde su panel',
+  1 => '1 nueva sin leer',
+  _ => '$unread nuevas sin leer',
+};

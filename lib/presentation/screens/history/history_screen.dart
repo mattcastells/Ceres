@@ -11,6 +11,7 @@ import '../../../core/utils/dates.dart';
 import '../../../core/utils/formats.dart';
 import '../../../domain/models/summaries.dart';
 import '../../components/feedback/feedback.dart';
+import '../../components/plan/ad_banner.dart';
 import '../../components/system/buttons.dart';
 import '../../components/system/inputs.dart';
 import '../../components/system/nm_screen.dart';
@@ -196,6 +197,10 @@ class HistoryScreen extends ConsumerWidget {
                     },
                   ),
           ),
+          // Fijo abajo y no entre los días: metido en la lista, un anuncio
+          // quedaría pegado al balance de un día en particular. Solo en el
+          // plan gratis.
+          const AdBanner(padding: EdgeInsets.only(bottom: NmSpace.s3)),
           Padding(
             padding: const EdgeInsets.only(bottom: NmSpace.s4),
             child: Text(

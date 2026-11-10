@@ -19,6 +19,8 @@ import '../../../domain/models/food.dart';
 import '../../../domain/models/meal.dart';
 import '../../components/feedback/feedback.dart';
 import '../../components/food/food_widgets.dart';
+import '../../components/plan/ad_banner.dart';
+import '../../components/plan/ai_gate.dart';
 import '../../components/system/buttons.dart';
 import '../../components/system/inputs.dart';
 import '../../components/system/nm_screen.dart';
@@ -249,7 +251,19 @@ class _FoodSearchScreenState extends ConsumerState<FoodSearchScreen> {
                           : null,
                       secondaryLabel: hasQuery ? 'Sacar una foto' : null,
                       onSecondary: hasQuery
-                          ? () => context.push(Routes.photoCapture)
+                          ? () {
+                              // Sin IA en el plan, la salida a mano es la de
+                              // al lado: crear el alimento con sus valores.
+                              if (!ensureAiAllowed(
+                                context,
+                                ref,
+                                onManual: () =>
+                                    _openAndCloseIfAdded(Routes.foodNew),
+                              )) {
+                                return;
+                              }
+                              context.push(Routes.photoCapture);
+                            }
                           : null,
                     )
                   : Semantics(
@@ -273,6 +287,17 @@ class _FoodSearchScreenState extends ConsumerState<FoodSearchScreen> {
                         ),
                       ),
                     ),
+            ),
+            // Entre los resultados y los botones, fuera de la lista: no puede
+            // confundirse con un alimento ni quedar pegado a uno. Solo en el
+            // plan gratis.
+            AdBanner(
+              padding: EdgeInsets.fromLTRB(
+                context.screenPadding,
+                0,
+                context.screenPadding,
+                NmSpace.s3,
+              ),
             ),
             Padding(
               padding: EdgeInsets.fromLTRB(

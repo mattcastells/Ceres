@@ -107,9 +107,16 @@ class CalorieTargetClient {
     final details = error.details;
     final payload = details is Map ? details['error'] : null;
     final message = payload is Map ? payload['message'] : null;
+    final code = payload is Map ? payload['code'] : null;
 
     return AppError(
-      code: ApiErrorCode.aiInvalidResponse,
+      // El plan es el único código que cambia lo que hace la pantalla —ofrece
+      // los planes en vez de un error—, así que es el único que se conserva.
+      // El resto sigue cayendo en uno solo: para el alta, cualquier otro fallo
+      // significa lo mismo, "seguí con el número calculado".
+      code: code == ApiErrorCode.planRequired.wire
+          ? ApiErrorCode.planRequired
+          : ApiErrorCode.aiInvalidResponse,
       // El texto del servidor cuando lo hay: es el que sabe si fue la cuota,
       // el proveedor o una propuesta fuera de banda, y los tres mandan a hacer
       // cosas distintas.

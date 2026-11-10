@@ -17,6 +17,7 @@ import '../../../domain/enums/enums.dart';
 import '../../../domain/models/ai_calorie_target.dart';
 import '../../../domain/repositories/repositories.dart';
 import '../../../domain/services/goal_planner.dart';
+import '../../components/plan/ai_gate.dart';
 import '../../components/system/buttons.dart';
 import '../../components/system/inputs.dart';
 import '../../components/system/nm_screen.dart';
@@ -218,6 +219,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     final formulaTarget = _plan?.result?.target;
     if (weightKg == null || goalType == null || formulaTarget == null) return;
 
+    // Sin IA en el plan, la salida a mano es escribir el número: el campo
+    // arranca en el calculado, que es con lo que se sigue de todos modos.
+    if (!ensureAiAllowed(context, ref, onManual: _writeTargetByHand)) return;
+
     setState(() {
       _asking = true;
       _proposalError = null;
@@ -238,6 +243,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       });
     } on AppError catch (error) {
       if (!mounted) return;
+      if (handlePlanRequired(context, error, onManual: _writeTargetByHand)) {
+        setState(() => _asking = false);
+        return;
+      }
       // El error se muestra **en la pantalla** y no en un cartel que se va: acá
       // no hay a dónde volver, y quien no llegue a leerlo se queda sin saber si
       // conviene reintentar o seguir con el calculado.
@@ -246,6 +255,15 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         _asking = false;
       });
     }
+  }
+
+  /// Lo mismo que el interruptor de "escribirlo a mano" del último paso.
+  void _writeTargetByHand() {
+    if (!mounted) return;
+    setState(() {
+      _manual = true;
+      _manualTarget.text = (_confirmedTarget ?? _fallbackTarget).toString();
+    });
   }
 
   bool get _canContinue => switch (_step) {

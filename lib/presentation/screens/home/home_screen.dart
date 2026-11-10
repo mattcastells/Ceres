@@ -11,6 +11,7 @@ import '../../../core/utils/dates.dart';
 import '../../../core/utils/formats.dart';
 import '../../../domain/enums/enums.dart';
 import '../../components/activity/activity_cards.dart';
+import '../../components/care/care_feedback_card.dart';
 import '../../components/charts/macro_bar.dart';
 import '../../components/feedback/day_context_card.dart';
 import '../../components/feedback/feedback.dart';
@@ -24,6 +25,7 @@ import '../../components/water/alcohol_card.dart';
 import '../../components/water/water_card.dart';
 import '../../providers/app_providers.dart';
 import '../../providers/auth_providers.dart';
+import '../../providers/plan_providers.dart';
 import '../profile/calorie_target_sheet.dart';
 import '../weight/weight_sheet.dart';
 import 'add_sheet.dart';
@@ -86,6 +88,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 // hay de dónde traer y el indicador se cierra solo.
                 onRefresh: () async {
                   if (!repo.hasSession) return;
+                  // El plan y lo de la nutricionista van en paralelo y sin
+                  // esperarlos: el indicador cierra con los registros, que son
+                  // lo que la persona vino a buscar al tirar.
+                  refreshServerState(ref);
                   await ref
                       .read(relationalSyncProvider)
                       ?.refresh(
@@ -158,6 +164,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               onEditTarget: () =>
                                   showCalorieTargetSheet(context),
                             ),
+                            // Lo que dejó la nutricionista, justo debajo del
+                            // día: es lo primero que conviene leer antes de
+                            // decidir qué comer. Sin nada nuevo ni vigente no
+                            // ocupa lugar.
+                            const CareFeedbackHomeCard(),
                             const SizedBox(height: NmSpace.s6),
                             NmCard(child: MacroBar(macros: summary.macros)),
                             const SizedBox(height: NmSpace.s6),

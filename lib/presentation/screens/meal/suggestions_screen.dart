@@ -13,6 +13,7 @@ import '../../../domain/enums/enums.dart';
 import '../../../domain/models/meal.dart';
 import '../../../domain/models/meal_suggestion.dart';
 import '../../components/feedback/feedback.dart';
+import '../../components/plan/ai_gate.dart';
 import '../../components/system/buttons.dart';
 import '../../components/system/inputs.dart';
 import '../../components/system/nm_screen.dart';
@@ -158,6 +159,7 @@ class _SuggestionsScreenState extends ConsumerState<SuggestionsScreen> {
         _error = error;
         _loading = false;
       });
+      handlePlanRequired(context, error);
     } on Object catch (error) {
       // `on AppError` solo no alcanza y ya nos costó una vez: un `TypeError`
       // **no es una `Exception`**, así que una respuesta con forma inesperada

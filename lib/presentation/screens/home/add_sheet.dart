@@ -12,9 +12,11 @@ import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/utils/icons.dart';
 import '../../../domain/enums/enums.dart';
+import '../../components/plan/ai_gate.dart';
 import '../../components/system/overlays.dart';
 import '../../components/system/surfaces.dart';
 import '../../providers/app_providers.dart';
+import '../../providers/plan_providers.dart';
 import '../sleep/sleep_sheet.dart';
 import '../weight/measurement_sheet.dart';
 import '../weight/weight_sheet.dart';
@@ -129,7 +131,18 @@ class _MainPane extends ConsumerWidget {
             // foto— apagaba "¿Qué como?" por algo que no tiene nada que ver.
             enabled: SupabaseConfig.isConfigured,
             disabledNote: 'Las sugerencias necesitan servidor configurado',
-            onTap: () => onGo(Routes.mealSuggestions),
+            onTap: () {
+              if (ref.read(planProvider).includesAi) {
+                onGo(Routes.mealSuggestions);
+                return;
+              }
+              // Sin IA en el plan: se cierra el menú y se ofrecen los planes.
+              // No hay "cargar a mano" acá: la pregunta era qué comer, no
+              // cómo cargarlo.
+              final root = Navigator.of(context, rootNavigator: true).context;
+              Navigator.of(context).pop();
+              showAiUpsellSheet(root);
+            },
           ),
           // "Sacar foto" no está acá: es una forma de sumar ítems a una comida,
           // no una entrada paralela. Vive en la pantalla de la comida, junto al

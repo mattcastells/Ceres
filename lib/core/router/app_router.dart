@@ -21,13 +21,16 @@ import '../../presentation/screens/pals/pal_day_screen.dart';
 import '../../presentation/screens/pals/pal_sharing_screen.dart';
 import '../../presentation/screens/pals/pals_screen.dart';
 import '../../presentation/screens/photo/photo_screens.dart';
+import '../../presentation/screens/plans/plans_screen.dart';
 import '../../presentation/screens/profile/body_target_screens.dart';
 import '../../presentation/screens/profile/care_access_screen.dart';
+import '../../presentation/screens/profile/care_feedback_screen.dart';
 import '../../presentation/screens/profile/dietary_screen.dart';
 import '../../presentation/screens/profile/goal_picker_screen.dart';
 import '../../presentation/screens/profile/profile_screen.dart';
 import '../../presentation/screens/progress/progress_detail_screens.dart';
 import '../../presentation/screens/progress/progress_screen.dart';
+import '../../presentation/screens/progress/weekly_report_screen.dart';
 import '../../presentation/screens/settings/cloud_backup_screen.dart';
 import '../../presentation/screens/settings/notifications_screen.dart';
 import '../../presentation/screens/settings/report_screen.dart';
@@ -235,6 +238,18 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: Routes.profileCare,
         builder: (context, state) => const CareAccessScreen(),
+      ),
+      GoRoute(
+        path: Routes.careFeedback,
+        builder: (context, state) => const CareFeedbackScreen(),
+      ),
+      GoRoute(
+        path: Routes.plans,
+        builder: (context, state) => const PlansScreen(),
+      ),
+      GoRoute(
+        path: Routes.weeklyReport,
+        builder: (context, state) => const WeeklyReportScreen(),
       ),
       GoRoute(
         path: Routes.settings,

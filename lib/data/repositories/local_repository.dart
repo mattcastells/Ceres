@@ -110,6 +110,28 @@ class LocalRepository
   /// búsqueda sigue andando con Open Food Facts y con la tabla argentina.
   final UsdaFoodClient? usdaFoods;
 
+  /// Si el plan de la cuenta incluye la IA. Lo enlaza `bootstrap` con el
+  /// plan efectivo después de crear el contenedor, igual que [onChanged]; sin
+  /// enlazar —los tests, el modo local— la IA está permitida.
+  ///
+  /// Es la segunda de tres barreras. La primera son los botones, que ofrecen
+  /// los planes en vez de arrancar; la última es el servidor, que contesta 402
+  /// diga lo que diga el teléfono. Esta existe para el camino que no pasa por
+  /// un botón —un enlace, una pantalla que reintenta sola—: frena antes de
+  /// subir una foto o gastar un viaje que el servidor va a rechazar.
+  bool Function() aiAllowed = _aiAlways;
+
+  static bool _aiAlways() => true;
+
+  void _requireAiPlan() {
+    if (aiAllowed()) return;
+    throw const AppError(
+      code: ApiErrorCode.planRequired,
+      message: 'Esto usa IA y es parte de Premium. Podés seguir cargando a '
+          'mano, como siempre.',
+    );
+  }
+
   Future<void> _commit() async {
     await store.persist();
     onChanged();
@@ -2096,6 +2118,7 @@ class LocalRepository
 
   @override
   Future<AiAnalysis> analyzeText({required String description}) async {
+    _requireAiPlan();
     final client = aiAnalysis;
     if (client == null) {
       throw const AppError(
@@ -2114,6 +2137,7 @@ class LocalRepository
     MealSlot? slot,
     int? remainingProteinG,
   }) async {
+    _requireAiPlan();
     final client = suggestions;
     if (client == null) {
       throw const AppError(
@@ -2159,6 +2183,7 @@ class LocalRepository
     required GoalType goalType,
     required int formulaTarget,
   }) async {
+    _requireAiPlan();
     final client = calorieTargets;
     if (client == null) {
       throw const AppError(
@@ -2198,6 +2223,7 @@ class LocalRepository
     void Function(AnalysisStage stage)? onStage,
     void Function(String remotePath)? onUploaded,
   }) async {
+    _requireAiPlan();
     final client = aiAnalysis;
     if (client != null) {
       onStage?.call(AnalysisStage.preparing);
@@ -2291,6 +2317,7 @@ class LocalRepository
     void Function(AnalysisStage stage)? onStage,
     void Function(String remotePath)? onUploaded,
   }) async {
+    _requireAiPlan();
     final client = aiAnalysis;
     if (client == null) {
       throw const AppError(

@@ -56,6 +56,15 @@ abstract final class Routes {
   /// A quién le diste acceso a tu seguimiento, y qué ve.
   static const String profileCare = '/profile/care';
 
+  /// Devoluciones e indicaciones de la nutricionista.
+  static const String careFeedback = '/profile/care/feedback';
+
+  /// Gratis, Premium y Pro, con la compra simulada de la demo.
+  static const String plans = '/profile/plans';
+
+  /// El resumen semanal con IA.
+  static const String weeklyReport = '/progress/weekly';
+
   static const String settings = '/settings';
   static const String exerciseCredit = '/settings/exercise-credit';
   static const String units = '/settings/units';

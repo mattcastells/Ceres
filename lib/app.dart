@@ -10,6 +10,7 @@ import 'core/utils/dates.dart';
 import 'data/local/home_widget_publisher.dart';
 import 'presentation/providers/app_providers.dart';
 import 'presentation/providers/auth_providers.dart';
+import 'presentation/providers/plan_providers.dart';
 
 /// La app: tema, router y localización.
 ///
@@ -106,6 +107,10 @@ class _CeresAppState extends ConsumerState<CeresApp>
       ref.read(currentDayProvider.notifier).refresh();
       _publishToWidget();
       unawaited(_pullFromTables());
+      // El plan y lo que escribió la nutricionista también pueden haber
+      // cambiado afuera: una demo que volvió a Gratis, una devolución nueva
+      // publicada desde el panel mientras el teléfono estaba en el bolsillo.
+      if (ref.read(repositoryProvider).hasSession) refreshServerState(ref);
     }
   }
 

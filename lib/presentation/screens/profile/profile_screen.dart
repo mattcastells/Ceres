@@ -21,6 +21,7 @@ import '../../components/system/overlays.dart';
 import '../../components/system/surfaces.dart';
 import '../../providers/app_providers.dart';
 import '../../providers/auth_providers.dart';
+import '../../providers/plan_providers.dart';
 import '../../providers/update_providers.dart';
 import 'calorie_target_sheet.dart';
 
@@ -37,6 +38,12 @@ class ProfileScreen extends ConsumerWidget {
     final weightKg = ref.watch(currentWeightProvider);
     final activityGoals = ref.watch(activityGoalsProvider);
     final repo = ref.watch(repositoryProvider);
+    // Sin servidor no hay plan que mostrar: la app tiene todo y decirle a
+    // alguien "Premium" en un teléfono sin cuenta sería inventarle una compra.
+    final cloud = ref.watch(isCloudEnabledProvider);
+    final plan = ref.watch(planProvider);
+    final unreadFeedback =
+        ref.watch(careFeedbackProvider).valueOrNull?.unreadCount ?? 0;
 
     final preset = goal == null ? null : GoalPreset.of(goal.goalType);
     final minutes = activityGoals
@@ -177,6 +184,21 @@ class ProfileScreen extends ConsumerWidget {
             const SizedBox(height: NmSpace.s6),
           ],
 
+          if (cloud) ...<Widget>[
+            NmCard(
+              padding: const EdgeInsets.symmetric(vertical: NmSpace.s2),
+              child: NmListRow(
+                title: 'Tu plan: ${plan.label}',
+                subtitle: plan.includesAi
+                    ? 'Planes y qué incluye cada uno'
+                    : 'Sin IA y con anuncios. Mirá qué incluye Premium',
+                leading: Icon(PhosphorIcons.sparkle()),
+                onTap: () => context.push(Routes.plans),
+              ),
+            ),
+            const SizedBox(height: NmSpace.s6),
+          ],
+
           NmCard(
             padding: const EdgeInsets.symmetric(vertical: NmSpace.s2),
             child: Column(
@@ -227,8 +249,17 @@ class ProfileScreen extends ConsumerWidget {
                 const NmDivider(indent: NmSpace.s6),
                 NmListRow(
                   title: 'Mi nutricionista',
-                  subtitle: 'Darle acceso a tu seguimiento, y cortarlo',
+                  subtitle: unreadFeedback > 0
+                      ? '$unreadFeedback '
+                            '${unreadFeedback == 1 ? 'devolución nueva' : 'devoluciones nuevas'}'
+                      : 'Acceso a tu seguimiento y sus devoluciones',
                   leading: Icon(PhosphorIcons.stethoscope()),
+                  trailing: unreadFeedback == 0
+                      ? null
+                      : NmTag(
+                          label: '$unreadFeedback',
+                          variant: NmTagVariant.accent,
+                        ),
                   onTap: () => context.push(Routes.profileCare),
                 ),
                 const NmDivider(indent: NmSpace.s6),

@@ -16,6 +16,7 @@ import '../../components/feedback/feedback.dart';
 import '../../components/food/food_widgets.dart';
 import '../../components/food/meal_photo.dart';
 import '../../components/food/meal_photo_field.dart';
+import '../../components/plan/ai_gate.dart';
 import '../../components/system/buttons.dart';
 import '../../components/system/inputs.dart';
 import '../../components/system/nm_screen.dart';
@@ -127,7 +128,17 @@ class _MealFormScreenState extends ConsumerState<MealFormScreen> {
     );
   }
 
+  /// La puerta de la IA de esta pantalla. Sin IA en el plan, "Cargar a mano"
+  /// es el buscador de alimentos: es el camino que ya está en esta misma
+  /// comida, un botón más arriba.
+  bool _aiOrUpsell() => ensureAiAllowed(
+    context,
+    ref,
+    onManual: () => context.push('${Routes.foodSearch}?target=meal'),
+  );
+
   Future<void> _recalculate() async {
+    if (!_aiOrUpsell()) return;
     final done = await showRecalculateSheet(context);
     if (done != true || !mounted) return;
     NmSnackbar.show(context, 'Ítems recalculados. Revisalos y guardá.');
@@ -351,6 +362,7 @@ class _MealFormScreenState extends ConsumerState<MealFormScreen> {
                           icon: PhosphorIcons.camera(),
                           onPressed: _aiAvailable
                               ? () {
+                                  if (!_aiOrUpsell()) return;
                                   // El slot y el día los manda el borrador, no
                                   // la hora: se limpia el objetivo por si quedó
                                   // uno de otra entrada.
@@ -372,6 +384,7 @@ class _MealFormScreenState extends ConsumerState<MealFormScreen> {
                           icon: PhosphorIcons.chatText(),
                           onPressed: _aiAvailable
                               ? () {
+                                  if (!_aiOrUpsell()) return;
                                   ref
                                       .read(photoTargetProvider.notifier)
                                       .state = null;

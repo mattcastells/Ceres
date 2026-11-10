@@ -17,6 +17,7 @@ import '../../../domain/services/photo_sync_service.dart';
 import '../../components/feedback/analysis_progress.dart';
 import '../../components/feedback/feedback.dart';
 import '../../components/food/meal_photo_field.dart';
+import '../../components/plan/ai_gate.dart';
 import '../../components/system/buttons.dart';
 import '../../components/system/inputs.dart';
 import '../../components/system/overlays.dart';
@@ -207,6 +208,16 @@ class _RecalculateSheetState extends ConsumerState<RecalculateSheet> {
     _tick?.cancel();
     _descartarSubida();
     if (!mounted) return;
+    // El plan no incluye la IA (el servidor lo supo antes que la app): este
+    // sheet se cierra con la comida como estaba y se ofrecen los planes en su
+    // lugar, en vez de un error que no se arregla reintentando.
+    if (error.code == ApiErrorCode.planRequired) {
+      final root = Navigator.of(context, rootNavigator: true).context;
+      setState(() => _busy = false);
+      Navigator.of(context).pop(false);
+      handlePlanRequired(root, error);
+      return;
+    }
     setState(() {
       _busy = false;
       _error = error;

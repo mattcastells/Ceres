@@ -29,6 +29,7 @@ import '../../components/feedback/analysis_progress.dart';
 import '../../components/feedback/feedback.dart';
 import '../../components/food/food_widgets.dart';
 import '../../components/food/meal_photo.dart';
+import '../../components/plan/ai_gate.dart';
 import '../../components/system/buttons.dart';
 import '../../components/system/dictation.dart';
 import '../../components/system/inputs.dart';
@@ -580,7 +581,10 @@ class _PhotoAnalyzingScreenState extends ConsumerState<PhotoAnalyzingScreen>
       context.pushReplacement(Routes.photoReview);
     } on AppError catch (error) {
       if (!mounted || _cancelled) return;
+      // Abajo queda el fallo con sus salidas de siempre; arriba, los planes y
+      // el mismo "cargar a mano", que arma la comida con esta foto.
       _fallo(error);
+      handlePlanRequired(context, error, onManual: _manual);
     } on Object catch (error) {
       if (!mounted || _cancelled) return;
       _fallo(

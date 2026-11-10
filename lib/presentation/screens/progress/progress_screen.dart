@@ -12,9 +12,13 @@ import '../../../domain/services/summary_builder.dart';
 import '../../components/activity/activity_cards.dart';
 import '../../components/charts/charts.dart';
 import '../../components/feedback/feedback.dart';
+import '../../components/plan/ad_banner.dart';
+import '../../components/plan/ai_gate.dart';
 import '../../components/system/nm_screen.dart';
 import '../../components/system/surfaces.dart';
 import '../../providers/app_providers.dart';
+import '../../providers/auth_providers.dart';
+import '../../providers/plan_providers.dart';
 import '../weight/weight_sheet.dart';
 
 /// S-23 · Progreso. Muestra tendencia sin juicio de valor.
@@ -27,6 +31,8 @@ class ProgressScreen extends ConsumerWidget {
     final range = ref.watch(progressRangeProvider);
     final progress = ref.watch(progressProvider);
     final units = ref.watch(unitSystemProvider);
+    final cloud = ref.watch(isCloudEnabledProvider);
+    final plan = ref.watch(planProvider);
 
     return NmScreen(
       title: 'Progreso',
@@ -55,6 +61,32 @@ class ProgressScreen extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: NmSpace.s8),
+
+          // El resumen semanal con IA. Arriba de los gráficos porque es la
+          // lectura de todo lo de abajo; y solo con servidor, que es quien lo
+          // arma.
+          if (cloud) ...<Widget>[
+            NmCard(
+              padding: const EdgeInsets.symmetric(vertical: NmSpace.s2),
+              child: NmListRow(
+                title: 'Tu semana con IA',
+                subtitle: 'Lo que salió bien, lo que se repite y algo para '
+                    'probar',
+                leading: Icon(PhosphorIcons.sparkle()),
+                trailing: plan.includesAi
+                    ? null
+                    : const NmTag(
+                        label: 'Premium',
+                        variant: NmTagVariant.outline,
+                      ),
+                onTap: () {
+                  if (!ensureAiAllowed(context, ref)) return;
+                  context.push(Routes.weeklyReport);
+                },
+              ),
+            ),
+            const SizedBox(height: NmSpace.s8),
+          ],
 
           // Peso.
           NmSectionHeader(
@@ -180,6 +212,9 @@ class ProgressScreen extends ConsumerWidget {
               ],
             ),
           ),
+          // Abajo de todo y lejos del peso: el anuncio no puede quedar al
+          // lado de un número del cuerpo de nadie. Solo en el plan gratis.
+          const AdBanner(padding: EdgeInsets.only(top: NmSpace.s6)),
         ],
       ),
     );
