@@ -62,6 +62,16 @@ Requiere npm      'Viene con Node.'
 if ($Telefono -or $Emulador) { Requiere flutter 'Instalá Flutter y agregalo al PATH.' }
 if ($Telefono) { Requiere cloudflared 'Instalá cloudflared: winget install Cloudflare.cloudflared' }
 
+# `adb` muchas veces no está en el PATH: se busca en el SDK de Android.
+$Adb = 'adb'
+if (-not (Get-Command adb -ErrorAction SilentlyContinue)) {
+  foreach ($sdk in @($env:ANDROID_HOME, $env:ANDROID_SDK_ROOT, (Join-Path $env:LOCALAPPDATA 'Android\Sdk'))) {
+    if (-not $sdk) { continue }
+    $candidato = Join-Path $sdk 'platform-tools\adb.exe'
+    if (Test-Path $candidato) { $Adb = $candidato; break }
+  }
+}
+
 # ── 1 · Configuración local (.env.demo) ───────────────────────────────────
 $EnvFile = Join-Path $Demo '.env.demo'
 if (-not (Test-Path $EnvFile)) {
@@ -180,7 +190,7 @@ if ($Emulador) {
     $id = ($emu.ToString() -split '•')[0].Trim()
     flutter emulators --launch $id | Out-Null
   }
-  Start-Process powershell -ArgumentList '-NoExit', '-Command', "Set-Location '$Raiz'; `$host.UI.RawUI.WindowTitle = 'Ceres demo · app'; `$env:CERES_DEMO='1'; adb wait-for-device; flutter run --dart-define-from-file=env/demo-emulador.json"
+  Start-Process powershell -ArgumentList '-NoExit', '-Command', "Set-Location '$Raiz'; `$host.UI.RawUI.WindowTitle = 'Ceres demo · app'; `$env:CERES_DEMO='1'; & '$Adb' wait-for-device; flutter run --dart-define-from-file=env/demo-emulador.json"
 }
 
 if ($Telefono) {
@@ -206,8 +216,8 @@ if ($Telefono) {
   flutter build apk --debug --dart-define-from-file=env/demo-telefono.json
   if ($LASTEXITCODE -ne 0) { Falla 'No compiló el APK.' }
   $apk = Join-Path $Raiz 'build\app\outputs\flutter-apk\app-debug.apk'
-  if (adb devices | Select-String "`tdevice$") {
-    adb install -r $apk
+  if (& $Adb devices | Select-String "`tdevice$") {
+    & $Adb install -r $apk
   } else {
     Write-Host 'No hay un teléfono conectado por USB: instalá el APK a mano.' -ForegroundColor Yellow
   }
