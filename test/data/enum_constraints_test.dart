@@ -108,6 +108,8 @@ const Set<String> _noLasEscribeLaApp = <String>{
   'account_plans_plan',
   'care_feedback_kind',
   'care_feedback_source',
+  // Artículos y recetas (migración 52): los escribe el panel; la app los lee.
+  'care_articles_kind',
   'care_reports_kind',
   'org_members_role',
   'foods_source', // el cliente manda 'user' fijo, no el enum
