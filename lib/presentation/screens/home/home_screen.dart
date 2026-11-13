@@ -333,7 +333,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                   // una caminata y una entrada de gimnasio ya
                                   // son dos.
                                   if (!summary.isRestDay) ...<Widget>[
-                                    const SizedBox(height: NmSpace.s2),
+                                    if (summary.activities.isNotEmpty)
+                                      const SizedBox(height: NmSpace.s2),
                                     Align(
                                       alignment: Alignment.centerLeft,
                                       child: NmButton.ghost(

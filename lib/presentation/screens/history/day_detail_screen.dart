@@ -147,7 +147,8 @@ class DayDetailScreen extends ConsumerWidget {
                     },
                   ),
                 if (!summary.isRestDay) ...<Widget>[
-                  const SizedBox(height: NmSpace.s2),
+                  if (summary.activities.isNotEmpty)
+                    const SizedBox(height: NmSpace.s2),
                   NmButton.ghost(
                     label: summary.activities.isEmpty
                         ? 'Agregar actividad'

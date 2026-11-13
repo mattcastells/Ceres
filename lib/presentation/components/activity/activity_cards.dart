@@ -350,14 +350,9 @@ class ActivitySummaryCard extends StatelessWidget {
       );
     }
 
-    // Sin "hoy": la misma tarjeta se ve en cualquier día de Inicio y en el
-    // detalle del historial, y un martes pasado decía "hoy".
-    if (totals.sessions == 0) {
-      return Text(
-        'Sin actividad registrada.',
-        style: NmTextStyles.from(NmType.bodySm, color: nm.textMuted),
-      );
-    }
+    // Sin actividad no dice nada: la tarjeta queda con su "Agregar actividad"
+    // y el total aparece cuando se carga la primera.
+    if (totals.sessions == 0) return const SizedBox.shrink();
 
     return Semantics(
       label:

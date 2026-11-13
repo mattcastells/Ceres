@@ -128,7 +128,6 @@ class _PalsScreenState extends ConsumerState<PalsScreen> {
       context: context,
       builder: (context) => NmDialog(
         title: '¿Quitar a ${pal.label}?',
-        body: 'Deja de ver tu día y vos el suyo.',
         actions: <Widget>[
           NmButton.ghost(
             label: 'Cancelar',
@@ -170,11 +169,6 @@ class _PalsScreenState extends ConsumerState<PalsScreen> {
       title: 'Pals',
       actions: <Widget>[
         NmIconButton(
-          icon: PhosphorIcons.gear(),
-          tooltip: 'Qué ven mis pals',
-          onPressed: () => context.push(Routes.palSharing),
-        ),
-        NmIconButton(
           icon: PhosphorIcons.arrowsClockwise(),
           tooltip: 'Actualizar',
           onPressed: () => ref.invalidate(palsProvider),
@@ -210,12 +204,6 @@ class _PalsScreenState extends ConsumerState<PalsScreen> {
               ],
             ),
           ),
-          const SizedBox(height: NmSpace.s2),
-          Text(
-            'Pasáselo a quien quieras agregar.',
-            style: NmTextStyles.from(NmType.caption, color: nm.textMuted),
-          ),
-
           const SizedBox(height: NmSpace.s6),
           const NmSectionHeader(title: 'Agregar un pal'),
           NmTextField(
@@ -250,10 +238,13 @@ class _PalsScreenState extends ConsumerState<PalsScreen> {
           ),
 
           const SizedBox(height: NmSpace.s6),
-          Text(
-            'Un pal siempre ve qué comiste y si te moviste; lo demás lo '
-            'elegís vos. Tu peso y tus medidas nunca se comparten.',
-            style: NmTextStyles.from(NmType.bodySm, color: nm.textMuted),
+          // Antes vivía en Perfil y en un engranaje de la barra: acá, a la
+          // vista, que es donde se piensa en los pals.
+          NmButton.secondary(
+            label: 'Qué ven mis pals',
+            block: true,
+            icon: PhosphorIcons.slidersHorizontal(),
+            onPressed: () => context.push(Routes.palSharing),
           ),
         ],
       ),

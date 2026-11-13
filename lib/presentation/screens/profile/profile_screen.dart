@@ -266,16 +266,6 @@ class ProfileScreen extends ConsumerWidget {
                   onTap: () => context.push(Routes.profileCare),
                 ),
                 const NmDivider(indent: NmSpace.s6),
-                // Sin el contador de solicitudes: esta fila lleva a qué ven,
-                // donde no se pueden responder. El aviso vive en el puntito de
-                // la tab de Pals, que es donde se aceptan.
-                NmListRow(
-                  title: 'Qué ven mis pals',
-                  subtitle: 'Fotos, agua, sueño y detalle de actividad',
-                  leading: Icon(PhosphorIcons.users()),
-                  onTap: () => context.push(Routes.palSharing),
-                ),
-                const NmDivider(indent: NmSpace.s6),
                 NmListRow(
                   title: 'Configuración',
                   leading: Icon(PhosphorIcons.gear()),
