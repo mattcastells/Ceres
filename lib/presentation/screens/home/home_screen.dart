@@ -125,7 +125,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             // igual que el de uno ya comido.
                             if (isFutureDate) ...<Widget>[
                               const InfoNote(
-                                text: 'Estás planificando un día que todavía '
+                                text:
+                                    'Estás planificando un día que todavía '
                                     'no llegó.',
                               ),
                               const SizedBox(height: NmSpace.s5),
@@ -148,7 +149,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             if (profile.birthDate == null ||
                                 profile.heightCm == null) ...<Widget>[
                               InfoNote(
-                                text: 'Este objetivo es genérico: sale de '
+                                text:
+                                    'Este objetivo es genérico: sale de '
                                     'tus datos cuando los cargues.',
                                 action: 'Cargar mis datos',
                                 onAction: () =>
@@ -196,50 +198,53 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               const SizedBox(height: NmSpace.s8),
                             ],
 
-                            // Comidas: 4 secciones por slot, sin encabezado
-                            // propio — cada slot ya se nombra solo.
-                            for (final slot in MealSlot.values)
-                              Padding(
-                                padding: const EdgeInsets.only(
-                                  bottom: NmSpace.s4,
-                                ),
-                                child: MealSection(
-                                  slot: slot,
-                                  meals: summary.mealsFor(slot),
-                                  // Los días futuros dentro de la ventana se
-                                  // pueden cargar: es la planificación.
-                                  onAdd: () => showAddToSlotSheet(
-                                    context,
+                            // Comidas: una tarjeta con los cuatro momentos del
+                            // día, como Actividad y Peso más abajo.
+                            const NmSectionHeader(title: 'Comidas'),
+                            MealsCard(
+                              sections: <Widget>[
+                                for (final slot in MealSlot.values)
+                                  MealSection(
                                     slot: slot,
-                                    date: date,
-                                  ),
-                                  onOpenMeal: (meal) =>
-                                      context.push(Routes.meal(meal.id)),
-                                  onDeleteMeal: (meal) async {
-                                    await repo.deleteMeal(meal.id);
-                                    if (!context.mounted) return;
-                                    NmSnackbar.show(
+                                    meals: summary.mealsFor(slot),
+                                    // Los días futuros dentro de la ventana se
+                                    // pueden cargar: es la planificación.
+                                    onAdd: () => showAddToSlotSheet(
                                       context,
-                                      'Comida eliminada',
-                                      actionLabel: 'Deshacer',
-                                      undo: true,
-                                      onAction: () =>
-                                          repo.restoreMeal(meal.id),
-                                    );
-                                  },
-                                  onDuplicateMeal: (meal) async {
-                                    await repo.duplicateMeal(
-                                      meal.id,
-                                      date,
-                                      meal.slot,
-                                    );
-                                    if (!context.mounted) return;
-                                    NmSnackbar.show(context, 'Comida duplicada');
-                                  },
-                                ),
-                              ),
+                                      slot: slot,
+                                      date: date,
+                                    ),
+                                    onOpenMeal: (meal) =>
+                                        context.push(Routes.meal(meal.id)),
+                                    onDeleteMeal: (meal) async {
+                                      await repo.deleteMeal(meal.id);
+                                      if (!context.mounted) return;
+                                      NmSnackbar.show(
+                                        context,
+                                        'Comida eliminada',
+                                        actionLabel: 'Deshacer',
+                                        undo: true,
+                                        onAction: () =>
+                                            repo.restoreMeal(meal.id),
+                                      );
+                                    },
+                                    onDuplicateMeal: (meal) async {
+                                      await repo.duplicateMeal(
+                                        meal.id,
+                                        date,
+                                        meal.slot,
+                                      );
+                                      if (!context.mounted) return;
+                                      NmSnackbar.show(
+                                        context,
+                                        'Comida duplicada',
+                                      );
+                                    },
+                                  ),
+                              ],
+                            ),
 
-                            const SizedBox(height: NmSpace.s6),
+                            const SizedBox(height: NmSpace.s8),
 
                             // Actividad.
                             //
@@ -266,13 +271,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                         profile.effectiveCreditPercentage,
                                     isRestDay: summary.isRestDay,
                                   ),
-                                  if (summary.activities.isNotEmpty) ...<Widget>[
+                                  if (summary
+                                      .activities
+                                      .isNotEmpty) ...<Widget>[
                                     const SizedBox(height: NmSpace.s3),
                                     const NmDivider(),
                                   ],
-                                  for (var i = 0;
-                                      i < summary.activities.length;
-                                      i++)
+                                  for (
+                                    var i = 0;
+                                    i < summary.activities.length;
+                                    i++
+                                  )
                                     StaggeredItem(
                                       index: i,
                                       child: ActivityListItem(
@@ -487,4 +496,3 @@ class _HomeSkeleton extends StatelessWidget {
     ],
   );
 }
-

@@ -72,36 +72,38 @@ class DayDetailScreen extends ConsumerWidget {
           ],
           const SizedBox(height: NmSpace.s8),
 
-          // Las comidas van sin encabezado: los cuatro slots ya se nombran
-          // solos y "Comidas" arriba de "Desayuno" no agregaba nada.
-          for (final slot in MealSlot.values)
-            Padding(
-              padding: const EdgeInsets.only(bottom: NmSpace.s4),
-              child: MealSection(
-                slot: slot,
-                meals: summary.mealsFor(slot),
-                onAdd: () => showAddToSlotSheet(context, slot: slot, date: date),
-                onOpenMeal: (meal) => context.push(Routes.meal(meal.id)),
-                onDeleteMeal: (meal) async {
-                  await repo.deleteMeal(meal.id);
-                  if (!context.mounted) return;
-                  NmSnackbar.show(
-                    context,
-                    'Comida eliminada',
-                    actionLabel: 'Deshacer',
-                    undo: true,
-                    onAction: () => repo.restoreMeal(meal.id),
-                  );
-                },
-                onDuplicateMeal: (meal) async {
-                  await repo.duplicateMeal(meal.id, date, meal.slot);
-                  if (!context.mounted) return;
-                  NmSnackbar.show(context, 'Comida duplicada');
-                },
-              ),
-            ),
+          // Igual que en Inicio: una tarjeta con los cuatro momentos.
+          const NmSectionHeader(title: 'Comidas'),
+          MealsCard(
+            sections: <Widget>[
+              for (final slot in MealSlot.values)
+                MealSection(
+                  slot: slot,
+                  meals: summary.mealsFor(slot),
+                  onAdd: () =>
+                      showAddToSlotSheet(context, slot: slot, date: date),
+                  onOpenMeal: (meal) => context.push(Routes.meal(meal.id)),
+                  onDeleteMeal: (meal) async {
+                    await repo.deleteMeal(meal.id);
+                    if (!context.mounted) return;
+                    NmSnackbar.show(
+                      context,
+                      'Comida eliminada',
+                      actionLabel: 'Deshacer',
+                      undo: true,
+                      onAction: () => repo.restoreMeal(meal.id),
+                    );
+                  },
+                  onDuplicateMeal: (meal) async {
+                    await repo.duplicateMeal(meal.id, date, meal.slot);
+                    if (!context.mounted) return;
+                    NmSnackbar.show(context, 'Comida duplicada');
+                  },
+                ),
+            ],
+          ),
 
-          const SizedBox(height: NmSpace.s6),
+          const SizedBox(height: NmSpace.s8),
           // Igual que en Inicio: el resumen, la lista y **siempre** el botón de
           // sumar otra. Acá el botón solo aparecía con el día vacío, así que
           // después de cargar una actividad no quedaba cómo cargar la segunda,
