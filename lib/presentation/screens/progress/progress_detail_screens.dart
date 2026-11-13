@@ -58,84 +58,86 @@ class WeightChartScreen extends ConsumerWidget {
             children: <Widget>[
               StatCard(
                 label: 'Variación',
-                value:
-                    '${Fmt.signedDecimal1(progress.weightDeltaKg)} '
-                    '${Fmt.weightUnit(units)}',
+                value: Fmt.signedWeight(progress.weightDeltaKg, units),
               ),
               StatCard(
                 label: 'Tendencia semanal',
                 value: progress.trendKgPerWeek == null
                     ? '—'
-                    : '${Fmt.signedDecimal1(progress.trendKgPerWeek!)} kg',
+                    : Fmt.signedWeight(progress.trendKgPerWeek!, units),
                 caption: progress.trendKgPerWeek == null
                     ? 'Necesitamos unos días más de registro'
                     : null,
               ),
             ],
           ),
-          const SizedBox(height: NmSpace.s8),
-          const NmSectionHeader(title: 'Registros'),
-          NmCard(
-            padding: const EdgeInsets.symmetric(vertical: NmSpace.s1),
-            child: Column(
-              children: <Widget>[
-                for (final log in logs.take(20))
-                  Dismissible(
-                    key: ValueKey<String>(log.id),
-                    direction: DismissDirection.endToStart,
-                    background: Container(
-                      alignment: Alignment.centerRight,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: NmSpace.s6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: nm.danger.withValues(alpha: 0.14),
-                        borderRadius: NmRadius.brMd,
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: <Widget>[
-                          Icon(
-                            PhosphorIcons.trash(),
-                            size: NmIconSize.md,
-                            color: nm.danger,
-                          ),
-                          const SizedBox(width: NmSpace.s2),
-                          Text(
-                            'Eliminar',
-                            style: NmTextStyles.from(
-                              NmType.caption,
+          // Sin pesos no hay lista: el encabezado y una tarjeta vacía debajo
+          // del gráfico parecían algo que no terminó de cargar.
+          if (logs.isNotEmpty) ...<Widget>[
+            const SizedBox(height: NmSpace.s8),
+            const NmSectionHeader(title: 'Registros'),
+            NmCard(
+              padding: const EdgeInsets.symmetric(vertical: NmSpace.s1),
+              child: Column(
+                children: <Widget>[
+                  for (final log in logs.take(20))
+                    Dismissible(
+                      key: ValueKey<String>(log.id),
+                      direction: DismissDirection.endToStart,
+                      background: Container(
+                        alignment: Alignment.centerRight,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: NmSpace.s6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: nm.danger.withValues(alpha: 0.14),
+                          borderRadius: NmRadius.brMd,
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: <Widget>[
+                            Icon(
+                              PhosphorIcons.trash(),
+                              size: NmIconSize.md,
                               color: nm.danger,
                             ),
-                          ),
-                        ],
+                            const SizedBox(width: NmSpace.s2),
+                            Text(
+                              'Eliminar',
+                              style: NmTextStyles.from(
+                                NmType.caption,
+                                color: nm.danger,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      confirmDismiss: (_) async {
+                        final id = log.id;
+                        await repo.deleteWeight(id);
+                        if (context.mounted) {
+                          NmSnackbar.show(
+                            context,
+                            'Registro eliminado',
+                            actionLabel: 'Deshacer',
+                            undo: true,
+                            onAction: () => repo.restoreWeight(id),
+                          );
+                        }
+                        return false;
+                      },
+                      child: _WeightLogRow(
+                        day: friendlyDay(log.localDate),
+                        value: Fmt.weightValue(log.weightKg, units),
+                        unit: Fmt.weightUnit(units),
+                        onEdit: () =>
+                            showWeightSheet(context, date: log.localDate),
                       ),
                     ),
-                    confirmDismiss: (_) async {
-                      final id = log.id;
-                      await repo.deleteWeight(id);
-                      if (context.mounted) {
-                        NmSnackbar.show(
-                          context,
-                          'Registro eliminado',
-                          actionLabel: 'Deshacer',
-                          undo: true,
-                          onAction: () => repo.restoreWeight(id),
-                        );
-                      }
-                      return false;
-                    },
-                    child: _WeightLogRow(
-                      day: friendlyDay(log.localDate),
-                      value: Fmt.weightValue(log.weightKg, units),
-                      unit: Fmt.weightUnit(units),
-                      onEdit: () =>
-                          showWeightSheet(context, date: log.localDate),
-                    ),
-                  ),
-              ],
+                ],
+              ),
             ),
-          ),
+          ],
           const SizedBox(height: NmSpace.s6),
           NmButton(
             label: 'Registrar peso',
@@ -292,9 +294,8 @@ class ActivityProgressScreen extends ConsumerWidget {
         title: 'Actividad',
         child: EmptyState(
           icon: PhosphorIcons.personSimpleRun(),
-          title: 'Todavía no registraste actividad en este período',
-          body: 'Cuando registres una, vas a ver acá los minutos, las '
-              'sesiones y la distribución por categoría.',
+          title: 'Sin actividad en este período',
+          body: 'Acá vas a ver los minutos, las sesiones y las categorías.',
         ),
       );
     }
@@ -401,16 +402,15 @@ class ActivityGoalsScreen extends ConsumerWidget {
         children: <Widget>[
           const SizedBox(height: NmSpace.s4),
           const InfoNote(
-            text: 'Los objetivos de actividad nunca reducen tu objetivo '
-                'calórico ni bloquean nada. Podés usar Ceres sin '
-                'configurar ninguno.',
+            text: 'Son opcionales y no cambian tu objetivo calórico.',
           ),
           const SizedBox(height: NmSpace.s6),
           if (progress.goals.isEmpty)
             EmptyState(
               icon: PhosphorIcons.target(),
               title: 'Sin objetivos configurados',
-              body: 'Los objetivos de actividad son opcionales.',
+              body: 'Minutos, sesiones, pasos o días activos, por día o por '
+                  'semana.',
               primaryLabel: 'Crear un objetivo',
               onPrimary: () => _showGoalSheet(context, ref, null),
             )
@@ -666,7 +666,7 @@ class _MeasurementsScreenState extends ConsumerState<MeasurementsScreen> {
           ),
           const SizedBox(height: NmSpace.s5),
           NmButton(
-            label: 'Guardar medidas',
+            label: 'Guardar',
             block: true,
             loading: _saving,
             onPressed: _save,

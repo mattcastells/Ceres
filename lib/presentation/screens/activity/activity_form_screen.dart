@@ -288,8 +288,8 @@ class _ActivityFormScreenState extends ConsumerState<ActivityFormScreen> {
       builder: (context) => StatefulBuilder(
         builder: (context, setLocal) => NmDialog(
           title: 'Ingresar otro valor',
-          body: 'El cálculo por MET da ${Fmt.integer(calculated)} kcal. '
-              'Guardamos el valor original para que no se pierda.',
+          body: 'El valor calculado es ${Fmt.integer(calculated)} kcal y '
+              'queda guardado aparte.',
           content: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
@@ -325,7 +325,7 @@ class _ActivityFormScreenState extends ConsumerState<ActivityFormScreen> {
               onPressed: () => Navigator.of(context).pop(),
             ),
             NmButton(
-              label: 'Guardar valor',
+              label: 'Guardar',
               onPressed: () {
                 final value = int.tryParse(controller.text);
                 if (value == null || value < 1 || value > 10000) return;
@@ -361,7 +361,7 @@ class _ActivityFormScreenState extends ConsumerState<ActivityFormScreen> {
       ),
     );
     if (!mounted) return;
-    NmSnackbar.show(context, 'Guardamos la plantilla');
+    NmSnackbar.show(context, 'Plantilla guardada');
   }
 
   @override
@@ -683,9 +683,8 @@ class _ActivityFormScreenState extends ConsumerState<ActivityFormScreen> {
                             ),
                             const SizedBox(height: NmSpace.s2),
                             const InfoNote(
-                              text: 'La frecuencia cardíaca se guarda como dato '
-                                  'descriptivo: no entra en el cálculo de '
-                                  'calorías.',
+                              text: 'La frecuencia cardíaca no entra en el '
+                                  'cálculo de calorías.',
                             ),
                             const SizedBox(height: NmSpace.s4),
                           ],
@@ -698,14 +697,6 @@ class _ActivityFormScreenState extends ConsumerState<ActivityFormScreen> {
                           NmButton.ghost(
                             label: 'Guardar como plantilla',
                             onPressed: _saveAsTemplate,
-                          ),
-                        ],
-
-                        if (_isStrength) ...<Widget>[
-                          const SizedBox(height: NmSpace.s6),
-                          const InfoNote(
-                            text: 'Series y repeticiones llegan en una próxima '
-                                'versión.',
                           ),
                         ],
 

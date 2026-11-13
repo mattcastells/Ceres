@@ -51,7 +51,7 @@ class SettingsScreen extends ConsumerWidget {
                 NmListRow(
                   title: 'Crédito de ejercicio',
                   subtitle: profile.effectiveCreditPercentage == 0
-                      ? 'El ejercicio no suma a tu presupuesto'
+                      ? 'El ejercicio no suma a tu objetivo'
                       : 'Suma el ${profile.effectiveCreditPercentage} %',
                   leading: Icon(PhosphorIcons.personSimpleRun()),
                   onTap: () => context.push(Routes.exerciseCredit),
@@ -103,7 +103,7 @@ class SettingsScreen extends ConsumerWidget {
                   title: 'Respaldo en la nube',
                   subtitle: ref.watch(isCloudEnabledProvider)
                       ? 'Se guarda solo cada vez que registrás algo'
-                      : 'Esta compilación no tiene servidor',
+                      : 'Esta versión no tiene servidor',
                   leading: Icon(PhosphorIcons.cloudArrowUp()),
                   onTap: () => context.push(Routes.cloudBackup),
                 ),
@@ -130,7 +130,7 @@ class SettingsScreen extends ConsumerWidget {
               children: <Widget>[
                 NmSwitchRow(
                   title: 'Mostrar calorías netas',
-                  subtitle: 'Consumidas menos aplicadas, en Inicio',
+                  subtitle: 'Consumido − ejercicio, en Inicio',
                   value: profile.showNetCalories,
                   onChanged: repo.setShowNetCalories,
                 ),
@@ -177,7 +177,7 @@ class _ExerciseCreditScreenState extends ConsumerState<ExerciseCreditScreen> {
         children: <Widget>[
           const SizedBox(height: NmSpace.s4),
           Text(
-            'Sumar las calorías del ejercicio a mi presupuesto diario',
+            'Sumar las calorías del ejercicio a mi objetivo diario',
             style: NmTextStyles.from(NmType.h3, color: context.nm.text),
           ),
           const SizedBox(height: NmSpace.s6),
@@ -185,27 +185,19 @@ class _ExerciseCreditScreenState extends ConsumerState<ExerciseCreditScreen> {
             value: profile.exerciseCreditPercentage,
             enabled: profile.exerciseCreditEnabled,
             previewEstimatedCalories: summary.exerciseEstimatedKcal,
+            // Siempre prendido con lo elegido: el 0 % ya es "no sumar". Antes
+            // se pasaba el `enabled` del perfil, que con el ajuste apagado
+            // seguía en false y el porcentaje elegido no se aplicaba.
             onChanged: (value) {
               setState(() => _changed = true);
-              repo.setExerciseCredit(
-                percentage: value,
-                enabled: profile.exerciseCreditEnabled,
-              );
-            },
-            onToggleEnabled: (enabled) {
-              setState(() => _changed = true);
-              repo.setExerciseCredit(
-                percentage: profile.exerciseCreditPercentage,
-                enabled: enabled,
-              );
+              repo.setExerciseCredit(percentage: value, enabled: true);
             },
           ),
           if (_changed) ...<Widget>[
             const SizedBox(height: NmSpace.s6),
             const InfoNote(
               tone: NmNoteTone.info,
-              text: 'Aplicamos el cambio desde hoy. Los días anteriores '
-                  'quedan como estaban.',
+              text: 'Rige desde hoy; los días anteriores no cambian.',
             ),
           ],
         ],
@@ -265,12 +257,6 @@ class AppearanceScreen extends ConsumerWidget {
               ],
             ),
           ),
-          const SizedBox(height: NmSpace.s4),
-          const InfoNote(
-            text: 'El tema oscuro es el canónico del sistema de diseño; el '
-                'claro se deriva invirtiendo la rampa neutral y bajando el '
-                'acento un paso para conservar el contraste.',
-          ),
         ],
       ),
     );
@@ -304,8 +290,7 @@ class UnitsScreen extends ConsumerWidget {
             ),
           const SizedBox(height: NmSpace.s4),
           const InfoNote(
-            text: 'La conversión es solo de presentación: por dentro todo se '
-                'guarda en kilos, centímetros y metros.',
+            text: 'Por dentro todo se guarda en kilos, centímetros y metros.',
           ),
         ],
       ),
@@ -341,14 +326,12 @@ class _IntegrationsScreenState extends ConsumerState<IntegrationsScreen> {
             InfoNote(
               tone: NmNoteTone.caution,
               text: repo.isPlatformSupported
-                  ? 'Esta compilación tiene la importación apagada '
-                        '(`NM_HEALTH_SYNC=false`).'
+                  ? 'Esta versión tiene la importación apagada.'
                   : 'Health Connect está disponible solo en Android.',
             ),
             const SizedBox(height: NmSpace.s6),
             const InfoNote(
-              text: 'Ceres funciona completo con registro manual: ninguna '
-                  'pantalla obligatoria depende de una integración externa.',
+              text: 'Podés usar Ceres completo cargando todo a mano.',
             ),
           ],
         ),
@@ -503,9 +486,8 @@ class _IntegrationsScreenState extends ConsumerState<IntegrationsScreen> {
           ),
           const SizedBox(height: NmSpace.s6),
           const InfoNote(
-            text: 'Usamos las calorías activas del proveedor, no el total: el '
-                'total incluye el metabolismo basal, que ya está dentro de tu '
-                'objetivo.',
+            text: 'Se importan solo las calorías activas: el metabolismo basal '
+                'ya está en tu objetivo.',
           ),
           const SizedBox(height: NmSpace.s4),
           if (integration.importedCount > 0)
@@ -588,7 +570,7 @@ class PrivacyScreen extends ConsumerWidget {
             text: cloudEnabled
                 ? 'Tus datos se guardan en Supabase a medida que registrás '
                       'algo; las fotos se analizan con Gemini.'
-                : 'Esta compilación no tiene servidor: todo vive solo en tu '
+                : 'Esta versión no tiene servidor: todo vive solo en tu '
                       'teléfono y no sale de acá.',
           ),
           const SizedBox(height: NmSpace.s3),
@@ -596,20 +578,17 @@ class PrivacyScreen extends ConsumerWidget {
           // arriba, y por eso se explica acá: cada permiso que pedimos tiene
           // que poder justificarse en esta pantalla.
           const InfoNote(
-            text: 'El micrófono se usa solo mientras dictás una comida, y lo '
-                'transcribe tu propio teléfono: no guardamos el audio ni lo '
-                'mandamos a ningún lado.',
+            text: 'El micrófono se usa solo mientras dictás, y la transcripción '
+                'la hace tu teléfono: el audio no se guarda ni se envía.',
           ),
           const SizedBox(height: NmSpace.s6),
           const NmSectionHeader(title: 'Respaldo'),
           InfoNote(
             tone: cloudEnabled ? NmNoteTone.info : NmNoteTone.caution,
             text: cloudEnabled
-                ? 'Ya tenés respaldo automático en la nube (Configuración → '
-                      'Respaldo en la nube). Este archivo es una copia '
-                      'portátil adicional, para llevarte los datos a mano.'
-                : 'Sin servidor, este archivo es tu único respaldo: si '
-                      'perdés el teléfono, perdés el historial. Guardalo '
+                ? 'Ya tenés respaldo automático en la nube. Este archivo es una '
+                      'copia extra para guardar vos.'
+                : 'Sin servidor, este archivo es tu único respaldo. Guardalo '
                       'cada tanto en Drive o mandátelo por correo.',
           ),
           const SizedBox(height: NmSpace.s4),
@@ -891,9 +870,8 @@ class AboutScreen extends ConsumerWidget {
           const Center(child: BrandWordmark(markSize: 40)),
           const SizedBox(height: NmSpace.s6),
           Text(
-            'Ceres muestra el cálculo completo del día en vez de un único '
-            'número mágico, y nunca presenta una estimación como si fuera una '
-            'medición.',
+            'Ceres muestra el cálculo completo del día y marca qué es una '
+            'estimación.',
             style: NmTextStyles.from(NmType.bodySm, color: nm.textMuted),
           ),
           const SizedBox(height: NmSpace.s6),

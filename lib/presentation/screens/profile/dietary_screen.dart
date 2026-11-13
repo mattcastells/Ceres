@@ -137,8 +137,7 @@ class _DietaryPickerState extends State<DietaryPicker> {
         ),
         const SizedBox(height: NmSpace.s4),
         Text(
-          'Esto es tuyo y no se comparte con nadie: ni con tus pals, ni en el '
-          'día que ellos ven.',
+          'No se comparte con nadie.',
           style: NmTextStyles.from(NmType.caption, color: nm.textMuted),
         ),
       ],

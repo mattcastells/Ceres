@@ -316,9 +316,7 @@ class ActivitySummaryCard extends StatelessWidget {
     required this.estimatedCalories,
     required this.appliedCalories,
     required this.creditPercentage,
-    this.onAdd,
     this.isRestDay = false,
-    this.onRestDay,
     super.key,
   });
 
@@ -327,12 +325,11 @@ class ActivitySummaryCard extends StatelessWidget {
   final int appliedCalories;
   final int creditPercentage;
 
-  /// El "Agregar" chico de la derecha cuando no hay actividad. Solo para las
-  /// pantallas que no tienen otro botón para lo mismo (el detalle de un día
-  /// del historial); Inicio no lo pasa porque ya tiene "Agregar actividad".
-  final VoidCallback? onAdd;
+  /// Solo lo dice: el descanso se marca y se desmarca en "Cómo estuvo el día".
+  /// Acá había un "Quitar" que hacía lo mismo que el checkbox de abajo, en la
+  /// misma pantalla. Lo mismo con el "Agregar" chico de la derecha: quien usa
+  /// esta tarjeta ya tiene su "Agregar actividad" debajo de la lista.
   final bool isRestDay;
-  final VoidCallback? onRestDay;
 
   @override
   Widget build(BuildContext context) {
@@ -349,29 +346,22 @@ class ActivitySummaryCard extends StatelessWidget {
               style: NmTextStyles.from(NmType.bodySm, color: nm.textMuted),
             ),
           ),
-          if (onRestDay != null)
-            NmButton.ghost(label: 'Quitar', onPressed: onRestDay),
         ],
       );
     }
 
+    // Sin "hoy": la misma tarjeta se ve en cualquier día de Inicio y en el
+    // detalle del historial, y un martes pasado decía "hoy".
     if (totals.sessions == 0) {
-      return Row(
-        children: <Widget>[
-          Expanded(
-            child: Text(
-              'Todavía no registraste actividad hoy.',
-              style: NmTextStyles.from(NmType.bodySm, color: nm.textMuted),
-            ),
-          ),
-          if (onAdd != null) NmButton.ghost(label: 'Agregar', onPressed: onAdd),
-        ],
+      return Text(
+        'Sin actividad registrada.',
+        style: NmTextStyles.from(NmType.bodySm, color: nm.textMuted),
       );
     }
 
     return Semantics(
       label:
-          'Actividad de hoy: ${totals.minutes} minutos, aproximadamente '
+          'Actividad del día: ${totals.minutes} minutos, aproximadamente '
           '${Fmt.integer(estimatedCalories)} calorías estimadas, '
           '${totals.sessions} ${totals.sessions == 1 ? 'sesión' : 'sesiones'}',
       child: ExcludeSemantics(

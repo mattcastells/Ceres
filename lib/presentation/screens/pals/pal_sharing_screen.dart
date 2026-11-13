@@ -74,8 +74,8 @@ class _SharingFormState extends ConsumerState<_SharingForm> {
       children: <Widget>[
         const SizedBox(height: NmSpace.s4),
         Text(
-          'Lo que comiste y si te moviste siempre lo ve un pal aceptado. '
-          'Elegí qué más quiere ver.',
+          'Un pal siempre ve qué comiste y si te moviste. Elegí qué más '
+          'puede ver.',
           style: NmTextStyles.from(NmType.bodySm, color: nm.textMuted),
         ),
         const SizedBox(height: NmSpace.s6),
@@ -85,7 +85,7 @@ class _SharingFormState extends ConsumerState<_SharingForm> {
             children: <Widget>[
               NmSwitchRow(
                 title: 'Fotos de mis comidas',
-                subtitle: 'La foto que sacaste al cargar lo que comiste.',
+                subtitle: 'La foto que sacaste al cargar cada comida.',
                 value: _prefs.photos,
                 onChanged: (v) => _update(_prefs.copyWith(photos: v)),
               ),
@@ -105,10 +105,9 @@ class _SharingFormState extends ConsumerState<_SharingForm> {
               ),
               const NmDivider(indent: NmSpace.s3),
               NmSwitchRow(
-                title: 'Detalle de ejercicio',
-                subtitle:
-                    'Cada actividad con su nombre y duración, no solo el '
-                    'total del día.',
+                title: 'Detalle de actividad',
+                subtitle: 'Cada actividad con su nombre y duración, no solo '
+                    'el total.',
                 value: _prefs.activityDetail,
                 onChanged: (v) => _update(_prefs.copyWith(activityDetail: v)),
               ),
@@ -117,8 +116,7 @@ class _SharingFormState extends ConsumerState<_SharingForm> {
         ),
         const SizedBox(height: NmSpace.s6),
         const InfoNote(
-          text: 'Tu peso y tus medidas nunca se comparten, prendas lo que '
-              'prendas acá.',
+          text: 'Tu peso y tus medidas nunca se comparten.',
         ),
       ],
     );

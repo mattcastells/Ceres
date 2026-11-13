@@ -106,9 +106,8 @@ class AiUpsellSheet extends StatelessWidget {
                   // El tono es el de un dato, no el de una puerta cerrada: lo
                   // que la persona venía haciendo sigue a mano, sin perder
                   // nada.
-                  'Esto usa IA y es parte de Premium. Con el plan Gratis '
-                  'podés seguir registrando todo a mano: buscar alimentos, '
-                  'escanear códigos y armar tus comidas.',
+                  'Es parte de Premium. Con el plan Gratis podés seguir '
+                  'registrando todo a mano.',
                   style: NmTextStyles.from(NmType.body, color: nm.text),
                 ),
               ),

@@ -137,7 +137,7 @@ void main() {
 
       expect(ran, 0);
       expect(find.text('Esto usa IA'), findsOneWidget);
-      expect(find.textContaining('es parte de Premium'), findsOneWidget);
+      expect(find.textContaining('Es parte de Premium'), findsOneWidget);
       expect(find.text('Ver planes'), findsOneWidget);
 
       await tester.tap(find.text('Cargar a mano'));

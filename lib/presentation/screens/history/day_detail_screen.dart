@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../../../core/router/routes.dart';
-import '../../../core/theme/nm_theme.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/utils/dates.dart';
 import '../../../core/utils/formats.dart';
@@ -14,6 +14,7 @@ import '../../components/feedback/day_context.dart';
 import '../../components/food/daily_summary_card.dart';
 import '../../components/food/food_widgets.dart';
 import '../../components/sleep/sleep_card.dart';
+import '../../components/system/buttons.dart';
 import '../../components/system/nm_screen.dart';
 import '../../components/system/overlays.dart';
 import '../../components/system/surfaces.dart';
@@ -37,6 +38,7 @@ class DayDetailScreen extends ConsumerWidget {
     final summary = ref.watch(dailySummaryProvider(date));
     final repo = ref.watch(repositoryProvider);
     final units = ref.watch(unitSystemProvider);
+    final profile = ref.watch(profileProvider);
 
     return NmScreen(
       title: longDay(date),
@@ -100,45 +102,65 @@ class DayDetailScreen extends ConsumerWidget {
             ),
 
           const SizedBox(height: NmSpace.s6),
+          // Igual que en Inicio: el resumen, la lista y **siempre** el botón de
+          // sumar otra. Acá el botón solo aparecía con el día vacío, así que
+          // después de cargar una actividad no quedaba cómo cargar la segunda,
+          // y las filas no tenían "Duplicar" ni "Favorita" como en Inicio.
           const NmSectionHeader(title: 'Actividad'),
-          if (summary.activities.isEmpty)
-            NmCard(
-              child: ActivitySummaryCard(
-                totals: summary.activityTotals,
-                estimatedCalories: summary.exerciseEstimatedKcal,
-                appliedCalories: summary.exerciseAppliedKcal,
-                creditPercentage: summary.creditPercentage,
-                isRestDay: summary.isRestDay,
-                onAdd: () => context.push(
-                  '${Routes.activityNew}?date=${isoDate(date)}',
+          NmCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                ActivitySummaryCard(
+                  totals: summary.activityTotals,
+                  estimatedCalories: summary.exerciseEstimatedKcal,
+                  appliedCalories: summary.exerciseAppliedKcal,
+                  creditPercentage: summary.effectiveCreditPercentage,
+                  isRestDay: summary.isRestDay,
                 ),
-              ),
-            )
-          else
-            NmCard(
-              child: Column(
-                children: <Widget>[
-                  for (final activity in summary.activities)
-                    ActivityListItem(
-                      activity: activity,
-                      onTap: () => context.push(Routes.activity(activity.id)),
-                      onEdit: () =>
-                          context.push(Routes.activityEdit(activity.id)),
-                      onDelete: () async {
-                        await repo.deleteActivity(activity.id);
-                        if (!context.mounted) return;
-                        NmSnackbar.show(
-                          context,
-                          'Actividad eliminada',
-                          actionLabel: 'Deshacer',
-                          undo: true,
-                          onAction: () => repo.restoreActivity(activity.id),
-                        );
-                      },
-                    ),
+                if (summary.activities.isNotEmpty) ...<Widget>[
+                  const SizedBox(height: NmSpace.s3),
+                  const NmDivider(),
                 ],
-              ),
+                for (final activity in summary.activities)
+                  ActivityListItem(
+                    activity: activity,
+                    onTap: () => context.push(Routes.activity(activity.id)),
+                    onEdit: () =>
+                        context.push(Routes.activityEdit(activity.id)),
+                    onDuplicate: () async {
+                      await repo.duplicateActivity(activity.id, date);
+                      if (!context.mounted) return;
+                      NmSnackbar.show(context, 'Actividad duplicada');
+                    },
+                    onToggleFavorite: () => repo.toggleFavorite(activity.id),
+                    onDelete: () async {
+                      await repo.deleteActivity(activity.id);
+                      if (!context.mounted) return;
+                      NmSnackbar.show(
+                        context,
+                        'Actividad eliminada',
+                        actionLabel: 'Deshacer',
+                        undo: true,
+                        onAction: () => repo.restoreActivity(activity.id),
+                      );
+                    },
+                  ),
+                if (!summary.isRestDay) ...<Widget>[
+                  const SizedBox(height: NmSpace.s2),
+                  NmButton.ghost(
+                    label: summary.activities.isEmpty
+                        ? 'Agregar actividad'
+                        : 'Agregar otra actividad',
+                    icon: PhosphorIcons.plus(),
+                    onPressed: () => context.push(
+                      '${Routes.activityNew}?date=${isoDate(date)}',
+                    ),
+                  ),
+                ],
+              ],
             ),
+          ),
 
           const SizedBox(height: NmSpace.s8),
           const NmSectionHeader(title: 'Peso'),
@@ -151,37 +173,20 @@ class DayDetailScreen extends ConsumerWidget {
             ),
           ),
 
-          const SizedBox(height: NmSpace.s8),
-          const NmSectionHeader(title: 'Cierre del día'),
-          NmCard(
-            child: Column(
-              children: <Widget>[
-                ValueRow(
-                  label: 'Objetivo base',
-                  value: Fmt.kcal(summary.baseTarget),
-                ),
-                ValueRow(
-                  label: 'Ajuste por ejercicio',
-                  value: '+${Fmt.kcal(summary.exerciseAppliedKcal)}',
-                ),
-                const NmDivider(),
-                ValueRow(
-                  label: 'Balance final',
-                  value: Fmt.signed(summary.remainingKcal),
-                  emphasis: true,
-                  valueColor: summary.remainingKcal < 0
-                      ? context.nm.overBudget
-                      : null,
-                ),
-                ValueRow(
-                  label: 'Calorías netas',
-                  caption: 'consumidas − aplicadas',
-                  value: Fmt.kcal(summary.netKcal),
-                  muted: true,
-                ),
-              ],
+          // "Cierre del día" repetía objetivo base, ajuste y balance, que ya
+          // están en la tarjeta de arriba. Queda lo único que no estaba: las
+          // netas, con la misma preferencia que en Inicio.
+          if (profile.showNetCalories) ...<Widget>[
+            const SizedBox(height: NmSpace.s6),
+            NmCard(
+              child: ValueRow(
+                label: 'Calorías netas',
+                caption: 'consumido − ejercicio',
+                value: Fmt.kcal(summary.netKcal),
+                muted: true,
+              ),
             ),
-          ),
+          ],
         ],
       ),
     );

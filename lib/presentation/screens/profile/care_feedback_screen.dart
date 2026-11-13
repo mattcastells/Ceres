@@ -150,8 +150,8 @@ class _List extends StatelessWidget {
             icon: PhosphorIcons.stethoscope(),
             title: 'Todavía no hay nada',
             body:
-                'Cuando tu nutricionista te escriba una devolución o te '
-                'deje una indicación desde su panel, la vas a ver acá.',
+                'Las devoluciones e indicaciones de tu nutricionista van a '
+                'aparecer acá.',
             secondaryLabel: 'Ver quién tiene acceso',
             onSecondary: () =>
                 GoRouter.maybeOf(context)?.push(Routes.profileCare),

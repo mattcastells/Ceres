@@ -57,13 +57,15 @@ class _DailyBreakdownSheet extends ConsumerWidget {
                 '${Fmt.integer(summary.consumedKcal)}',
           ),
           const SizedBox(height: NmSpace.s3),
+          // Con el porcentaje efectivo: con el ajuste apagado decía
+          // "0 = 300 × 0,50", una cuenta que no da.
           FormulaRow(
             expression: 'Ejercicio = actividad estimada × '
-                '${Fmt.decimal2(summary.creditPercentage / 100)}',
+                '${Fmt.decimal2(summary.effectiveCreditPercentage / 100)}',
             values:
                 '${Fmt.integer(summary.exerciseAppliedKcal)} = '
                 '${Fmt.integer(summary.exerciseEstimatedKcal)} × '
-                '${Fmt.decimal2(summary.creditPercentage / 100)}',
+                '${Fmt.decimal2(summary.effectiveCreditPercentage / 100)}',
           ),
           const SizedBox(height: NmSpace.s6),
           NmCard(
@@ -83,7 +85,7 @@ class _DailyBreakdownSheet extends ConsumerWidget {
                 ),
                 ValueRow(
                   label: 'Ajuste aplicado',
-                  caption: '${summary.creditPercentage} %',
+                  caption: '${summary.effectiveCreditPercentage} %',
                   value: '+${Fmt.kcal(summary.exerciseAppliedKcal)}',
                 ),
                 const NmDivider(),

@@ -133,7 +133,6 @@ class ActivityDetailScreen extends ConsumerWidget {
     ref.watch(appRevisionProvider);
     final repo = ref.watch(repositoryProvider);
     final activity = repo.activityById(activityId);
-    final profile = ref.watch(profileProvider);
     final units = ref.watch(unitSystemProvider);
 
     if (activity == null || activity.isDeleted) {
@@ -171,18 +170,22 @@ class ActivityDetailScreen extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           const SizedBox(height: NmSpace.s4),
-          Row(
+          // `Wrap` y no `Row`, como en la fila de la lista: "Importado ·
+          // Health Connect" y el estado largo de sincronización no entran
+          // juntos en un teléfono angosto.
+          Wrap(
+            spacing: NmSpace.s2,
+            runSpacing: NmSpace.s1,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: <Widget>[
               // Igual que en la lista: "Manual" es lo esperado, no una marca.
-              if (activity.origin != DataOrigin.manual) ...<Widget>[
+              if (activity.origin != DataOrigin.manual)
                 DataOriginBadge(
                   origin: activity.origin,
                   sourceLabel: activity.externalSource == null
                       ? null
                       : HealthProvider.healthConnect.label,
                 ),
-                const SizedBox(width: NmSpace.s2),
-              ],
               SyncStatusBadge(status: activity.syncStatus, compact: false),
             ],
           ),
@@ -276,9 +279,11 @@ class ActivityDetailScreen extends ConsumerWidget {
 
           const SizedBox(height: NmSpace.s4),
           InfoNote(
-            text: profile.effectiveCreditPercentage == 0
-                ? 'Con tu configuración actual, el ejercicio no suma a tu '
-                      'objetivo del día.'
+            // Con el porcentaje **de esa actividad**, que es el que se aplicó
+            // ese día; el del perfil es el de hoy, y una actividad de cuando
+            // sumaba el 50 % decía que no sumaba nada.
+            text: activity.exerciseCreditPercentage == 0
+                ? 'No suma a tu objetivo (crédito de ejercicio: 0 %).'
                 : 'Aporta +${Fmt.integer(activity.appliedCalories)} kcal a tu '
                       'objetivo de ese día '
                       '(${activity.exerciseCreditPercentage} %).',
@@ -341,10 +346,12 @@ class ActivityDetailScreen extends ConsumerWidget {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setLocal) => NmDialog(
-          title: 'Editar calorías',
+          // Mismo título y texto que en el formulario: se abre desde el mismo
+          // botón, "Ingresar otro valor".
+          title: 'Ingresar otro valor',
           body: 'El valor calculado es '
-              '${Fmt.integer(activity.originalCalories ?? activity.estimatedCalories)} kcal. '
-              'Lo guardamos igual para que no se pierda.',
+              '${Fmt.integer(activity.originalCalories ?? activity.estimatedCalories)} '
+              'kcal y queda guardado aparte.',
           content: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[

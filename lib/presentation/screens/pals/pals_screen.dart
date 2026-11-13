@@ -156,7 +156,7 @@ class _PalsScreenState extends ConsumerState<PalsScreen> {
         child: Padding(
           padding: EdgeInsets.only(top: NmSpace.s6),
           child: InfoNote(
-            text: 'Esta compilación no tiene servidor: Pals necesita cuenta.',
+            text: 'Esta versión no tiene servidor: Pals necesita cuenta.',
             tone: NmNoteTone.caution,
           ),
         ),
@@ -251,9 +251,8 @@ class _PalsScreenState extends ConsumerState<PalsScreen> {
 
           const SizedBox(height: NmSpace.s6),
           Text(
-            'Un pal siempre ve qué comiste y si te moviste. Fotos, agua, '
-            'sueño y el detalle de tu ejercicio los elegís vos, acá arriba. '
-            'Tu peso y tus medidas nunca se comparten.',
+            'Un pal siempre ve qué comiste y si te moviste; lo demás lo '
+            'elegís vos. Tu peso y tus medidas nunca se comparten.',
             style: NmTextStyles.from(NmType.bodySm, color: nm.textMuted),
           ),
         ],

@@ -72,7 +72,7 @@ void main() {
     // etiqueta, su unidad y la última medida abajo: es la pantalla del grupo
     // con más chances de desbordar cuando alguien agranda el texto.
     'Medidas corporales': MeasurementsScreen.new,
-    'Mis cosas': MyItemsScreen.new,
+    'Mis alimentos y plantillas': MyItemsScreen.new,
   };
 
   for (final entry in screens.entries) {

@@ -76,6 +76,11 @@ class DailySummary {
   final int exerciseAppliedKcal;
   final int creditPercentage;
   final bool creditEnabled;
+
+  /// El porcentaje que de verdad se aplica: 0 con el ajuste apagado, aunque
+  /// el perfil recuerde el último que se eligió.
+  int get effectiveCreditPercentage => creditEnabled ? creditPercentage : 0;
+
   final MacroSet macros;
   final List<Meal> meals;
   final List<Activity> activities;

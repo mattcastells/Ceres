@@ -244,7 +244,7 @@ class _Day extends StatelessWidget {
         // nada, su ausencia se leería como "no lo comparte".
         _Category(
           icon: PhosphorIcons.personSimpleRun(),
-          title: 'Deporte',
+          title: 'Actividad',
           child: day.activities.isNotEmpty
               ? Column(
                   children: <Widget>[

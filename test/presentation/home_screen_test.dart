@@ -162,7 +162,7 @@ void main() {
     // D-02 / AC-04: sin crédito, la fila de ajuste desaparece. El crédito se
     // maneja desde preferencias, así que la tarjeta tampoco lo explica acá.
     expect(find.text('Ajuste aplicado'), findsNothing);
-    expect(find.text('El ejercicio no suma a tu presupuesto'), findsNothing);
+    expect(find.text('El ejercicio no suma a tu objetivo'), findsNothing);
     expect(find.text('Objetivo ajustado'), findsNothing);
   });
 

@@ -57,7 +57,7 @@ class _AlcoholSheetState extends ConsumerState<_AlcoholSheet> {
       _saving = false;
       _quantity = 1;
     });
-    NmSnackbar.show(context, 'Anotado');
+    NmSnackbar.show(context, 'Agregado');
   }
 
   /// Cuántas unidades de **esa bebida** —dos copas, una lata—, que es otra
@@ -156,7 +156,7 @@ class _AlcoholSheetState extends ConsumerState<_AlcoholSheet> {
 
           const SizedBox(height: NmSpace.s5),
           NmButton(
-            label: 'Anotar',
+            label: 'Agregar',
             block: true,
             loading: _saving,
             onPressed: _save,
@@ -190,7 +190,7 @@ class _AlcoholSheetState extends ConsumerState<_AlcoholSheet> {
                 ),
                 trailing: NmIconButton(
                   icon: PhosphorIcons.trash(),
-                  tooltip: 'Borrar',
+                  tooltip: 'Eliminar',
                   onPressed: () => ref
                       .read(repositoryProvider)
                       .deleteAlcohol(log.id),
@@ -200,10 +200,8 @@ class _AlcoholSheetState extends ConsumerState<_AlcoholSheet> {
 
           const SizedBox(height: NmSpace.s2),
           Text(
-            'Un trago es una unidad de bebida estándar: 10 g de alcohol puro, '
-            'que es lo único con lo que se pueden sumar una cerveza y un '
-            'whisky. Las calorías son una estimación y van aparte de las '
-            'comidas: sumarlas ahí escondería de dónde salieron.',
+            'Un trago es una unidad de bebida estándar: 10 g de alcohol puro. '
+            'Las calorías son una estimación y van aparte de las comidas.',
             style: NmTextStyles.from(NmType.caption, color: nm.textMuted),
           ),
         ],

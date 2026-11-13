@@ -123,9 +123,8 @@ class _WeeklyReportScreenState extends ConsumerState<WeeklyReportScreen> {
         child: EmptyState(
           icon: PhosphorIcons.sparkle(),
           title: 'Necesitás una cuenta',
-          body:
-              'El resumen lo arma el servidor con tus registros, y sin '
-              'cuenta tus datos viven solo en este teléfono.',
+          body: 'El resumen se arma en el servidor, y sin cuenta tus datos '
+              'están solo en este teléfono.',
         ),
       );
     }
@@ -134,15 +133,9 @@ class _WeeklyReportScreenState extends ConsumerState<WeeklyReportScreen> {
     final report = _fresh ?? latest.valueOrNull;
 
     return NmScreen(
+      // Sin "Regenerar" en la barra: el botón con nombre está al pie del
+      // resumen, que es donde se termina de leer. Eran dos para lo mismo.
       title: 'Tu semana con IA',
-      actions: <Widget>[
-        if (report != null && !_generating)
-          IconButton(
-            tooltip: 'Regenerar',
-            onPressed: _generate,
-            icon: Icon(PhosphorIcons.arrowsClockwise()),
-          ),
-      ],
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
@@ -176,10 +169,8 @@ class _WeeklyReportScreenState extends ConsumerState<WeeklyReportScreen> {
             EmptyState(
               icon: PhosphorIcons.sparkle(),
               title: 'Tu semana, en un resumen',
-              body:
-                  'Con tus registros de los últimos siete días armamos un '
-                  'resumen: lo que salió bien, lo que se repite y algo para '
-                  'probar. Tarda menos de un minuto.',
+              body: 'Lo que salió bien, lo que se repite y algo para probar, '
+                  'con tus registros de los últimos siete días.',
               primaryLabel: 'Generar mi resumen',
               onPrimary: _generate,
             ),
@@ -338,9 +329,8 @@ class _ReportView extends StatelessWidget {
         const SizedBox(height: NmSpace.s2),
         Text(
           'Generado el ${longDay(report.createdAt).toLowerCase()} a las '
-          '${timeOfDay(report.createdAt)}. Es una lectura de tus registros, no '
-          'un diagnóstico: para decisiones sobre tu salud, hablalo con tu '
-          'nutricionista.',
+          '${timeOfDay(report.createdAt)}. No es un diagnóstico: para '
+          'decisiones sobre tu salud, hablalo con tu nutricionista.',
           style: NmTextStyles.from(NmType.caption, color: nm.textMuted),
         ),
       ],

@@ -374,16 +374,13 @@ class _SuggestionsScreenState extends ConsumerState<SuggestionsScreen> {
             const EmptyState(
               icon: Icons.restaurant_menu_outlined,
               title: 'Decime con cuánto y busco',
-              body: 'Elegí el presupuesto y tocá "Buscar opciones". Cada '
-                  'búsqueda le pregunta al modelo, así que sale cuando vos '
-                  'querés y no antes.',
+              body: 'Elegí las calorías y tocá "Buscar opciones".',
             )
           else if (_options!.isEmpty)
             const EmptyState(
               icon: Icons.no_food_outlined,
               title: 'Esta vez no salió nada',
-              body: 'Ninguna opción cerró con ese presupuesto. Probá de nuevo: '
-                  'el modelo no siempre contesta lo mismo.',
+              body: 'Ninguna opción entró en esas calorías. Probá de nuevo.',
             )
           else
             for (final option in _options!)
@@ -399,9 +396,8 @@ class _SuggestionsScreenState extends ConsumerState<SuggestionsScreen> {
           if (_options != null && _options!.isNotEmpty) ...<Widget>[
             const SizedBox(height: NmSpace.s2),
             const InfoNote(
-              text: 'Los gramos son una estimación, igual que los de la foto: '
-                  'sirven para orientarse, no para pesar. Al cargar una podés '
-                  'cambiar lo que quieras antes de guardarla.',
+              text: 'Los gramos son una estimación. Al cargar una podés '
+                  'cambiarla antes de guardar.',
             ),
           ],
         ],
@@ -536,7 +532,8 @@ class _SuggestionCardState extends State<_SuggestionCard> {
             for (final i in o.items)
               ValueRow(
                 label: i.name,
-                caption: '${_cantidad(i.quantity)} ${i.unit}',
+                caption:
+                    '${_cantidad(i.quantity)} ${MealItem.unitLabel(i.unit, i.quantity)}',
                 value: '${i.kcal} kcal',
               ),
 

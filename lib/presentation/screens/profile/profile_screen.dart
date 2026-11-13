@@ -34,7 +34,6 @@ class ProfileScreen extends ConsumerWidget {
     final nm = context.nm;
     final profile = ref.watch(profileProvider);
     final goal = ref.watch(currentGoalProvider);
-    final palRequests = ref.watch(incomingPalRequestsProvider);
     final weightKg = ref.watch(currentWeightProvider);
     final activityGoals = ref.watch(activityGoalsProvider);
     final repo = ref.watch(repositoryProvider);
@@ -75,7 +74,7 @@ class ProfileScreen extends ConsumerWidget {
                     (profile.displayName?.trim().isNotEmpty ?? false)
                         ? profile.displayName!.trim().characters.first
                               .toUpperCase()
-                        : 'N',
+                        : 'C',
                     style: NmTextStyles.from(
                       NmType.h3,
                       color: nm.accentOnFill,
@@ -191,7 +190,7 @@ class ProfileScreen extends ConsumerWidget {
                 title: 'Tu plan: ${plan.label}',
                 subtitle: plan.includesAi
                     ? 'Planes y qué incluye cada uno'
-                    : 'Sin IA y con anuncios. Mirá qué incluye Premium',
+                    : 'Sin IA y con anuncios',
                 leading: Icon(PhosphorIcons.sparkle()),
                 onTap: () => context.push(Routes.plans),
               ),
@@ -203,13 +202,17 @@ class ProfileScreen extends ConsumerWidget {
             padding: const EdgeInsets.symmetric(vertical: NmSpace.s2),
             child: Column(
               children: <Widget>[
-                NmListRow(
-                  title: 'Objetivo',
-                  subtitle: 'Bajar, mantener, subir o ganar músculo',
-                  leading: Icon(PhosphorIcons.flag()),
-                  onTap: () => context.push(Routes.profileGoal),
-                ),
-                const NmDivider(indent: NmSpace.s6),
+                // Con objetivo, la tarjeta de arriba ya lleva acá con su
+                // lápiz: la fila era la misma puerta dos veces en la pantalla.
+                if (goal == null || preset == null) ...<Widget>[
+                  NmListRow(
+                    title: 'Objetivo',
+                    subtitle: 'Bajar, mantener, subir o ganar músculo',
+                    leading: Icon(PhosphorIcons.flag()),
+                    onTap: () => context.push(Routes.profileGoal),
+                  ),
+                  const NmDivider(indent: NmSpace.s6),
+                ],
                 NmListRow(
                   title: 'Perfil corporal',
                   subtitle: 'Sexo, nacimiento, altura, nivel de actividad',
@@ -235,14 +238,14 @@ class ProfileScreen extends ConsumerWidget {
                 const NmDivider(indent: NmSpace.s6),
                 NmListRow(
                   title: 'Medidas corporales',
-                  subtitle: 'Perímetros, pliegues y bioimpedancia',
+                  subtitle: 'Perímetros, pliegues y balanza',
                   leading: Icon(PhosphorIcons.ruler()),
                   onTap: () => context.push(Routes.progressMeasurements),
                 ),
                 const NmDivider(indent: NmSpace.s6),
                 NmListRow(
                   title: 'Mis alimentos y plantillas',
-                  subtitle: 'Alimentos propios, actividades, favoritos',
+                  subtitle: 'Alimentos propios, plantillas y favoritos',
                   leading: Icon(PhosphorIcons.bowlFood()),
                   onTap: () => context.push(Routes.profileFoods),
                 ),
@@ -263,18 +266,13 @@ class ProfileScreen extends ConsumerWidget {
                   onTap: () => context.push(Routes.profileCare),
                 ),
                 const NmDivider(indent: NmSpace.s6),
+                // Sin el contador de solicitudes: esta fila lleva a qué ven,
+                // donde no se pueden responder. El aviso vive en el puntito de
+                // la tab de Pals, que es donde se aceptan.
                 NmListRow(
                   title: 'Qué ven mis pals',
-                  subtitle: palRequests > 0
-                      ? '$palRequests ${palRequests == 1 ? 'solicitud' : 'solicitudes'} sin responder'
-                      : 'Fotos, agua, sueño y detalle de ejercicio',
+                  subtitle: 'Fotos, agua, sueño y detalle de actividad',
                   leading: Icon(PhosphorIcons.users()),
-                  trailing: palRequests == 0
-                      ? null
-                      : NmTag(
-                          label: '$palRequests',
-                          variant: NmTagVariant.accent,
-                        ),
                   onTap: () => context.push(Routes.palSharing),
                 ),
                 const NmDivider(indent: NmSpace.s6),

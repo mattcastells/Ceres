@@ -95,7 +95,7 @@ class AlcoholCard extends ConsumerWidget {
               Row(
                 children: <Widget>[
                   Text(
-                    'Sin registro',
+                    'Sin registrar',
                     style: NmTextStyles.from(
                       NmType.body,
                       color: nm.textMuted,
@@ -103,7 +103,7 @@ class AlcoholCard extends ConsumerWidget {
                   ),
                   const Spacer(),
                   Text(
-                    'Anotar',
+                    'Cargar',
                     style: NmTextStyles.from(
                       NmType.bodySm,
                       color: nm.accentText,
