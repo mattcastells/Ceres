@@ -273,10 +273,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                     isRestDay: summary.isRestDay,
                                     onRestDay: () =>
                                         repo.setRestDay(date, false),
-                                    onAdd: () => showAddSheet(
-                                      context,
-                                      activityFirst: true,
-                                    ),
                                   ),
                                   if (summary.activities.isNotEmpty) ...<Widget>[
                                     const SizedBox(height: NmSpace.s3),
@@ -402,7 +398,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               date: date,
                               onTapSick: () =>
                                   showSickDaySheet(context, date: date),
-                              onTapRest: () => showRestDaySheet(context, date),
                             ),
                           ],
                         ),
@@ -500,39 +495,3 @@ class _HomeSkeleton extends StatelessWidget {
   );
 }
 
-/// `sheet.rest_day` — marcar o quitar el descanso planificado (RN-15).
-Future<void> showRestDaySheet(BuildContext context, DateTime date) =>
-    showNmSheet<void>(
-      context: context,
-      builder: (context) => Consumer(
-        builder: (context, ref, _) {
-          final repo = ref.watch(repositoryProvider);
-          final isRest = repo.isRestDay(date);
-          return NmSheet(
-            title: 'Día de descanso',
-            subtitle: friendlyDay(date),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                const InfoNote(
-                  text: 'Un día de descanso planificado no cuenta como día sin '
-                      'actividad y no cambia tu objetivo calórico.',
-                ),
-                const SizedBox(height: NmSpace.s6),
-                NmButton(
-                  label: isRest
-                      ? 'Quitar el descanso planificado'
-                      : 'Marcar como descanso planificado',
-                  block: true,
-                  onPressed: () async {
-                    await repo.setRestDay(date, !isRest);
-                    if (context.mounted) Navigator.of(context).pop();
-                  },
-                ),
-              ],
-            ),
-          );
-        },
-      ),
-    );

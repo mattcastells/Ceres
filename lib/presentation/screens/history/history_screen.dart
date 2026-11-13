@@ -341,39 +341,38 @@ class _DayRow extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: <Widget>[
-                  Row(
+                  // `Wrap` y no `Row`: un día con descanso o enfermedad y
+                  // además alcohol no entra en una línea, y las etiquetas se
+                  // salían de la tarjeta. Ahora bajan a la siguiente.
+                  Wrap(
+                    spacing: NmSpace.s2,
+                    runSpacing: NmSpace.s1,
+                    crossAxisAlignment: WrapCrossAlignment.center,
                     children: <Widget>[
-                      Flexible(
-                        child: Text(
-                          friendlyDay(day.date),
-                          overflow: TextOverflow.ellipsis,
-                          style: NmTextStyles.from(NmType.body, color: nm.text),
-                        ),
+                      Text(
+                        friendlyDay(day.date),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: NmTextStyles.from(NmType.body, color: nm.text),
                       ),
-                      if (day.isRestDay) ...<Widget>[
-                        const SizedBox(width: NmSpace.s2),
+                      if (day.isRestDay)
                         const NmTag(
                           label: 'Descanso',
                           variant: NmTagVariant.outline,
                         ),
-                      ],
                       // El contexto va en la fila y no en una columna aparte:
                       // "sin registros" y "estuve enfermo" se leen juntos o no
                       // se leen. Ver `docs/contexto-diario.md`.
-                      if (day.isSickDay) ...<Widget>[
-                        const SizedBox(width: NmSpace.s2),
+                      if (day.isSickDay)
                         const NmTag(
                           label: 'Enfermedad',
                           variant: NmTagVariant.outline,
                         ),
-                      ],
-                      if (day.standardDrinks > 0) ...<Widget>[
-                        const SizedBox(width: NmSpace.s2),
+                      if (day.standardDrinks > 0)
                         NmTag(
                           label: Fmt.standardDrinks(day.standardDrinks),
                           variant: NmTagVariant.outline,
                         ),
-                      ],
                     ],
                   ),
                   const SizedBox(height: NmSpace.s1),

@@ -316,7 +316,7 @@ class ActivitySummaryCard extends StatelessWidget {
     required this.estimatedCalories,
     required this.appliedCalories,
     required this.creditPercentage,
-    required this.onAdd,
+    this.onAdd,
     this.isRestDay = false,
     this.onRestDay,
     super.key,
@@ -326,7 +326,11 @@ class ActivitySummaryCard extends StatelessWidget {
   final int estimatedCalories;
   final int appliedCalories;
   final int creditPercentage;
-  final VoidCallback onAdd;
+
+  /// El "Agregar" chico de la derecha cuando no hay actividad. Solo para las
+  /// pantallas que no tienen otro botón para lo mismo (el detalle de un día
+  /// del historial); Inicio no lo pasa porque ya tiene "Agregar actividad".
+  final VoidCallback? onAdd;
   final bool isRestDay;
   final VoidCallback? onRestDay;
 
@@ -360,7 +364,7 @@ class ActivitySummaryCard extends StatelessWidget {
               style: NmTextStyles.from(NmType.bodySm, color: nm.textMuted),
             ),
           ),
-          NmButton.ghost(label: 'Agregar', onPressed: onAdd),
+          if (onAdd != null) NmButton.ghost(label: 'Agregar', onPressed: onAdd),
         ],
       );
     }
