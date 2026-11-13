@@ -355,7 +355,7 @@ class _MealFormScreenState extends ConsumerState<MealFormScreen> {
                         ),
                         const SizedBox(height: NmSpace.s4),
                         NmButton.secondary(
-                          label: 'Agregar alimento',
+                          label: 'Buscar alimentos',
                           block: true,
                           icon: PhosphorIcons.plus(),
                           onPressed: () =>
@@ -363,7 +363,7 @@ class _MealFormScreenState extends ConsumerState<MealFormScreen> {
                         ),
                         const SizedBox(height: NmSpace.s2),
                         // El escáner no está acá: vive adentro del buscador, y
-                        // "Agregar alimento" abre el buscador. Tenerlo también
+                        // "Buscar alimentos" abre el buscador. Tenerlo también
                         // afuera era el mismo camino ofrecido dos veces, y dos
                         // botones que hacen lo mismo hacen dudar de si lo hacen.
                         //

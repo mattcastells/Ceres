@@ -168,13 +168,13 @@ void main() {
     await _settle(tester);
 
     expect(find.text('Sumar un ítem'), findsOneWidget);
-    expect(find.text('Agregar alimento'), findsOneWidget);
+    expect(find.text('Buscar alimentos'), findsOneWidget);
     expect(find.text('Sacar foto y analizarla'), findsOneWidget);
     // "Describir" era texto que se estima y se suma a esta comida: lo mismo
     // que el campo "Sumar un ítem", con dos pantallas de más. Acá queda uno.
     expect(find.text('Describir lo que comiste'), findsNothing);
 
-    // El escáner vive adentro del buscador, y "Agregar alimento" lo abre.
+    // El escáner vive adentro del buscador, y "Buscar alimentos" lo abre.
     // Tenerlo también acá era el mismo camino ofrecido dos veces.
     expect(find.text('Escanear un código'), findsNothing);
 
@@ -227,7 +227,7 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('Sumar un ítem'), findsOneWidget);
-    expect(find.text('Agregar alimento'), findsOneWidget);
+    expect(find.text('Buscar alimentos'), findsOneWidget);
     expect(find.text('Sacar foto y analizarla'), findsOneWidget);
     expect(find.text('Describir lo que comiste'), findsNothing);
     expect(find.text('Agregá el primer alimento'), findsNothing);

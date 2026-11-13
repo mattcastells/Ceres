@@ -147,8 +147,7 @@ class _PhotoCaptureScreenState extends ConsumerState<PhotoCaptureScreen> {
       builder: (context) => NmDialog(
         title: 'Vamos a usar la cámara',
         body: 'La foto se usa solo para estimar los ítems de la comida. '
-            'Podés corregir todo antes de guardar y la imagen queda en tu '
-            'teléfono.',
+            'Podés corregir todo antes de guardar.',
         actions: <Widget>[
           NmButton.ghost(
             label: 'Ahora no',
@@ -312,8 +311,8 @@ class _PhotoDescribeScreenState extends ConsumerState<PhotoDescribeScreen> {
             const SizedBox(height: NmSpace.s5),
           ],
           Text(
-            'Si querés, contanos qué hay en la foto. La IA ve la forma pero no '
-            'el relleno ni cómo está cocinado: con eso estima mucho mejor.',
+            'Opcional: contá lo que la foto no muestra, como el relleno o '
+            'cómo está cocinado.',
             style: NmTextStyles.from(NmType.bodySm, color: nm.textMuted),
           ),
           const SizedBox(height: NmSpace.s5),

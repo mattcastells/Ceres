@@ -127,8 +127,8 @@ class _MealDescribeScreenState extends ConsumerState<MealDescribeScreen> {
         children: <Widget>[
           const SizedBox(height: NmSpace.s4),
           Text(
-            'Escribilo como se lo contarías a alguien. La IA lo convierte en '
-            'ítems con sus cantidades y vos los revisás antes de guardar.',
+            'Escribilo como se lo contarías a alguien. Revisás los ítems '
+            'antes de guardar.',
             style: NmTextStyles.from(NmType.bodySm, color: nm.textMuted),
           ),
           const SizedBox(height: NmSpace.s6),
@@ -180,8 +180,7 @@ class _MealDescribeScreenState extends ConsumerState<MealDescribeScreen> {
           ),
           const SizedBox(height: NmSpace.s3),
           Text(
-            'Es una estimación, no una medición: revisá los números antes de '
-            'guardar.',
+            'Es una estimación, no una medición.',
             style: NmTextStyles.from(NmType.caption, color: nm.textMuted),
           ),
         ],

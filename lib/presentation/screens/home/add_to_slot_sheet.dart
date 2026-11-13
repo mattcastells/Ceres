@@ -78,7 +78,9 @@ class _AddToSlotSheet extends ConsumerWidget {
       await repo.duplicateMeal(meal.id, date, slot);
       messenger
         ..hideCurrentSnackBar()
-        ..showSnackBar(SnackBar(content: Text('${meal.title} agregada')));
+        ..showSnackBar(
+          SnackBar(content: Text('Agregado a ${slot.label.toLowerCase()}')),
+        );
     }
 
     return NmSheet(
