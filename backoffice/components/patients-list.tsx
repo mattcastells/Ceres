@@ -95,6 +95,7 @@ export function PatientsList({
               </p>
             </div>
             <nav className="row topbar-nav">
+              <Link href="/articulos">Artículos y recetas</Link>
               {hasOrg && <Link href="/organizacion">Organización</Link>}
               <SignOut />
             </nav>
@@ -113,10 +114,9 @@ export function PatientsList({
 
         {!error && patients.length === 0 && (
           <div className="card" style={{ marginTop: 'var(--s6)' }}>
-            <h3>Todavía no te dio acceso nadie</h3>
+            <h3>Todavía no tenés pacientes</h3>
             <p className="muted" style={{ marginTop: 'var(--s2)' }}>
-              Pasale tu código de arriba a la persona que vas a seguir. Lo carga
-              en la app, en Perfil → Mi nutricionista, y elige qué querés ver.
+              Pasales tu código. Lo cargan en la app, en Perfil → Mi nutricionista.
             </p>
           </div>
         )}
@@ -130,8 +130,8 @@ export function PatientsList({
           // de registrar es peor que la lista completa, pero mucho mejor que no
           // poder entrar a ninguna ficha.
           <p className="caption" style={{ marginTop: 'var(--s6)' }}>
-            No pudimos traer los números del equipo. La lista está completa; los
-            datos de cada paciente están en su ficha.
+            No se pudieron traer los números del equipo. Los datos están en cada
+            ficha.
           </p>
         )}
 
@@ -267,7 +267,7 @@ function Card({
           </span>
         ))}
         {cats.length === 0 && (
-          <span className="chip chip--warn">Sin categorías: no vas a ver datos</span>
+          <span className="chip chip--warn">No comparte ninguna categoría</span>
         )}
       </div>
 

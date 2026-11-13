@@ -132,11 +132,42 @@ export type CareFeedback = {
   read_at: string | null;
   created_at: string;
   updated_at: string;
+  /** El objetivo recomendado (migración 53): solo en indicaciones. `target_kcal`
+   *  no nulo = es un objetivo; los macros pueden venir en null. */
+  target_kcal?: number | null;
+  target_protein_g?: number | null;
+  target_carbs_g?: number | null;
+  target_fat_g?: number | null;
+  /** Lo marca el paciente al aplicarlo en la app (`mark_care_target_applied`). */
+  applied_at?: string | null;
 };
 
 export const FEEDBACK_COLUMNS =
   'id, patient_id, kind, local_date, body, source, published_at, read_at, ' +
-  'created_at, updated_at';
+  'created_at, updated_at, target_kcal, target_protein_g, target_carbs_g, ' +
+  'target_fat_g, applied_at';
+
+/**
+ * Un artículo o una receta para todo el equipo (migración 52).
+ *
+ * Como las devoluciones: borrador privado hasta que se publica, y borrar es
+ * `deleted_at`. Lo publicado lo leen en la app los pacientes con un acceso
+ * vigente a esta profesional.
+ */
+export type CareArticle = {
+  id: string;
+  kind: 'article' | 'recipe';
+  title: string;
+  body: string;
+  tag: string | null;
+  /** `null` = borrador: ningún paciente lo ve. */
+  published_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export const ARTICLE_COLUMNS =
+  'id, kind, title, body, tag, published_at, created_at, updated_at';
 
 /** Un informe guardado por `care-report`. `content` depende de `kind`; ver
  *  `lib/care-report.ts`. */
@@ -516,6 +547,28 @@ export async function fetchFeedback(
       .select(FEEDBACK_COLUMNS)
       .eq('author_id', authorId)
       .eq('patient_id', patientId)
+      .is('deleted_at', null)
+      .order('created_at', { ascending: false })
+      .limit(200),
+  );
+  return data ?? [];
+}
+
+/** Los artículos y recetas propios, sin los borrados, del más nuevo al más
+ *  viejo. El filtro por autora es el mismo "además de RLS" de
+ *  `fetchFeedback`: la policy también deja ver lo publicado por la
+ *  profesional de quien mira, si alguna vez una profesional es paciente de
+ *  otra. */
+export async function fetchArticles(
+  db: SupabaseClient,
+  authorId: string,
+): Promise<CareArticle[]> {
+  const data = check<CareArticle[] | null>(
+    'artículos',
+    await db
+      .from('care_articles')
+      .select(ARTICLE_COLUMNS)
+      .eq('author_id', authorId)
       .is('deleted_at', null)
       .order('created_at', { ascending: false })
       .limit(200),

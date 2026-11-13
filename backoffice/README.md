@@ -39,6 +39,100 @@ Las dos se escriben desde islas de cliente (`components/feedback-panel.tsx`,
 `components/ai-report.tsx`, `components/team-report.tsx`) con la sesión del
 navegador y la publishable key: las mismas políticas de siempre deciden.
 
+Desde las migraciones 52 y 53 se suman dos más, con las mismas reglas
+(borrador privado, borrado suave, sin datos del paciente):
+
+- **Artículos y recetas** (`care_articles`), en `/articulos`.
+- **El objetivo recomendado**: columnas nuevas de `care_feedback`, desde la
+  pestaña Devoluciones.
+
+Ver "El contrato con la app", abajo.
+
+## El contrato con la app
+
+Lo que el panel publica y la app tiene que leer. Todo con la sesión del
+paciente: RLS ya filtra, los filtros de abajo están para usar los índices.
+
+### Artículos y recetas (`care_articles`, migración 52)
+
+| Columna | Qué es |
+| --- | --- |
+| `id`, `author_id` | El artículo y la profesional que lo escribió |
+| `kind` | `article` o `recipe` |
+| `title` | Hasta 140 caracteres |
+| `body` | Texto con markdown mínimo: párrafos (línea en blanco), listas con `- ` o `1. `, títulos con `# ` y `**negrita**`. Las reglas exactas están en `lib/articulos.ts`, con test; la app tiene que dibujar lo mismo |
+| `tag` | Etiqueta opcional ("Desayunos") |
+| `published_at` | `null` = borrador: el paciente no lo recibe |
+
+```
+select id, author_id, kind, title, body, tag, published_at
+  from care_articles
+ where published_at is not null and deleted_at is null
+ order by published_at desc
+```
+
+Un paciente ve lo publicado de **cada profesional con un acceso vigente**
+(`is_my_professional`), tenga o no categorías prendidas: leer lo que escribió
+su nutricionista no le abre ningún dato a ella. Si corta el acceso, deja de
+verlo. El nombre de la autora sale de `care_professionals`, como en las
+devoluciones. La app solo lee: no hay "leído" para artículos.
+
+### El objetivo recomendado (`care_feedback`, migración 53)
+
+"La profesional fija el objetivo calórico y de macros" quedó como
+**recomendación**: la profesional no tiene permiso de escritura sobre `goals`
+—el objetivo es del paciente, y su historial no se reescribe—, así que publica
+una indicación con números y el paciente la aplica desde la app.
+
+| Columna | Qué es |
+| --- | --- |
+| `kind` | Siempre `indication` |
+| `target_kcal` | No nulo = es un objetivo recomendado. 800–6000, los topes de `goals` |
+| `target_protein_g`, `target_carbs_g`, `target_fat_g` | Opcionales: si vienen en `null`, la app reparte los macros como siempre |
+| `body` | Ya trae los números escritos ("Objetivo recomendado: 1.900 kcal por día · proteínas 95 g…") y, debajo, la nota de la profesional. Una app que no conoce las columnas lo muestra igual como una indicación |
+| `applied_at` | Lo marca el paciente al aplicarlo |
+
+El vigente es la indicación publicada más reciente con `target_kcal`:
+
+```
+select id, author_id, body, target_kcal, target_protein_g, target_carbs_g,
+       target_fat_g, published_at, read_at, applied_at
+  from care_feedback
+ where kind = 'indication' and target_kcal is not null
+   and published_at is not null and deleted_at is null
+ order by published_at desc
+ limit 1
+```
+
+**"Aplicar"** en la app: cerrar el objetivo vigente y abrir uno nuevo desde hoy
+(como hace siempre, `ends_on = ayer`) con `base_calorie_target = target_kcal` y
+los macros que vengan (`macro_method = 'custom'` si vienen los tres), y después
+llamar a `mark_care_target_applied(id)`, que pone `applied_at` y `read_at`. El
+panel muestra "Aplicado el …". `target_method` hoy acepta `calculated`,
+`manual` y `ai`: si se quiere un valor propio (`professional`), va en una
+migración **junto con** el enum de Dart, porque
+`test/data/enum_constraints_test.dart` compara las dos listas.
+
+`read_at` y `applied_at` los escribe solo el paciente, por función: desde la
+migración 53 los permisos de `care_feedback` son por columna y la profesional
+no los puede tocar ni en sus propias filas.
+
+Publicar un objetivo nuevo saca (borrado suave) el anterior **después** de
+guardar el nuevo: si la segunda escritura fallara, la app igual toma el más
+reciente.
+
+En las listas de la pestaña Devoluciones el objetivo no aparece como una
+indicación más: tiene su propia sección, con lo que el paciente tiene hoy en la
+app al lado (si comparte comidas) y los macros sumados en kcal para que un
+error de tipeo se note antes de publicar.
+
+## El orden de los botones
+
+En todo el panel, una fila de acciones va en el mismo orden: **la principal
+primero** (Publicar), después las secundarias (Guardar borrador, Editar) y **lo
+que borra o cancela al final** (Despublicar, Borrar, Sacar, Cancelar). Los
+textos son cortos y sin explicar de más: el hint de una sección es una línea.
+
 ## El período efectivo, que es de donde salen todos los denominadores
 
 Los períodos salen del calendario —"los últimos 30 días"— pero **lo que se
@@ -72,7 +166,9 @@ Ver [`docs/contexto-diario.md`](../docs/contexto-diario.md).
    misma pantalla.
 
 Una categoría apagada no es lo mismo que un día sin registros, y el panel lo
-dice: donde no hay permiso muestra "no está compartido" y no un vacío.
+dice: donde no hay permiso muestra "Esta categoría no está compartida" y no un
+vacío, y el Resumen nombra las que faltan con el nombre de su pestaña ("No
+comparte Cuerpo ni Hábitos").
 
 ## Correrlo
 
@@ -232,8 +328,11 @@ porque no dependen de una categoría: son de la profesional.
   separado**: los números salen de `care-report/metrics.ts` —código con test— y
   viajan en `content.metricas`; el texto del modelo lleva la etiqueta ámbar
   "Redactado con IA · revisalo", que es el ámbar con el que la app marca toda
-  estimación. Un error de la función se muestra con su mensaje, que ya está
-  escrito para eso ("Llegaste a los 40 informes de hoy").
+  estimación. Un error de la función se muestra en una línea: el mensaje de
+  la función ("Llegaste a los 40 informes de hoy"), salvo tres que
+  `lib/care-report.ts` dice igual para todo lo de IA —sin clave del modelo
+  (`ERR_PROVIDER_UNAVAILABLE`, el caso de la base local): "La IA no está
+  disponible en este servidor."; tiempo agotado; sin conexión—.
 - **Devoluciones** (`components/feedback-panel.tsx`): escribir, editar,
   publicar y borrar devoluciones (sobre un día o generales) e indicaciones (lo
   que el paciente ve en Inicio hasta que se saca), y "Proponer borrador" con IA

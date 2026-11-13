@@ -2093,3 +2093,80 @@ button,
     transition: none;
   }
 }
+
+/* ── El objetivo recomendado ─────────────────────────────────────────────── */
+
+.obj-resumen {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--s4);
+  margin: 0;
+}
+
+.obj-resumen dd {
+  margin: var(--s1) 0 0;
+}
+
+.obj-resumen .button--link {
+  align-self: center;
+}
+
+.obj-campos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--s3);
+}
+
+.obj-campo {
+  display: grid;
+  gap: var(--s1);
+}
+
+.obj-campo input {
+  width: 100%;
+  min-width: 0;
+}
+
+/* ── Artículos y recetas ─────────────────────────────────────────────────── */
+
+.art-titulo {
+  width: 100%;
+  font-size: 17px;
+}
+
+.art-previa {
+  border: 1px dashed var(--divider);
+  border-radius: var(--radius-sm);
+  padding: var(--s4) var(--s5);
+}
+
+.art-body {
+  line-height: 1.55;
+}
+
+.art-body > * {
+  margin: var(--s3) 0 0;
+}
+
+.art-body > h4 {
+  margin-top: var(--s4);
+  font-size: 14px;
+}
+
+.art-body ul,
+.art-body ol {
+  padding-left: 1.4em;
+}
+
+.art-extracto {
+  margin: var(--s1) 0 0;
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+
+/* La línea de estado de una fila de acciones ocupa su propio renglón cuando
+ * no entra al lado de los botones: así, en el teléfono, los botones bajan
+ * juntos y no uno suelto debajo de los otros. */
+.fb-actions > .caption {
+  flex: 1 1 240px;
+}
