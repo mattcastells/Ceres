@@ -217,6 +217,47 @@ class MealDraftController extends Notifier<MealDraft?> {
     );
   }
 
+  /// Suma al plato uno o más ítems estimados desde el campo "Sumar un ítem".
+  ///
+  /// Se parece a [appendAnalysis] y difiere en lo que importa: acá se agrega
+  /// **un ítem más** a un plato que ya tiene identidad, así que no se pisa lo
+  /// que el plato ya dice de sí mismo.
+  ///
+  /// - El origen pasa a "estimado por texto" solo si el plato no tenía ningún
+  ///   número estimado (`manual`, código de barras, duplicado): con un ítem
+  ///   estimado adentro ya no es cierto que ninguno lo sea. Si el plato salió
+  ///   de una foto, sigue siendo de foto — es lo que dice que hay una imagen
+  ///   que volver a mirar al recalcular.
+  /// - El vínculo con el análisis se conserva si ya había uno: es el del plato
+  ///   entero, y el de una feta de queso no lo describe.
+  ///
+  /// Devuelve `false` si no hay borrador abierto o si el abierto ya no es
+  /// [draftId]: la respuesta llegó tarde, después de cerrar esa comida, y
+  /// sumarla a otra sería meterle un ítem a un plato que nadie tocó.
+  bool appendEstimatedItems({
+    required String draftId,
+    required List<MealItem> items,
+    String? aiAnalysisId,
+  }) {
+    final current = state;
+    if (current == null || current.id != draftId || items.isEmpty) {
+      return false;
+    }
+    state = MealDraft(
+      id: current.id,
+      slot: current.slot,
+      date: current.date,
+      eatenAt: current.eatenAt,
+      items: <MealItem>[...current.items, ...items],
+      source: current.source.isAi ? current.source : MealSource.aiText,
+      name: current.name,
+      editingMealId: current.editingMealId,
+      photoPath: current.photoPath,
+      aiAnalysisId: current.aiAnalysisId ?? aiAnalysisId,
+    );
+    return true;
+  }
+
   /// Reemplaza los ítems por los que devolvió un recálculo.
   ///
   /// Al revés que [appendAnalysis], que suma: el recálculo devuelve la comida
