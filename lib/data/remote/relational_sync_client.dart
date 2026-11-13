@@ -6,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/error/app_error.dart';
 import '../../core/utils/dates.dart';
 import '../../domain/models/day_marker.dart';
+import '../../domain/services/photo_sync_service.dart';
 import '../local/local_store.dart';
 
 /// Sube y baja los datos del usuario **como filas**, en las tablas del
@@ -137,6 +138,12 @@ class RelationalSyncClient {
             .upsert(<String, dynamic>{
               'id': userId,
               'display_name': profile.displayName,
+              // Solo la ruta del bucket: un archivo del teléfono no sirve en
+              // otro. Mientras no suba, la columna queda como estaba; sin foto,
+              // se vacía.
+              if (profile.avatarPath == null ||
+                  PhotoSyncService.isRemotePath(profile.avatarPath!))
+                'avatar_path': profile.avatarPath,
               'biological_sex': profile.biologicalSex.wire,
               'birth_date': profile.birthDate == null
                   ? null
@@ -840,6 +847,7 @@ class RelationalSyncClient {
               if (f is String) f,
           ],
           'dietaryNote': perfil['dietary_note'] ?? '',
+          'avatarPath': perfil['avatar_path'],
           'isDemo': false,
           'createdAt': isoOf(perfil['created_at']),
           'updatedAt': isoOf(perfil['updated_at']),

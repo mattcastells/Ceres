@@ -133,12 +133,18 @@ abstract interface class ProfileRepository {
   bool get needsOnboarding;
 
   Future<void> updateProfile(UserProfile profile);
+
+  /// Pone o quita (`null`) la foto de perfil. Queda en el teléfono en el
+  /// acto y se sube al bucket cuando hay sesión.
+  Future<void> setProfilePhoto(String? localPath);
   Future<void> setExerciseCredit({
     required int percentage,
     required bool enabled,
   });
+
   /// Modo demo sin cuenta: usuario local anónimo (D-15).
   Future<void> startDemoSession({required bool seeded});
+
   /// Marca el documento local como el de esta cuenta.
   ///
   /// [accountId] es el `auth.users.id`. Va porque es lo que permite distinguir
@@ -319,6 +325,7 @@ abstract interface class BodyRepository {
   List<WeightLog> get weightLogs;
   WeightLog? weightOn(DateTime date);
   double? get currentWeightKg;
+
   /// [source] distingue lo que cargó la persona de lo que trajo una
   /// integración. La base contempla `'imported'` desde siempre y la app
   /// mandaba `'manual'` para todo, así que la procedencia de un peso que vino

@@ -18,6 +18,7 @@ import '../../components/system/buttons.dart';
 import '../../components/system/inputs.dart';
 import '../../components/system/nm_screen.dart';
 import '../../components/system/overlays.dart';
+import '../../components/system/profile_avatar.dart';
 import '../../components/system/surfaces.dart';
 import '../../providers/app_providers.dart';
 import '../../providers/auth_providers.dart';
@@ -62,24 +63,18 @@ class ProfileScreen extends ConsumerWidget {
             onTap: () => showDisplayNameSheet(context),
             child: Row(
               children: <Widget>[
-                Container(
-                  height: 52,
-                  width: 52,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: nm.accentFill,
-                    borderRadius: BorderRadius.circular(NmRadius.full),
-                  ),
-                  child: Text(
-                    (profile.displayName?.trim().isNotEmpty ?? false)
-                        ? profile.displayName!.trim().characters.first
-                              .toUpperCase()
-                        : 'C',
-                    style: NmTextStyles.from(
-                      NmType.h3,
-                      color: nm.accentOnFill,
-                    ),
-                  ),
+                // Tocar la foto la cambia; tocar el resto de la tarjeta, el
+                // nombre.
+                ProfileAvatar(
+                  path: profile.avatarPath,
+                  initial: (profile.displayName?.trim().isNotEmpty ?? false)
+                      ? profile.displayName!
+                            .trim()
+                            .characters
+                            .first
+                            .toUpperCase()
+                      : 'C',
+                  onTap: () => showProfilePhotoSheet(context, ref),
                 ),
                 const SizedBox(width: NmSpace.s4),
                 Expanded(

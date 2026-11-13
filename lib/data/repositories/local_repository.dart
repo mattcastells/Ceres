@@ -165,6 +165,46 @@ class LocalRepository
     await _commit();
   }
 
+  /// La foto de perfil vive en `progress-photos/{uid}/perfil.jpg`: un bucket
+  /// privado que ya tiene la política de "cada uno su carpeta", así que no
+  /// hace falta otro. Siempre la misma ruta: cambiarla pisa la anterior.
+  static const String profilePhotoId = 'perfil';
+
+  @override
+  Future<void> setProfilePhoto(String? localPath) async {
+    final previous = profile.avatarPath;
+    if (localPath == null) {
+      await updateProfile(profile.copyWith(clearAvatar: true));
+      try {
+        await photos?.delete(bucket: PhotoBucket.progress, path: previous);
+      } on AppError {
+        // Sin conexión queda la foto en el bucket, sin nada que la nombre; la
+        // próxima que se suba la pisa.
+      }
+      return;
+    }
+
+    // Primero la local, para que se vea ya; después la del bucket, que es la
+    // que viaja a otro teléfono. Si no sube, queda la local y se reintenta
+    // la próxima vez que se abra Perfil.
+    await updateProfile(profile.copyWith(avatarPath: localPath));
+    await syncProfilePhoto();
+  }
+
+  /// Sube la foto de perfil si todavía es un archivo del teléfono.
+  Future<void> syncProfilePhoto() async {
+    final path = profile.avatarPath;
+    if (path == null || PhotoSyncService.isRemotePath(path)) return;
+    final remote = await photos?.ensureUploaded(
+      bucket: PhotoBucket.progress,
+      recordId: profilePhotoId,
+      localPath: path,
+    );
+    if (remote != null && remote != path && profile.avatarPath == path) {
+      await updateProfile(profile.copyWith(avatarPath: remote));
+    }
+  }
+
   @override
   Future<void> setThemeMode(ThemeModeSetting mode) =>
       updateProfile(profile.copyWith(themeMode: mode));
