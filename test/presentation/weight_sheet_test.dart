@@ -14,6 +14,7 @@ import 'package:ceres/core/theme/app_theme.dart';
 import 'package:ceres/core/utils/dates.dart';
 import 'package:ceres/data/local/local_store.dart';
 import 'package:ceres/data/repositories/local_repository.dart';
+import 'package:ceres/domain/enums/enums.dart';
 import 'package:ceres/domain/repositories/repositories.dart';
 import 'package:ceres/presentation/providers/app_providers.dart';
 import 'package:ceres/presentation/screens/weight/weight_sheet.dart';
@@ -174,5 +175,31 @@ void main() {
     expect(repo.currentWeightKg, 100.0);
     // El sheet sigue abierto para corregir el número.
     expect(find.text('Nota (opcional)'), findsOneWidget);
+  });
+  // Con libras, la etiqueta del campo decía "lb" pero el número precargado
+  // estaba en kilos, y lo escrito se guardaba como kilos: 165 lb quedaban
+  // como 165 kg.
+  testWidgets('en libras se muestra y se guarda en libras', (tester) async {
+    late ProviderContainer container;
+    late CeresRepositories repo;
+    await tester.runAsync(() async {
+      final booted = await _boot(pesoPrevio: 75);
+      container = booted.$1;
+      repo = booted.$2;
+      await repo.setUnitSystem(UnitSystem.imperial);
+    });
+    addTearDown(() => container.dispose());
+
+    await _abrir(tester, container);
+    // 75 kg ≈ 165,3 lb.
+    expect(find.text('165,3'), findsOneWidget);
+    expect(find.text('lb'), findsOneWidget);
+
+    await tester.enterText(find.byType(TextField).first, '163,1');
+    await tester.pump();
+    await tester.tap(find.text('Guardar'));
+    await _settle(tester);
+
+    expect(repo.currentWeightKg, closeTo(74.0, 0.05));
   });
 }

@@ -115,7 +115,7 @@ class DayDetailScreen extends ConsumerWidget {
                   totals: summary.activityTotals,
                   estimatedCalories: summary.exerciseEstimatedKcal,
                   appliedCalories: summary.exerciseAppliedKcal,
-                  creditPercentage: summary.creditPercentage,
+                  creditPercentage: summary.effectiveCreditPercentage,
                   isRestDay: summary.isRestDay,
                 ),
                 if (summary.activities.isNotEmpty) ...<Widget>[

@@ -71,69 +71,73 @@ class WeightChartScreen extends ConsumerWidget {
               ),
             ],
           ),
-          const SizedBox(height: NmSpace.s8),
-          const NmSectionHeader(title: 'Registros'),
-          NmCard(
-            padding: const EdgeInsets.symmetric(vertical: NmSpace.s1),
-            child: Column(
-              children: <Widget>[
-                for (final log in logs.take(20))
-                  Dismissible(
-                    key: ValueKey<String>(log.id),
-                    direction: DismissDirection.endToStart,
-                    background: Container(
-                      alignment: Alignment.centerRight,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: NmSpace.s6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: nm.danger.withValues(alpha: 0.14),
-                        borderRadius: NmRadius.brMd,
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: <Widget>[
-                          Icon(
-                            PhosphorIcons.trash(),
-                            size: NmIconSize.md,
-                            color: nm.danger,
-                          ),
-                          const SizedBox(width: NmSpace.s2),
-                          Text(
-                            'Eliminar',
-                            style: NmTextStyles.from(
-                              NmType.caption,
+          // Sin pesos no hay lista: el encabezado y una tarjeta vacía debajo
+          // del gráfico parecían algo que no terminó de cargar.
+          if (logs.isNotEmpty) ...<Widget>[
+            const SizedBox(height: NmSpace.s8),
+            const NmSectionHeader(title: 'Registros'),
+            NmCard(
+              padding: const EdgeInsets.symmetric(vertical: NmSpace.s1),
+              child: Column(
+                children: <Widget>[
+                  for (final log in logs.take(20))
+                    Dismissible(
+                      key: ValueKey<String>(log.id),
+                      direction: DismissDirection.endToStart,
+                      background: Container(
+                        alignment: Alignment.centerRight,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: NmSpace.s6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: nm.danger.withValues(alpha: 0.14),
+                          borderRadius: NmRadius.brMd,
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: <Widget>[
+                            Icon(
+                              PhosphorIcons.trash(),
+                              size: NmIconSize.md,
                               color: nm.danger,
                             ),
-                          ),
-                        ],
+                            const SizedBox(width: NmSpace.s2),
+                            Text(
+                              'Eliminar',
+                              style: NmTextStyles.from(
+                                NmType.caption,
+                                color: nm.danger,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      confirmDismiss: (_) async {
+                        final id = log.id;
+                        await repo.deleteWeight(id);
+                        if (context.mounted) {
+                          NmSnackbar.show(
+                            context,
+                            'Registro eliminado',
+                            actionLabel: 'Deshacer',
+                            undo: true,
+                            onAction: () => repo.restoreWeight(id),
+                          );
+                        }
+                        return false;
+                      },
+                      child: _WeightLogRow(
+                        day: friendlyDay(log.localDate),
+                        value: Fmt.weightValue(log.weightKg, units),
+                        unit: Fmt.weightUnit(units),
+                        onEdit: () =>
+                            showWeightSheet(context, date: log.localDate),
                       ),
                     ),
-                    confirmDismiss: (_) async {
-                      final id = log.id;
-                      await repo.deleteWeight(id);
-                      if (context.mounted) {
-                        NmSnackbar.show(
-                          context,
-                          'Registro eliminado',
-                          actionLabel: 'Deshacer',
-                          undo: true,
-                          onAction: () => repo.restoreWeight(id),
-                        );
-                      }
-                      return false;
-                    },
-                    child: _WeightLogRow(
-                      day: friendlyDay(log.localDate),
-                      value: Fmt.weightValue(log.weightKg, units),
-                      unit: Fmt.weightUnit(units),
-                      onEdit: () =>
-                          showWeightSheet(context, date: log.localDate),
-                    ),
-                  ),
-              ],
+                ],
+              ),
             ),
-          ),
+          ],
           const SizedBox(height: NmSpace.s6),
           NmButton(
             label: 'Registrar peso',
