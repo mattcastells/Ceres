@@ -111,6 +111,23 @@ update public.profiles
        pal_share_photos = true
  where id = '66666666-6666-6666-6666-666666666666';
 
+-- Y vuelve a publicar, como hace la app al cambiar una preferencia: desde la
+-- migración 54 la base saca la foto de lo que se guardó con el interruptor
+-- apagado, así que prenderlo no la devuelve sola.
+update public.shared_days
+   set meals = jsonb_build_array(
+         jsonb_build_object('slot', 'lunch', 'name', 'Milanesa', 'kcal', 600,
+                            'photoPath', '66666666-6666-6666-6666-666666666666/hoy.jpg'))
+ where user_id = '66666666-6666-6666-6666-666666666666'
+   and local_date = current_date;
+
+update public.shared_days
+   set meals = jsonb_build_array(
+         jsonb_build_object('slot', 'dinner', 'name', 'Pizza', 'kcal', 800,
+                            'photoPath', '66666666-6666-6666-6666-666666666666/vieja.jpg'))
+ where user_id = '66666666-6666-6666-6666-666666666666'
+   and local_date = current_date - 10;
+
 -- ── A, con los interruptores prendidos ────────────────────────────────────
 set local role authenticated;
 select set_config('request.jwt.claims',

@@ -89,8 +89,9 @@ PalDay _build(DateTime date, PalSharingPrefs prefs) => PalDay(
   waterGlasses: prefs.water ? _waterGlasses : null,
 );
 
-List<String> _fechasDe(List<Map<String, dynamic>> subida) =>
-    <String>[for (final row in subida) row['local_date'] as String];
+List<String> _fechasDe(List<Map<String, dynamic>> subida) => <String>[
+  for (final row in subida) row['local_date'] as String,
+];
 
 void main() {
   late _FakeClient client;
@@ -161,19 +162,22 @@ void main() {
     expect(client.subidas.last.single['meals'], isEmpty);
   });
 
-  test('los números fuera de rango se recortan en vez de romper la fila', () async {
-    _activityMinutes = 3000;
-    _activityCount = 80;
-    _waterGlasses = 99;
-    client.prefs = const PalSharingPrefs(water: true);
+  test(
+    'los números fuera de rango se recortan en vez de romper la fila',
+    () async {
+      _activityMinutes = 3000;
+      _activityCount = 80;
+      _waterGlasses = 99;
+      client.prefs = const PalSharingPrefs(water: true);
 
-    await publisher.publish();
+      await publisher.publish();
 
-    final fila = client.subidas.single.first;
-    expect(fila['activity_minutes'], PalDay.maxActivityMinutes);
-    expect(fila['activity_count'], PalDay.maxActivityCount);
-    expect(fila['water_glasses'], PalDay.maxWaterGlasses);
-  });
+      final fila = client.subidas.single.first;
+      expect(fila['activity_minutes'], PalDay.maxActivityMinutes);
+      expect(fila['activity_count'], PalDay.maxActivityCount);
+      expect(fila['water_glasses'], PalDay.maxWaterGlasses);
+    },
+  );
 
   test('una subida que falla se reintenta con el próximo cambio', () async {
     client.failWith = const AppError(
@@ -207,18 +211,22 @@ void main() {
     expect(client.subidas.last, hasLength(PalPublisher.windowDays + 1));
   });
 
-  test('la proyección no lleva ítems de comida ni peso', () async {
-    _meals[isoDate(today())] = const <PalMeal>[
-      PalMeal(slot: MealSlot.lunch, name: 'Milanesa con puré', kcal: 720),
-    ];
-    await publisher.publish();
+  test(
+    'la proyección no lleva ítems de comida, ni peso si no se prendió',
+    () async {
+      _meals[isoDate(today())] = const <PalMeal>[
+        PalMeal(slot: MealSlot.lunch, name: 'Milanesa con puré', kcal: 720),
+      ];
+      await publisher.publish();
 
-    final fila = client.subidas.single.firstWhere(
-      (row) => row['local_date'] == isoDate(today()),
-    );
-    final json = jsonEncode(fila);
-    expect(json, isNot(contains('proteinG')));
-    expect(json, isNot(contains('weight')));
-    expect(fila.keys, isNot(contains('items')));
-  });
+      final fila = client.subidas.single.firstWhere(
+        (row) => row['local_date'] == isoDate(today()),
+      );
+      final json = jsonEncode(fila);
+      expect(json, isNot(contains('proteinG')));
+      expect(json, isNot(contains('bodyFat')));
+      expect(fila['weight_kg'], isNull);
+      expect(fila.keys, isNot(contains('items')));
+    },
+  );
 }

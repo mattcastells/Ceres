@@ -4,6 +4,7 @@ import 'package:timezone/data/latest_all.dart' as tzdata;
 import 'package:timezone/timezone.dart' as tz;
 
 import '../../domain/models/reminder.dart';
+import '../../domain/services/pal_alerts.dart';
 import '../../domain/services/reminder_service.dart';
 
 /// Recordatorios con notificaciones locales de Android.
@@ -11,7 +12,7 @@ import '../../domain/services/reminder_service.dart';
 /// Locales y no push: son horarios que la persona eligió, no eventos del
 /// servidor. Así funcionan sin conexión, sin cuenta y sin que la app tenga que
 /// despertar por la red.
-class AndroidReminderScheduler implements ReminderScheduler {
+class AndroidReminderScheduler implements ReminderScheduler, PalAlertSink {
   AndroidReminderScheduler(this._plugin);
 
   final FlutterLocalNotificationsPlugin _plugin;
@@ -108,4 +109,31 @@ class AndroidReminderScheduler implements ReminderScheduler {
 
   @override
   Future<void> cancelAll() => _plugin.cancelAll();
+
+  /// Un aviso de pals, en el momento. Canal propio para que se pueda silenciar
+  /// desde Android sin apagar los recordatorios.
+  @override
+  Future<void> show({
+    required int id,
+    required String title,
+    required String body,
+  }) async {
+    if (!await hasPermission()) return;
+    await _plugin.show(
+      id: id,
+      title: title,
+      body: body,
+      notificationDetails: const NotificationDetails(
+        android: AndroidNotificationDetails(
+          'ceres_pals',
+          'Pals',
+          channelDescription: 'Cuando un pal carga una comida o actividad.',
+          // Alta: aparece arriba de la pantalla. Es un "che, ¿y vos?" que
+          // pierde sentido si se descubre una hora después en la bandeja.
+          importance: Importance.high,
+          priority: Priority.high,
+        ),
+      ),
+    );
+  }
 }

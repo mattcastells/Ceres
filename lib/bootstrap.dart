@@ -16,6 +16,7 @@ import 'data/local/health_connect_gateway.dart';
 import 'data/local/home_widget_publisher.dart';
 import 'data/local/local_auth_gateway.dart';
 import 'data/local/local_store.dart';
+import 'data/local/pal_alert_store.dart';
 import 'data/remote/calorie_target_client.dart';
 import 'data/remote/care_articles_client.dart';
 import 'data/remote/care_client.dart';
@@ -31,9 +32,11 @@ import 'data/remote/relational_sync_client.dart';
 import 'data/remote/supabase_auth_gateway.dart';
 import 'data/remote/usda_food_client.dart';
 import 'data/repositories/local_repository.dart';
+import 'domain/models/activity.dart';
 import 'domain/models/pal.dart';
 import 'domain/repositories/auth_gateway.dart';
 import 'domain/services/cloud_backup_service.dart';
+import 'domain/services/pal_alerts.dart';
 import 'domain/services/pal_publisher.dart';
 import 'domain/services/photo_sync_service.dart';
 import 'domain/services/relational_sync_service.dart';
@@ -113,10 +116,8 @@ Future<void> bootstrap() async {
       : null;
 
   // Lo que ven los pals. Se arma acá y no en el repositorio para que quede a
-  // la vista qué se publica: momento, nombre y calorías por comida, más
-  // minutos y sesiones — siempre— y fotos/agua/sueño/detalle de actividad
-  // solo si `prefs` los tiene prendidos. Nada de peso, medidas ni ítems de
-  // cada comida, prenda lo que prenda la persona.
+  // la vista qué se publica: cada categoría solo si `prefs` la tiene prendida.
+  // Nunca medidas ni los ítems de cada comida.
   PalPublisher? palPublisher;
 
   // El repositorio avisa a la UI por el contador de revisión; se enlaza
@@ -200,24 +201,32 @@ Future<void> bootstrap() async {
       client: palsClient,
       auth: auth,
       buildDay: (date, prefs) {
-        final activities = repository.activitiesOn(date);
+        final activities = prefs.activity
+            ? repository.activitiesOn(date)
+            : const <Activity>[];
         final sleep = prefs.sleep ? repository.sleepOn(date) : null;
+        // El último peso hasta ese día: con pesajes semanales, "el peso del
+        // martes" casi nunca existe. `weightLogs` viene del más nuevo al más
+        // viejo.
+        final weight = prefs.weight
+            ? repository.weightLogs
+                  .where((w) => !w.localDate.isAfter(date))
+                  .firstOrNull
+            : null;
         return PalDay(
           userId: auth.currentAccount?.id ?? '',
           date: date,
           meals: <PalMeal>[
-            for (final meal in repository.mealsOn(date))
-              PalMeal(
-                slot: meal.slot,
-                // El título de la comida, que resume lo que tiene adentro sin
-                // publicar la lista de ítems. Antes era `items.first.name` —el
-                // primer ingrediente que se hubiera cargado—, así que una
-                // milanesa con puré y ensalada le llegaba al pal como "Puré de
-                // papa" si el puré había entrado primero.
-                name: meal.title,
-                kcal: meal.totalKcal,
-                photoPath: prefs.photos ? meal.photoPath : null,
-              ),
+            if (prefs.meals)
+              for (final meal in repository.mealsOn(date))
+                PalMeal(
+                  slot: meal.slot,
+                  // El título de la comida, que resume lo que tiene adentro
+                  // sin publicar la lista de ítems.
+                  name: meal.title,
+                  kcal: meal.totalKcal,
+                  photoPath: prefs.photos ? meal.photoPath : null,
+                ),
           ],
           activityMinutes: activities.fold(0, (acc, a) => acc + a.durationMinutes),
           activityCount: activities.length,
@@ -234,6 +243,8 @@ Future<void> bootstrap() async {
           waterGlasses: prefs.water ? repository.glassesOn(date) : null,
           sleepMinutes: sleep?.minutes,
           sleepQuality: sleep?.quality,
+          weightKg: weight?.weightKg,
+          weightDate: weight?.localDate,
         );
       },
     );
@@ -246,6 +257,21 @@ Future<void> bootstrap() async {
     // está publicado, así que en el caso normal —nada cambió— es un pedido de
     // lectura de preferencias y nada más.
     palPublisher.markDirty();
+  }
+
+  // Avisos de pals: "Tomás cargó el almuerzo", si vos todavía no. Necesita
+  // servidor (para escuchar) y notificaciones (para avisar).
+  if (palsClient != null && reminderScheduler != null) {
+    final alertStore = PalAlertStore();
+    PalAlertService(
+      client: palsClient,
+      auth: auth,
+      sink: reminderScheduler,
+      prefs: alertStore.load,
+      loggedSlotToday: (slot) =>
+          repository.mealsOn(today()).any((m) => m.slot == slot),
+      movedToday: () => repository.activitiesOn(today()).isNotEmpty,
+    ).attach();
   }
 
   // Plan, devoluciones e informes: los tres existen solo con servidor. Sin él
@@ -280,6 +306,8 @@ Future<void> bootstrap() async {
         relationalSyncProvider.overrideWithValue(relationalSync),
       if (photos != null) photoSyncProvider.overrideWithValue(photos),
       if (palsClient != null) palsClientProvider.overrideWithValue(palsClient),
+      if (palPublisher != null)
+        palPublisherProvider.overrideWithValue(palPublisher),
       if (careClient != null) careClientProvider.overrideWithValue(careClient),
       if (reminderScheduler != null)
         reminderSchedulerProvider.overrideWithValue(reminderScheduler),

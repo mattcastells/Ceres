@@ -133,6 +133,33 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('sin comida ni actividad compartidas, no aparecen', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _wrap(
+        PalDay(
+          userId: _userId,
+          date: today(),
+          meals: const <PalMeal>[],
+          activityMinutes: 0,
+          activityCount: 0,
+          waterGlasses: 5,
+          mealsShared: false,
+          activityShared: false,
+        ),
+      ),
+    );
+    await _settle(tester);
+
+    expect(find.text('COMIDA'), findsNothing);
+    expect(find.text('Comió'), findsNothing);
+    expect(find.text('ACTIVIDAD'), findsNothing);
+    expect(find.text('AGUA'), findsOneWidget);
+    expect(find.text('Comparte el agua.'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   // El bug: alguien cargó sus comidas y del otro lado no aparecían hasta
   // reiniciar la app. Las comidas estaban en el servidor desde el momento en
   // que se cargaron; lo que no se rehacía era la consulta, porque el provider

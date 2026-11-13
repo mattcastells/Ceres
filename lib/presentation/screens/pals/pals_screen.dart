@@ -119,9 +119,8 @@ class _PalsScreenState extends ConsumerState<PalsScreen> {
     ref.invalidate(palsProvider);
   }
 
-  Future<void> _accept(Pal pal) => _responder(
-    () async => ref.read(palsClientProvider)?.accept(pal.id),
-  );
+  Future<void> _accept(Pal pal) =>
+      _responder(() async => ref.read(palsClientProvider)?.accept(pal.id));
 
   Future<void> _remove(Pal pal) async {
     final confirmed = await showNmDialog<bool>(
@@ -230,18 +229,15 @@ class _PalsScreenState extends ConsumerState<PalsScreen> {
                   : 'No pudimos cargar tus pals.',
               onRetry: () => ref.invalidate(palsProvider),
             ),
-            data: (list) => _PalList(
-              pals: list,
-              onAccept: _accept,
-              onRemove: _remove,
-            ),
+            data: (list) =>
+                _PalList(pals: list, onAccept: _accept, onRemove: _remove),
           ),
 
           const SizedBox(height: NmSpace.s6),
-          // Antes vivía en Perfil y en un engranaje de la barra: acá, a la
-          // vista, que es donde se piensa en los pals.
+          // Qué ven tus pals y de qué te avisa la app. Antes vivía en Perfil
+          // y en un engranaje de la barra: acá, a la vista.
           NmButton.secondary(
-            label: 'Qué ven mis pals',
+            label: 'Configurar Pals',
             block: true,
             icon: PhosphorIcons.slidersHorizontal(),
             onPressed: () => context.push(Routes.palSharing),
@@ -271,9 +267,7 @@ class _PalList extends StatelessWidget {
     final sent = pals
         .where((p) => p.status == PalStatus.pending && !p.isIncoming)
         .toList();
-    final accepted = pals
-        .where((p) => p.status == PalStatus.accepted)
-        .toList();
+    final accepted = pals.where((p) => p.status == PalStatus.accepted).toList();
 
     if (pals.isEmpty) {
       return EmptyState(

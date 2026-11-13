@@ -346,6 +346,9 @@ class NmSegmentedControl<T> extends StatelessWidget {
 }
 
 /// Fila con switch. El control nunca usa el estilo por defecto del SO.
+///
+/// Sin [onChanged] queda deshabilitada: se ve, pero no se puede tocar (una
+/// opción que depende de otra apagada).
 class NmSwitchRow extends StatelessWidget {
   const NmSwitchRow({
     required this.title,
@@ -358,17 +361,19 @@ class NmSwitchRow extends StatelessWidget {
   final String title;
   final String? subtitle;
   final bool value;
-  final ValueChanged<bool> onChanged;
+  final ValueChanged<bool>? onChanged;
 
   @override
   Widget build(BuildContext context) {
     final nm = context.nm;
+    final enabled = onChanged != null;
     return Semantics(
       toggled: value,
+      enabled: enabled,
       label: title,
       child: ExcludeSemantics(
         child: InkWell(
-          onTap: () => onChanged(!value),
+          onTap: enabled ? () => onChanged!(!value) : null,
           borderRadius: NmRadius.brMd,
           child: Container(
             constraints: const BoxConstraints(
@@ -387,7 +392,10 @@ class NmSwitchRow extends StatelessWidget {
                     children: <Widget>[
                       Text(
                         title,
-                        style: NmTextStyles.from(NmType.body, color: nm.text),
+                        style: NmTextStyles.from(
+                          NmType.body,
+                          color: enabled ? nm.text : nm.textMuted,
+                        ),
                       ),
                       if (subtitle != null)
                         Text(
