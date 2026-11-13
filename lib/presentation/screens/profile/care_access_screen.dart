@@ -38,7 +38,6 @@ class CareAccessScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final nm = context.nm;
 
     // Sin servidor no hay nada que conceder y decirlo es más honesto que
     // mostrar una pantalla vacía que parece rota.
@@ -48,7 +47,8 @@ class CareAccessScreen extends ConsumerWidget {
         child: EmptyState(
           icon: PhosphorIcons.stethoscope(),
           title: 'Necesitás una cuenta',
-          body: 'Sin cuenta tus datos viven solo en este teléfono, así que no '
+          body:
+              'Sin cuenta tus datos viven solo en este teléfono, así que no '
               'hay nada a lo que darle acceso desde otro lado.',
         ),
       );
@@ -74,13 +74,6 @@ class CareAccessScreen extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
             const SizedBox(height: NmSpace.s4),
-            Text(
-              'Dale acceso a quien te sigue para que pueda ver tu día a día '
-              'desde su computadora. Vos elegís qué ve y podés cortarlo cuando '
-              'quieras.',
-              style: NmTextStyles.from(NmType.bodySm, color: nm.textMuted),
-            ),
-            const SizedBox(height: NmSpace.s6),
 
             // Lo que la profesional devuelve. Vive acá además de en Inicio
             // porque Inicio lo muestra solo cuando hay algo nuevo o vigente, y
@@ -117,14 +110,7 @@ class CareAccessScreen extends ConsumerWidget {
             ),
             const SizedBox(height: NmSpace.s6),
 
-            if (grants.isEmpty)
-              EmptyState(
-                compact: true,
-                icon: PhosphorIcons.stethoscope(),
-                title: 'Todavía no le diste acceso a nadie',
-                body: 'Pedile su código, que empieza con CE-, y cargalo acá.',
-              )
-            else ...<Widget>[
+            if (grants.isNotEmpty) ...<Widget>[
               const NmSectionHeader(title: 'Con acceso'),
               for (final grant in grants)
                 Padding(
@@ -139,12 +125,6 @@ class CareAccessScreen extends ConsumerWidget {
               block: true,
               icon: PhosphorIcons.plus(),
               onPressed: () => _openGrantSheet(context, ref),
-            ),
-            const SizedBox(height: NmSpace.s6),
-
-            const InfoNote(
-              text: 'Quien tenga acceso solo puede mirar, y solo lo que '
-                  'prendas.',
             ),
           ],
         ),
@@ -207,9 +187,7 @@ class _GrantCard extends ConsumerWidget {
             children: <Widget>[
               Expanded(
                 child: Text(
-                  grant.displayName.isEmpty
-                      ? 'Profesional'
-                      : grant.displayName,
+                  grant.displayName.isEmpty ? 'Profesional' : grant.displayName,
                   style: NmTextStyles.from(NmType.h4, color: nm.text),
                 ),
               ),
@@ -250,11 +228,7 @@ class _GrantCard extends ConsumerWidget {
           const SizedBox(height: NmSpace.s3),
           NmButton.ghost(
             label: 'Cambiar qué ve',
-            onPressed: () => _openGrantSheet(
-              context,
-              ref,
-              editing: grant,
-            ),
+            onPressed: () => _openGrantSheet(context, ref, editing: grant),
           ),
         ],
       ),
@@ -365,8 +339,7 @@ class _GrantSheetState extends ConsumerState<_GrantSheet> {
         children: <Widget>[
           if (!_isEditing) ...<Widget>[
             Text(
-              'Pedile el código que le muestra su panel. Empieza con CE- '
-                  '(los más viejos, con NT-).',
+              'Pedile el código que le muestra su panel.',
               style: NmTextStyles.from(NmType.bodySm, color: nm.textMuted),
             ),
             const SizedBox(height: NmSpace.s4),
@@ -390,16 +363,16 @@ class _GrantSheetState extends ConsumerState<_GrantSheet> {
               children: <Widget>[
                 NmSwitchRow(
                   title: 'Comidas',
-                  subtitle: 'Cada comida con sus ítems, calorías y macros, y '
-                      'tu objetivo del día.',
+                  subtitle: 'Ítems, calorías, macros y tu objetivo.',
                   value: _categories.meals,
-                  onChanged: (v) =>
-                      setState(() => _categories = _categories.copyWith(meals: v)),
+                  onChanged: (v) => setState(
+                    () => _categories = _categories.copyWith(meals: v),
+                  ),
                 ),
                 const NmDivider(indent: NmSpace.s3),
                 NmSwitchRow(
                   title: 'Fotos',
-                  subtitle: 'Las fotos de las comidas que analizaste.',
+                  subtitle: 'De las comidas que analizaste.',
                   value: _categories.photos,
                   onChanged: (v) => setState(
                     () => _categories = _categories.copyWith(photos: v),
@@ -408,16 +381,16 @@ class _GrantSheetState extends ConsumerState<_GrantSheet> {
                 const NmDivider(indent: NmSpace.s3),
                 NmSwitchRow(
                   title: 'Peso y medidas',
-                  subtitle: 'Tu peso día a día y los perímetros que cargaste.',
+                  subtitle: 'Peso y perímetros.',
                   value: _categories.body,
-                  onChanged: (v) =>
-                      setState(() => _categories = _categories.copyWith(body: v)),
+                  onChanged: (v) => setState(
+                    () => _categories = _categories.copyWith(body: v),
+                  ),
                 ),
                 const NmDivider(indent: NmSpace.s3),
                 NmSwitchRow(
                   title: 'Actividad, agua y sueño',
-                  subtitle: 'El ejercicio con sus calorías estimadas, los '
-                      'vasos de agua y cuánto dormiste.',
+                  subtitle: 'Ejercicio, vasos de agua y horas de sueño.',
                   value: _categories.wellbeing,
                   onChanged: (v) => setState(
                     () => _categories = _categories.copyWith(wellbeing: v),
@@ -462,8 +435,8 @@ String _articlesSubtitle(int total, int unseen) => switch (unseen) {
   _ => '$unseen sin leer',
 };
 
-String _feedbackSubtitle(int unread) => switch (unread) {
-  0 => 'Lo que tu nutricionista te escribe desde su panel',
+String? _feedbackSubtitle(int unread) => switch (unread) {
+  0 => null,
   1 => '1 nueva sin leer',
   _ => '$unread nuevas sin leer',
 };

@@ -242,7 +242,8 @@ class _BodyProfileScreenState extends ConsumerState<BodyProfileScreen> {
                   ),
                   const SizedBox(height: NmSpace.s3),
                   const InfoNote(
-                    text: 'Es una referencia poblacional: no distingue músculo '
+                    text:
+                        'Es una referencia poblacional: no distingue músculo '
                         'de grasa.',
                   ),
                   const SizedBox(height: NmSpace.s3),
@@ -259,7 +260,8 @@ class _BodyProfileScreenState extends ConsumerState<BodyProfileScreen> {
             const SizedBox(height: NmSpace.s6),
             InfoNote(
               tone: NmNoteTone.info,
-              text: 'Tu objetivo sugerido pasaría de '
+              text:
+                  'Tu objetivo sugerido pasaría de '
                   '${Fmt.integer(goal.baseCalorieTarget)} a '
                   '${Fmt.integer(suggested)} kcal.',
               action: 'Actualizar objetivo',
@@ -405,12 +407,16 @@ class _TargetScreenState extends ConsumerState<TargetScreen> {
                 children: <Widget>[
                   ValueRow(
                     label: 'Metabolismo basal',
-                    caption: 'Mifflin-St Jeor',
+                    hint:
+                        'Fórmula de Mifflin-St Jeor, con tu sexo, edad, '
+                        'altura y peso.',
                     value: Fmt.kcal(bmrValue),
                   ),
                   ValueRow(
                     label: '× factor de actividad',
-                    caption: profile.activityLevel.label,
+                    hint:
+                        'Nivel de actividad: '
+                        '${profile.activityLevel.label.toLowerCase()}.',
                     value: Fmt.decimal2(profile.activityLevel.factor),
                   ),
                   ValueRow(label: 'Gasto diario', value: Fmt.kcal(tdeeValue!)),
@@ -419,8 +425,9 @@ class _TargetScreenState extends ConsumerState<TargetScreen> {
                       label: goalType == GoalType.lose
                           ? '− déficit'
                           : '+ superávit',
-                      caption: '${pace.shareLabelFor(goalType)} · '
-                          '≈ ${Fmt.decimal2(effectiveRate)} kg/semana',
+                      hint:
+                          '${pace.shareLabelFor(goalType)}: '
+                          '≈ ${Fmt.decimal2(effectiveRate)} kg por semana.',
                       value: Fmt.kcal(
                         CalorieTargetRules.dailyAdjustment(
                           effectiveRate,
@@ -440,7 +447,8 @@ class _TargetScreenState extends ConsumerState<TargetScreen> {
               const SizedBox(height: NmSpace.s3),
               InfoNote(
                 tone: NmNoteTone.caution,
-                text: 'Ajustamos tu objetivo al mínimo saludable de '
+                text:
+                    'Ajustamos tu objetivo al mínimo saludable de '
                     '${CalorieTargetRules.minimumFor(profile.biologicalSex)} '
                     'kcal.',
               ),
@@ -452,24 +460,17 @@ class _TargetScreenState extends ConsumerState<TargetScreen> {
             action: 'Ver los cuatro',
             onAction: () => context.push(Routes.profileGoal),
           ),
-          Wrap(
-            spacing: NmSpace.s2,
-            runSpacing: NmSpace.s2,
-            children: <Widget>[
-              for (final type in GoalType.values)
-                NmChip(
-                  label: type.label,
-                  selected: type == goalType,
-                  semanticsInRadioGroup: true,
-                  onTap: () => setState(() {
-                    _goalType = type;
-                    // Cada objetivo arranca en su ritmo de referencia;
-                    // conservar el del objetivo anterior daba combinaciones
-                    // raras, como ganar músculo al ritmo más exigente.
-                    _pace = GoalPreset.of(type).defaultPace;
-                  }),
-                ),
-            ],
+          // Dos filas de dos, con un círculo de selección: es una sola
+          // opción entre cuatro.
+          _GoalTypeGrid(
+            value: goalType,
+            onChanged: (type) => setState(() {
+              _goalType = type;
+              // Cada objetivo arranca en su ritmo de referencia; conservar el
+              // del objetivo anterior daba combinaciones raras, como ganar
+              // músculo al ritmo más exigente.
+              _pace = GoalPreset.of(type).defaultPace;
+            }),
           ),
           if (goalType != GoalType.maintain) ...<Widget>[
             const SizedBox(height: NmSpace.s6),
@@ -508,8 +509,6 @@ class _TargetScreenState extends ConsumerState<TargetScreen> {
                         ),
                 ),
               ),
-            const SizedBox(height: NmSpace.s2),
-            const InfoNote(text: 'El tope es 1 kg por semana.'),
           ],
           const SizedBox(height: NmSpace.s6),
           NmSwitchRow(
@@ -537,17 +536,20 @@ class _TargetScreenState extends ConsumerState<TargetScreen> {
               children: <Widget>[
                 ValueRow(
                   label: 'Proteínas',
-                  caption: '${(macros.proteinG * 4 * 100 / previewTarget).round()} %',
+                  caption:
+                      '${(macros.proteinG * 4 * 100 / previewTarget).round()} %',
                   value: Fmt.grams(macros.proteinG),
                 ),
                 ValueRow(
                   label: 'Carbohidratos',
-                  caption: '${(macros.carbsG * 4 * 100 / previewTarget).round()} %',
+                  caption:
+                      '${(macros.carbsG * 4 * 100 / previewTarget).round()} %',
                   value: Fmt.grams(macros.carbsG),
                 ),
                 ValueRow(
                   label: 'Grasas',
-                  caption: '${(macros.fatG * 9 * 100 / previewTarget).round()} %',
+                  caption:
+                      '${(macros.fatG * 9 * 100 / previewTarget).round()} %',
                   value: Fmt.grams(macros.fatG),
                 ),
               ],
@@ -596,13 +598,13 @@ class _TargetScreenState extends ConsumerState<TargetScreen> {
                         context: context,
                         builder: (context) => NmDialog(
                           title: 'Es un objetivo muy bajo',
-                          body: 'Por debajo de $minimum kcal cuesta cubrir los '
+                          body:
+                              'Por debajo de $minimum kcal cuesta cubrir los '
                               'nutrientes básicos.',
                           actions: <Widget>[
                             NmButton.ghost(
                               label: 'Volver',
-                              onPressed: () =>
-                                  Navigator.of(context).pop(false),
+                              onPressed: () => Navigator.of(context).pop(false),
                             ),
                             NmButton(
                               label: 'Guardar igual',
@@ -636,10 +638,7 @@ class _TargetScreenState extends ConsumerState<TargetScreen> {
                     );
                     if (!context.mounted) return;
                     setState(() => _saving = false);
-                    NmSnackbar.show(
-                      context,
-                      'Objetivo actualizado desde hoy',
-                    );
+                    NmSnackbar.show(context, 'Objetivo actualizado desde hoy');
                   },
           ),
         ],
@@ -647,8 +646,7 @@ class _TargetScreenState extends ConsumerState<TargetScreen> {
     );
   }
 
-  String _formatDate(DateTime date) =>
-      '${date.day}/${date.month}/${date.year}';
+  String _formatDate(DateTime date) => '${date.day}/${date.month}/${date.year}';
 
   /// Los kilos por semana que le tocan a [pace] con este gasto.
   double _rateOf(GoalPace pace, GoalType goalType, int tdeeValue) =>
@@ -851,6 +849,66 @@ class _EmptyOrList extends StatelessWidget {
             ),
         ],
       ),
+    );
+  }
+}
+
+/// Tipo de objetivo en una grilla de 2 × 2, con un círculo por opción.
+class _GoalTypeGrid extends StatelessWidget {
+  const _GoalTypeGrid({required this.value, required this.onChanged});
+
+  final GoalType value;
+  final ValueChanged<GoalType> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final nm = context.nm;
+    const options = GoalType.values;
+    return Column(
+      children: <Widget>[
+        for (var i = 0; i < options.length; i += 2)
+          Row(
+            children: <Widget>[
+              for (final option in options.skip(i).take(2))
+                Expanded(
+                  child: Semantics(
+                    inMutuallyExclusiveGroup: true,
+                    checked: option == value,
+                    label: option.label,
+                    child: ExcludeSemantics(
+                      child: InkWell(
+                        onTap: () => onChanged(option),
+                        borderRadius: NmRadius.brSm,
+                        child: Row(
+                          children: <Widget>[
+                            Radio<GoalType>(
+                              value: option,
+                              // ignore: deprecated_member_use
+                              groupValue: value,
+                              // ignore: deprecated_member_use
+                              onChanged: (v) {
+                                if (v != null) onChanged(v);
+                              },
+                            ),
+                            Expanded(
+                              child: Text(
+                                option.label,
+                                style: NmTextStyles.from(
+                                  NmType.bodySm,
+                                  color: nm.text,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              if (options.length - i == 1) const Spacer(),
+            ],
+          ),
+      ],
     );
   }
 }
