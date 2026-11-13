@@ -62,6 +62,62 @@ export const DEVOLUCIONES = [
   { to: 'diego', kind: 'feedback', daysAgo: 1, draft: true, body: 'Borrador: Diego, entre semana venís muy bien. Hablemos de los fines de semana en la consulta.' },
 ];
 
+// El objetivo recomendado (migración 53): una indicación con números que el
+// paciente aplica desde la app. Carla ya lo leyó y todavía no lo aplicó; Diego
+// queda sin ninguno para recomendarlo en vivo.
+export const OBJETIVOS = [
+  { to: 'carla', daysAgo: 5, read: true, kcal: 1900, protein: 95, carbs: 230, fat: 63, nota: 'Mantenemos las calorías y subimos la proteína: repartila entre el desayuno y la merienda.' },
+];
+
+// Lo que Valentina publicó para todo su equipo (migración 52). El último es un
+// borrador: no lo ve ningún paciente.
+export const ARTICULOS = [
+  {
+    kind: 'recipe', tag: 'Desayunos', daysAgo: 20, title: 'Budín de avena y banana',
+    body: `# Ingredientes
+- 2 bananas maduras
+- 1 taza de avena
+- 2 huevos
+- Canela y esencia de vainilla
+
+# Preparación
+1. Pisá las bananas y mezclalas con los huevos.
+2. Sumá la avena y la canela.
+3. Horno medio, 25 minutos.
+
+Rinde 8 porciones de unas **120 kcal**. Con un yogur natural es un desayuno completo.`,
+  },
+  {
+    kind: 'article', tag: 'Organización', daysAgo: 9, title: 'Cómo armar una vianda en 10 minutos',
+    body: `La vianda sale fácil si el domingo dejás dos o tres bases cocidas. Después es combinar.
+
+# La regla del plato
+- **Mitad** de verduras, crudas o cocidas.
+- **Un cuarto** de proteína: pollo, huevo, legumbres, atún.
+- **Un cuarto** de hidratos: arroz, papa, fideos, quinoa.
+
+Sumá una fruta y agua. Si te queda corta, agregá más verdura antes que más hidratos.`,
+  },
+  {
+    kind: 'recipe', tag: 'Colaciones', daysAgo: 3, title: 'Hummus de garbanzos',
+    body: `# Ingredientes
+- 1 lata de garbanzos escurridos
+- 1 cucharada de tahini
+- Jugo de medio limón
+- 1 diente de ajo, sal y comino
+
+# Preparación
+1. Procesá todo con dos o tres cucharadas de agua.
+2. Ajustá la sal y el limón.
+
+Con bastones de zanahoria y apio es una colación que llena.`,
+  },
+  {
+    kind: 'article', tag: 'Salidas', daysAgo: 1, draft: true, title: 'Comer afuera sin descontrolarse',
+    body: 'Borrador. Ideas: mirar la carta antes, pedir la guarnición de verduras, compartir el postre.',
+  },
+];
+
 // Platos para generar comidas. Cada ítem: [nombre, cantidad, unidad, kcal, prot, carb, grasa].
 export const PLATOS = {
   breakfast: [

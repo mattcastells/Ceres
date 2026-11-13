@@ -26,6 +26,10 @@ Los pacientes están armados para que el panel tenga algo que contar:
 - **Sofía** tuvo angina hace 9 días (día de enfermedad marcado).
 - **Martina** quiere ganar músculo y come de menos.
 - **Camila** empezó hace 10 días.
+- **Carla** tiene además un **objetivo recomendado** (1.900 kcal, más proteína),
+  leído y sin aplicar. **Diego** no tiene ninguno: es el que se recomienda en vivo.
+- Valentina publicó **tres artículos y recetas** para el equipo y tiene un
+  borrador (`/articulos` en el panel).
 
 ## La primera vez en la notebook
 
@@ -71,6 +75,8 @@ levantarlo ahí mismo, con el emulador como plan B.
    "un café con leche y dos medialunas".
 2. **Panel (Valentina)**: la comida aparece en tu ficha. Pestaña **Informe con
    IA** → generar. **Devoluciones** → "Proponer borrador" → editar → publicar.
+   En la misma pestaña, **Objetivo recomendado** → calorías y proteínas →
+   Publicar.
 3. **App**: la devolución aparece en Inicio, en "De tu nutricionista".
 4. **Panel**: "Analizar el equipo con IA" en la portada; **Organización** con
    el fondo de IA del consultorio.

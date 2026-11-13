@@ -21,7 +21,8 @@
 
 import { randomUUID, createHash } from 'node:crypto';
 import {
-  AMIGOS, DEMO_DOMAIN, DEVOLUCIONES, ORGANIZACION, PACIENTES, PLATOS, PROFESIONALES,
+  AMIGOS, ARTICULOS, DEMO_DOMAIN, DEVOLUCIONES, OBJETIVOS, ORGANIZACION, PACIENTES, PLATOS,
+  PROFESIONALES,
 } from './escenario.mjs';
 
 const BASE = process.env.SUPABASE_URL?.replace(/\/$/, '');
@@ -294,6 +295,32 @@ await insert('care_feedback', DEVOLUCIONES.map((d) => {
     author_id: ids.valentina, patient_id: ids[d.to], kind: d.kind, body: d.body, source: 'manual',
     created_at: at, published_at: d.draft ? null : at,
     read_at: d.read ? atLocal(addDays(todayAR, -d.daysAgo + 1), 9 * 60).toISOString() : null,
+  };
+}));
+
+// El texto lleva los números escritos, como lo arma el panel
+// (`backoffice/lib/objetivo.ts`): así lo lee también una app que no conoce las
+// columnas.
+const kcalTxt = (n) => n.toLocaleString('es-AR');
+await insert('care_feedback', OBJETIVOS.map((o) => {
+  const at = atLocal(addDays(todayAR, -o.daysAgo), 18 * 60).toISOString();
+  const resumen = `Objetivo recomendado: ${kcalTxt(o.kcal)} kcal por día · proteínas ${o.protein} g · ` +
+    `carbohidratos ${o.carbs} g · grasas ${o.fat} g.`;
+  return {
+    author_id: ids.valentina, patient_id: ids[o.to], kind: 'indication', source: 'manual',
+    body: o.nota ? `${resumen}\n\n${o.nota}` : resumen,
+    target_kcal: o.kcal, target_protein_g: o.protein, target_carbs_g: o.carbs, target_fat_g: o.fat,
+    created_at: at, published_at: at,
+    read_at: o.read ? atLocal(addDays(todayAR, -o.daysAgo + 1), 9 * 60).toISOString() : null,
+  };
+}));
+
+console.log('· Artículos y recetas');
+await insert('care_articles', ARTICULOS.map((a) => {
+  const at = atLocal(addDays(todayAR, -a.daysAgo), 11 * 60).toISOString();
+  return {
+    author_id: ids.valentina, kind: a.kind, title: a.title, body: a.body, tag: a.tag ?? null,
+    created_at: at, updated_at: at, published_at: a.draft ? null : at,
   };
 }));
 
