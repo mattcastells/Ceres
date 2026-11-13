@@ -302,7 +302,7 @@ class ProfileScreen extends ConsumerWidget {
           Center(
             child: Column(
               children: <Widget>[
-                const BrandMark(size: 28, monochrome: true),
+                const BrandMark(size: 28),
                 const SizedBox(height: NmSpace.s2),
                 Text(
                   ref

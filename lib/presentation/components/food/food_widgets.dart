@@ -56,11 +56,18 @@ class MealSection extends StatelessWidget {
                 style: NmTextStyles.from(NmType.h4, color: nm.text),
               ),
             ),
-            Text(
-              Fmt.kcal(total),
-              style: NmTextStyles.from(NmType.bodySm, color: nm.textMuted).tnum,
-            ),
-            const SizedBox(width: NmSpace.s2),
+            // El total solo con dos comidas o más: con una sola repetía el
+            // número de la fila de abajo, y con ninguna era un "0 kcal".
+            if (meals.length > 1) ...<Widget>[
+              Text(
+                Fmt.kcal(total),
+                style: NmTextStyles.from(
+                  NmType.bodySm,
+                  color: nm.textMuted,
+                ).tnum,
+              ),
+              const SizedBox(width: NmSpace.s2),
+            ],
             NmIconButton(
               icon: PhosphorIcons.plus(),
               onPressed: onAdd,
@@ -69,29 +76,16 @@ class MealSection extends StatelessWidget {
             ),
           ],
         ),
-        if (meals.isEmpty)
-          Padding(
-            padding: const EdgeInsets.only(
-              left: NmSpace.s6,
-              bottom: NmSpace.s2,
-            ),
-            child: Text(
-              'Sin registros',
-              style: NmTextStyles.from(NmType.caption, color: nm.textMuted),
-            ),
-          )
-        else
-          for (final meal in meals)
-            MealListItem(
-              meal: meal,
-              onTap: () => onOpenMeal(meal),
-              onDelete: onDeleteMeal == null
-                  ? null
-                  : () => onDeleteMeal!(meal),
-              onDuplicate: onDuplicateMeal == null
-                  ? null
-                  : () => onDuplicateMeal!(meal),
-            ),
+        // Vacía no dice nada: el "+" de la derecha ya invita a cargar.
+        for (final meal in meals)
+          MealListItem(
+            meal: meal,
+            onTap: () => onOpenMeal(meal),
+            onDelete: onDeleteMeal == null ? null : () => onDeleteMeal!(meal),
+            onDuplicate: onDuplicateMeal == null
+                ? null
+                : () => onDuplicateMeal!(meal),
+          ),
       ],
     );
   }
@@ -459,11 +453,7 @@ class FoodResultRow extends StatelessWidget {
 
 /// Tabla nutricional por 100 g y por porción (S-17).
 class NutritionTable extends StatelessWidget {
-  const NutritionTable({
-    required this.food,
-    required this.quantity,
-    super.key,
-  });
+  const NutritionTable({required this.food, required this.quantity, super.key});
 
   final Food food;
 
@@ -482,8 +472,9 @@ class NutritionTable extends StatelessWidget {
     // porción daba "por 100 g: 7.000 kcal" para un huevo de 70. Un disparate
     // con forma de dato, que es justo lo que la app no se permite.
     const unidadesDePeso = <String>{'g', 'gr', 'gramos', 'ml', 'cc'};
-    final mostrarPor100 =
-        unidadesDePeso.contains(food.servingUnit.trim().toLowerCase());
+    final mostrarPor100 = unidadesDePeso.contains(
+      food.servingUnit.trim().toLowerCase(),
+    );
 
     Widget row(String label, double perServing, String unit) => Padding(
       padding: const EdgeInsets.symmetric(vertical: NmSpace.s2),
@@ -566,7 +557,8 @@ class AiEstimateBanner extends StatelessWidget {
   Widget build(BuildContext context) => InfoNote(
     tone: NmNoteTone.caution,
     icon: PhosphorIcons.sparkle(),
-    text: 'Estimación de IA: revisá antes de guardar. Con una foto, las '
+    text:
+        'Estimación de IA: revisá antes de guardar. Con una foto, las '
         'porciones tienen un error típico de ±25 %.',
   );
 }
@@ -617,10 +609,7 @@ class WeightRow extends StatelessWidget {
         if (delta != 0)
           Text(
             Fmt.signedWeight(delta, units),
-            style: NmTextStyles.from(
-              NmType.caption,
-              color: nm.textMuted,
-            ).tnum,
+            style: NmTextStyles.from(NmType.caption, color: nm.textMuted).tnum,
           ),
         const SizedBox(width: NmSpace.s2),
         NmButton.ghost(label: 'Actualizar', onPressed: onLog),
