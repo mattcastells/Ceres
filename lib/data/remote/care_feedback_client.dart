@@ -36,7 +36,12 @@ class CareFeedbackClient {
       final rows = await _db
           .from('care_feedback')
           .select(
-            'id, author_id, kind, local_date, body, published_at, read_at',
+            'id, author_id, kind, local_date, body, published_at, read_at, '
+            // El objetivo recomendado (migración 53). Va en la misma consulta:
+            // el vigente es la indicación más reciente que los trae, y la
+            // lista ya viene ordenada así.
+            'target_kcal, target_protein_g, target_carbs_g, target_fat_g, '
+            'applied_at',
           )
           .eq('patient_id', _me)
           .not('published_at', 'is', null)
@@ -50,27 +55,10 @@ class CareFeedbackClient {
       // ya usa la pantalla de accesos. Si una profesional dejó de tener
       // acceso, la vista no la devuelve y la devolución queda sin firma: lo
       // que escribió sigue valiendo.
-      final authorIds = <String>{
+      final nameById = await professionalNames(_db, <String>{
         for (final r in rows)
           if (r['author_id'] case final String id) id,
-      };
-      final nameById = <String, String>{};
-      if (authorIds.isNotEmpty) {
-        try {
-          final names = await _db
-              .from('care_professionals')
-              .select('id, display_name')
-              .inFilter('id', authorIds.toList())
-              .timeout(timeout);
-          for (final n in names) {
-            if (n['id'] case final String id) {
-              nameById[id] = n['display_name'] as String? ?? '';
-            }
-          }
-        } on Exception {
-          // Sin nombres la lista se muestra igual.
-        }
-      }
+      });
 
       return parseRows(rows, namesById: nameById);
     } on Exception {
@@ -110,8 +98,50 @@ class CareFeedbackClient {
     }
   }
 
+  /// Avisa que la persona aplicó el objetivo recomendado: pone `applied_at`
+  /// (y `read_at`) para que la profesional lo vea en el panel. Va por función
+  /// por lo mismo que [markRead].
+  Future<void> markTargetApplied(String id) async {
+    try {
+      await _db
+          .rpc<void>(
+            'mark_care_target_applied',
+            params: <String, dynamic>{'p_id': id},
+          )
+          .timeout(timeout);
+    } on Exception {
+      throw _offline;
+    }
+  }
+
   static const AppError _offline = AppError(
     code: ApiErrorCode.offline,
     message: 'No pudimos traer lo de tu nutricionista. Revisá tu conexión.',
   );
+}
+
+/// `id → display_name` de las profesionales, desde `care_professionals`. La
+/// usan las devoluciones y los artículos. Si falla devuelve lo que tenga: sin
+/// nombres la lista se muestra igual, sin firma.
+Future<Map<String, String>> professionalNames(
+  SupabaseClient db,
+  Set<String> ids,
+) async {
+  final nameById = <String, String>{};
+  if (ids.isEmpty) return nameById;
+  try {
+    final names = await db
+        .from('care_professionals')
+        .select('id, display_name')
+        .inFilter('id', ids.toList())
+        .timeout(CareFeedbackClient.timeout);
+    for (final n in names) {
+      if (n['id'] case final String id) {
+        nameById[id] = n['display_name'] as String? ?? '';
+      }
+    }
+  } on Exception {
+    // Sin nombres la lista se muestra igual.
+  }
+  return nameById;
 }

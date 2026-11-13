@@ -13,6 +13,7 @@ import '../../../core/theme/tokens.dart';
 import '../../../core/utils/dates.dart';
 import '../../../domain/models/care_feedback.dart';
 import '../../components/care/care_feedback_card.dart';
+import '../../components/care/care_target_block.dart';
 import '../../components/feedback/feedback.dart';
 import '../../components/system/nm_screen.dart';
 import '../../components/system/surfaces.dart';
@@ -140,6 +141,7 @@ class _List extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final nm = context.nm;
+    final target = inbox.target;
     final indications = inbox.indications;
     final feedback = inbox.items.where((f) => !f.isIndication).toList();
 
@@ -164,6 +166,11 @@ class _List extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: NmSpace.s12),
       children: <Widget>[
         const SizedBox(height: NmSpace.s4),
+        if (target != null) ...<Widget>[
+          const NmSectionHeader(title: 'Objetivo recomendado'),
+          _TargetItem(feedback: target, isNew: fresh.contains(target.id)),
+          const SizedBox(height: NmSpace.s6),
+        ],
         if (indications.isNotEmpty) ...<Widget>[
           const NmSectionHeader(title: 'Indicaciones vigentes'),
           Text(
@@ -181,6 +188,40 @@ class _List extends StatelessWidget {
             _Item(feedback: f, isNew: fresh.contains(f.id)),
         ],
       ],
+    );
+  }
+}
+
+/// El objetivo recomendado, con su firma y "Aplicar".
+class _TargetItem extends StatelessWidget {
+  const _TargetItem({required this.feedback, required this.isNew});
+
+  final CareFeedback feedback;
+  final bool isNew;
+
+  @override
+  Widget build(BuildContext context) {
+    final nm = context.nm;
+    return NmCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: Text(
+                  careFeedbackByline(feedback),
+                  style: NmTextStyles.from(NmType.caption, color: nm.textMuted),
+                ),
+              ),
+              if (isNew)
+                const NmTag(label: 'Nueva', variant: NmTagVariant.accent),
+            ],
+          ),
+          const SizedBox(height: NmSpace.s2),
+          CareTargetBlock(feedback: feedback, showLabel: false),
+        ],
+      ),
     );
   }
 }

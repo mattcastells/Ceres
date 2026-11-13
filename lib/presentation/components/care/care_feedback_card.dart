@@ -11,11 +11,13 @@ import '../../../core/utils/dates.dart';
 import '../../../domain/models/care_feedback.dart';
 import '../../providers/plan_providers.dart';
 import '../system/surfaces.dart';
+import 'care_target_block.dart';
 
 /// "De tu nutricionista", en Inicio.
 ///
-/// Aparece solo cuando hay algo que decir: la última devolución sin leer y las
-/// indicaciones vigentes. Sin nada de eso no ocupa lugar —Inicio es para el
+/// Aparece solo cuando hay algo que decir: la última devolución sin leer, el
+/// objetivo recomendado y las indicaciones vigentes. Sin nada de eso no
+/// ocupa lugar —Inicio es para el
 /// día, y una tarjeta vacía que dice "no hay nada" es ruido todos los días—.
 ///
 /// Mientras carga o si la consulta falla, tampoco: es información que suma,
@@ -29,8 +31,10 @@ class CareFeedbackHomeCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final inbox = ref.watch(careFeedbackProvider).valueOrNull;
-    if (inbox == null || !inbox.hasSomethingForHome) {
+    final inbox =
+        ref.watch(careFeedbackProvider).valueOrNull ??
+        CareInbox(const <CareFeedback>[]);
+    if (!inbox.hasSomethingForHome) {
       return const SizedBox.shrink();
     }
     return Padding(
@@ -46,7 +50,11 @@ class CareFeedbackHomeCard extends ConsumerWidget {
 /// El contenido de la tarjeta, separado del provider para poder dibujarlo
 /// con cualquier bandeja.
 class CareFeedbackSummary extends StatelessWidget {
-  const CareFeedbackSummary({required this.inbox, this.onTap, super.key});
+  const CareFeedbackSummary({
+    required this.inbox,
+    this.onTap,
+    super.key,
+  });
 
   final CareInbox inbox;
   final VoidCallback? onTap;
@@ -55,6 +63,7 @@ class CareFeedbackSummary extends StatelessWidget {
   Widget build(BuildContext context) {
     final nm = context.nm;
     final latest = inbox.latestUnreadFeedback;
+    final target = inbox.target;
     final indications = inbox.indications;
     final unread = inbox.unreadCount;
     final shown = indications.take(CareFeedbackHomeCard.maxIndications);
@@ -111,9 +120,17 @@ class CareFeedbackSummary extends StatelessWidget {
                 style: NmTextStyles.from(NmType.body, color: nm.text),
               ),
             ],
-            if (indications.isNotEmpty) ...<Widget>[
+            if (target != null) ...<Widget>[
               const SizedBox(height: NmSpace.s3),
               if (latest != null) ...<Widget>[
+                const NmDivider(),
+                const SizedBox(height: NmSpace.s3),
+              ],
+              CareTargetBlock(feedback: target, compact: true),
+            ],
+            if (indications.isNotEmpty) ...<Widget>[
+              const SizedBox(height: NmSpace.s3),
+              if (latest != null || target != null) ...<Widget>[
                 const NmDivider(),
                 const SizedBox(height: NmSpace.s3),
               ],

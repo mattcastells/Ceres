@@ -36,6 +36,9 @@ class _FakeFeedbackClient implements CareFeedbackClient {
       for (final f in items) f.id == id ? f.markedRead(DateTime.now()) : f,
     ];
   }
+
+  @override
+  Future<void> markTargetApplied(String id) async {}
 }
 
 CareFeedback _f(
