@@ -196,7 +196,8 @@ $EmuJson = Join-Path $Raiz 'env\demo-emulador.json'
   ConvertTo-Json | Set-Content -Path $EmuJson -Encoding utf8
 
 if ($Emulador) {
-  $emu = (flutter emulators 2>$null | Select-String '•' | Select-Object -First 1)
+  # La primera fila con '•' es la de títulos ("Id • Name • …"): se saltea.
+  $emu = (flutter emulators 2>$null | Select-String '•' | Where-Object { $_.ToString() -notmatch '^\s*Id\s' } | Select-Object -First 1)
   if ($emu) {
     $id = ($emu.ToString() -split '•')[0].Trim()
     flutter emulators --launch $id | Out-Null
