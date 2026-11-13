@@ -139,4 +139,37 @@ void main() {
     expect(copia.id, isNot(origen.id));
     expect(repo.mealsOn(hoy), hasLength(1));
   });
+
+  test('repetida para hoy queda con la hora de ahora', () async {
+    final ayer = hoy.subtract(const Duration(days: 1));
+    final origen = comida('Guiso', slot: MealSlot.dinner, fecha: ayer);
+    await repo.saveMeal(origen);
+
+    final antes = DateTime.now().subtract(const Duration(minutes: 1));
+    final copia = await repo.duplicateMeal(origen.id, hoy, MealSlot.lunch);
+
+    expect(copia.eatenAt.isAfter(antes), isTrue);
+    expect(copia.eatenAt.isAfter(DateTime.now()), isFalse,
+        reason: 'repetir hoy no puede dejar la comida en el futuro');
+  });
+
+  test('repetida para otro día conserva su hora', () async {
+    final ayer = hoy.subtract(const Duration(days: 1));
+    final anteayer = hoy.subtract(const Duration(days: 2));
+    final origen = comida('Guiso', slot: MealSlot.dinner, fecha: anteayer)
+        .copyWith(eatenAt: DateTime(anteayer.year, anteayer.month, anteayer.day, 21, 15));
+    await repo.saveMeal(origen);
+
+    final copia = await repo.duplicateMeal(origen.id, ayer, MealSlot.dinner);
+
+    expect(copia.eatenAt.hour, 21);
+    expect(copia.eatenAt.minute, 15);
+    expect(dateOnly(copia.eatenAt), dateOnly(ayer));
+  });
+
+  test('la unidad se lee con tilde y plural', () {
+    expect(MealItem.unitLabel('porcion', 1), 'porción');
+    expect(MealItem.unitLabel('porcion', 2), 'porciones');
+    expect(MealItem.unitLabel('g', 150), 'g');
+  });
 }

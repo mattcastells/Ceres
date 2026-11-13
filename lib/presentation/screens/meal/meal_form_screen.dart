@@ -3,8 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
-import '../../../core/config/feature_flags.dart';
-import '../../../core/config/supabase_config.dart';
 import '../../../core/router/routes.dart';
 import '../../../core/theme/nm_theme.dart';
 import '../../../core/theme/text_styles.dart';
@@ -26,6 +24,7 @@ import '../../providers/app_providers.dart';
 import '../photo/photo_screens.dart';
 import 'edit_portion_sheet.dart';
 import 'meal_draft.dart';
+import 'quick_add_item.dart';
 import 'recalculate_sheet.dart';
 
 /// S-15 · Nueva comida. Compone una comida a partir de ítems.
@@ -58,11 +57,6 @@ class MealFormScreen extends ConsumerStatefulWidget {
 
 class _MealFormScreenState extends ConsumerState<MealFormScreen> {
   bool _saving = false;
-
-  /// Sin servidor no hay Edge Function a la que preguntarle, así que el botón
-  /// se muestra deshabilitado y con el motivo, en vez de fallar al tocarlo.
-  static bool get _aiAvailable =>
-      FeatureFlags.aiPhotoAnalysis && SupabaseConfig.isConfigured;
 
   @override
   void initState() {
@@ -176,6 +170,10 @@ class _MealFormScreenState extends ConsumerState<MealFormScreen> {
     final nm = context.nm;
     final draft = ref.watch(mealDraftProvider);
     final controller = ref.read(mealDraftProvider.notifier);
+    // Sin servidor no hay Edge Function a la que preguntarle, así que los
+    // botones de IA se muestran deshabilitados y con el motivo, en vez de
+    // fallar al tocarlos.
+    final aiAvailable = ref.watch(mealAiAvailableProvider);
 
     if (draft == null) {
       return const Scaffold(body: Center(child: NmSpinner()));
@@ -304,9 +302,8 @@ class _MealFormScreenState extends ConsumerState<MealFormScreen> {
                             compact: true,
                             icon: PhosphorIcons.magnifyingGlass(),
                             title: 'Agregá el primer alimento',
-                            body: 'Buscalo en el catálogo, escaneá su código de '
-                                'barras o sacale una foto y que la IA la '
-                                'estime.',
+                            body: 'Escribilo abajo, buscalo en el catálogo o '
+                                'sacale una foto.',
                           )
                         else
                           NmCard(
@@ -339,6 +336,24 @@ class _MealFormScreenState extends ConsumerState<MealFormScreen> {
                             ),
                           ),
                         const SizedBox(height: NmSpace.s4),
+                        // Sumar un ítem escribiéndolo, pegado a la lista: es
+                        // la fila que le sigue al último ítem. Se estima, se
+                        // suma al plato y el total de abajo cambia en el acto.
+                        //
+                        // Reemplaza a "Describir lo que comiste" en esta
+                        // pantalla. Los dos eran texto que se estima y se suma
+                        // a esta comida; la única diferencia era una pantalla
+                        // de ida y otra de revisión antes de volver acá, donde
+                        // la revisión es la misma lista. Describir sigue en el
+                        // menú Agregar, que es donde se arranca una comida
+                        // entera desde cero.
+                        //
+                        // La key es el borrador: abrir otra comida no hereda
+                        // lo que había quedado escrito en el campo.
+                        QuickAddItemField(
+                          key: ValueKey<String>('sumar-${draft.id}'),
+                        ),
+                        const SizedBox(height: NmSpace.s4),
                         NmButton.secondary(
                           label: 'Agregar alimento',
                           block: true,
@@ -360,7 +375,7 @@ class _MealFormScreenState extends ConsumerState<MealFormScreen> {
                           label: 'Sacar foto y analizarla',
                           block: true,
                           icon: PhosphorIcons.camera(),
-                          onPressed: _aiAvailable
+                          onPressed: aiAvailable
                               ? () {
                                   if (!_aiOrUpsell()) return;
                                   // El slot y el día los manda el borrador, no
@@ -373,26 +388,7 @@ class _MealFormScreenState extends ConsumerState<MealFormScreen> {
                                 }
                               : null,
                         ),
-                        const SizedBox(height: NmSpace.s2),
-                        // La cuarta: contarlo en una frase. Estaba solo en el
-                        // menú Agregar, y esta es la pantalla donde se elige
-                        // con qué se arma la comida: si están el buscador, el
-                        // escáner y la foto, tiene que estar también.
-                        NmButton.secondary(
-                          label: 'Describir lo que comiste',
-                          block: true,
-                          icon: PhosphorIcons.chatText(),
-                          onPressed: _aiAvailable
-                              ? () {
-                                  if (!_aiOrUpsell()) return;
-                                  ref
-                                      .read(photoTargetProvider.notifier)
-                                      .state = null;
-                                  context.push(Routes.mealDescribe);
-                                }
-                              : null,
-                        ),
-                        if (!_aiAvailable) ...<Widget>[
+                        if (!aiAvailable) ...<Widget>[
                           const SizedBox(height: NmSpace.s2),
                           Text(
                             'El análisis con IA necesita servidor configurado.',
@@ -416,7 +412,7 @@ class _MealFormScreenState extends ConsumerState<MealFormScreen> {
                             label: 'Recalcular con IA',
                             block: true,
                             icon: PhosphorIcons.sparkle(),
-                            onPressed: _aiAvailable && !draft.isEmpty
+                            onPressed: aiAvailable && !draft.isEmpty
                                 ? _recalculate
                                 : null,
                           ),
