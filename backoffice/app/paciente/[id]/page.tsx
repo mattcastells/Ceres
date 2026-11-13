@@ -210,13 +210,10 @@ function ErrorDeCarga({ detalle }: { detalle: string }) {
       </p>
       <h1 style={{ marginTop: 'var(--s4)' }}>No se pudo abrir la ficha</h1>
       <div className="card" style={{ marginTop: 'var(--s5)' }}>
-        <p style={{ margin: 0 }}>
-          La consulta a la base falló, así que no hay nada que mostrar. No es
-          que esta persona te haya sacado el acceso: eso se vería distinto.
-        </p>
-        <p className="caption" style={{ marginTop: 'var(--s4)' }}>
-          Si el mensaje habla de una columna o una tabla que no existe, al
-          proyecto le faltan migraciones por aplicar.
+        <p style={{ margin: 0 }}>La consulta a la base falló.</p>
+        <p className="caption" style={{ marginTop: 'var(--s2)' }}>
+          Si el mensaje nombra una columna o una tabla que no existe, faltan
+          migraciones por aplicar.
         </p>
         <pre className="error-detail">{detalle}</pre>
       </div>

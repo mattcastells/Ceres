@@ -9,7 +9,13 @@ Lo que sigue sale de mirar **lo que ya guardamos** y no de una lista de features
 de productos parecidos. Cada propuesta dice qué problema resuelve, qué datos
 necesita, cómo se vería y qué cuesta.
 
-Nada de esto está implementado. La prioridad está al final.
+La prioridad está al final.
+
+**Estado (noviembre de 2026):** §1, §2, §3 y §4 están en la ficha (Resumen y
+Comidas, `backoffice/lib/analysis.ts`); §5 es la tarjeta "Cintura / altura" de
+Cuerpo y §6 la línea de días muy por debajo del basal del Resumen (menos del
+85 % del basal, para no avisar por un día de déficit normal). Quedan §7, §8 y
+§9.
 
 ---
 

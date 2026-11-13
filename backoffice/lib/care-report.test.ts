@@ -22,6 +22,15 @@ describe('los errores de la función de informes', () => {
   test('un timeout del gateway se dice como timeout', () => {
     assert.equal(leerError(504, '<html>').code, 'ERR_TIMEOUT');
   });
+
+  test('sin clave del modelo, una línea que sirve para todo lo de IA', () => {
+    assert.deepEqual(
+      leerError(503, {
+        error: { code: 'ERR_PROVIDER_UNAVAILABLE', message: 'Los informes no están configurados en el servidor.' },
+      }),
+      { code: 'ERR_PROVIDER_UNAVAILABLE', message: 'La IA no está disponible en este servidor.' },
+    );
+  });
 });
 
 describe('el plan', () => {

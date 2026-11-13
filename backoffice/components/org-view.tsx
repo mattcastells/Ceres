@@ -65,9 +65,8 @@ export function OrgView({ rows, viewerId }: { rows: OrgRow[]; viewerId: string |
         <section className="section" style={{ marginTop: 'var(--s5)' }}>
           <h2>Fondo de IA del mes</h2>
           <p className="caption" style={{ marginTop: 2, marginBottom: 'var(--s4)' }}>
-            Los análisis de comidas de los pacientes de todo el consultorio y los
-            informes del panel, desde el 1.° del mes. Se renueva el primer día de
-            cada mes.
+            Análisis de comidas de los pacientes e informes del panel, de todo el
+            consultorio. Se renueva el 1.° de cada mes.
           </p>
           <div className="card">
             <div className="row" style={{ justifyContent: 'space-between', alignItems: 'baseline' }}>

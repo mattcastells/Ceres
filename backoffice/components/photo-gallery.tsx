@@ -66,8 +66,7 @@ export function PhotoGallery({
     return (
       <div className="card">
         <p className="muted" style={{ margin: 0 }}>
-          Sin fotos en este período. Las fotos se sacan al cargar una comida
-          desde la app; una comida escrita a mano no tiene.
+          Sin fotos en este período.
         </p>
       </div>
     );

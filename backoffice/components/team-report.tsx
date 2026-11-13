@@ -58,8 +58,8 @@ export function TeamReport({
             <h2>El equipo, con IA</h2>
             <p className="caption" style={{ margin: 'var(--s1) 0 0' }}>
               {report
-                ? `Análisis del ${fechaHora(report.created_at)}, sobre los mismos números de las fichas de abajo.`
-                : 'A quién conviene escribirle primero y qué se repite en el equipo, sobre los números de las fichas de abajo.'}
+                ? `Análisis del ${fechaHora(report.created_at)}.`
+                : 'A quién escribirle primero y qué se repite en el equipo.'}
             </p>
           </div>
           <button
@@ -68,7 +68,7 @@ export function TeamReport({
             onClick={generar}
             disabled={generando || !permitido}
           >
-            {generando ? 'Analizando…' : report ? 'Analizar de nuevo' : 'Analizar el equipo con IA'}
+            {generando ? 'Analizando…' : report ? 'Analizar de nuevo' : 'Analizar'}
           </button>
         </div>
 

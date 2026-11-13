@@ -99,21 +99,29 @@ export function leerError(status: number | null, body: unknown): { code: string;
   const e = (body as { error?: { code?: unknown; message?: unknown } } | null)?.error;
   const code = typeof e?.code === 'string' ? e.code : null;
   const message = typeof e?.message === 'string' && e.message.trim() ? e.message.trim() : null;
+
+  // Sin clave del modelo en el servidor (el caso de la base local). La
+  // función dice "los informes no están configurados", que en el borrador de
+  // una devolución no es lo que se pidió: se dice igual para todo.
+  if (code && MENSAJES[code]) return { code, message: MENSAJES[code] };
   if (code && message) return { code, message };
 
   if (status === 504 || status === 546) {
-    return {
-      code: code ?? 'ERR_TIMEOUT',
-      message: 'El informe tardó demasiado en armarse. Probá de nuevo en un rato.',
-    };
+    return { code: code ?? 'ERR_TIMEOUT', message: MENSAJES.ERR_TIMEOUT };
   }
   return {
     code: code ?? 'ERR_UNKNOWN',
-    message:
-      message ??
-      `El servicio de informes respondió con un error${status ? ` (${status})` : ''}. Probá de nuevo en un rato.`,
+    message: message ?? `La IA respondió con un error${status ? ` (${status})` : ''}. Probá de nuevo.`,
   };
 }
+
+/** Los errores que se dicen distinto de como los escribe la función: uno por
+ *  línea y sin detalles técnicos. El resto se muestra tal cual. */
+const MENSAJES: Record<string, string> = {
+  ERR_PROVIDER_UNAVAILABLE: 'La IA no está disponible en este servidor.',
+  ERR_TIMEOUT: 'La IA tardó demasiado. Probá de nuevo.',
+  ERR_UNREACHABLE: 'No se pudo conectar con la IA. Probá de nuevo.',
+};
 
 /**
  * Llama a `care-report` y devuelve el resultado o el error ya legible.
@@ -143,19 +151,9 @@ export async function invokeCareReport<T>(
 
     // Fetch o relay: la función no contestó. Pasa cuando no está desplegada o
     // —en desarrollo— cuando el stack local no levanta las Edge Functions.
-    return {
-      ok: false,
-      code: 'ERR_UNREACHABLE',
-      message:
-        'No pudimos comunicarnos con el servicio de informes. Revisá la conexión y probá de nuevo.',
-    };
+    return { ok: false, code: 'ERR_UNREACHABLE', message: MENSAJES.ERR_UNREACHABLE };
   } catch {
-    return {
-      ok: false,
-      code: 'ERR_UNREACHABLE',
-      message:
-        'No pudimos comunicarnos con el servicio de informes. Revisá la conexión y probá de nuevo.',
-    };
+    return { ok: false, code: 'ERR_UNREACHABLE', message: MENSAJES.ERR_UNREACHABLE };
   }
 }
 

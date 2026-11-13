@@ -29,6 +29,7 @@ import { currentGoal, goalForDay, targetsByDay } from '@/lib/goals';
 import {
   alimentosFrecuentes,
   balanceEnergetico,
+  diasBajoBasal,
   horarios as calcularHorarios,
   semanas as calcularSemanas,
 } from '@/lib/analysis';
@@ -242,6 +243,12 @@ export function PatientView({ data, tab }: { data: PatientData; tab?: string }) 
   for (const m of measurements) {
     porMetrica.set(m.metric, [...(porMetrica.get(m.metric) ?? []), m]);
   }
+  const cinturas = porMetrica.get('waist') ?? [];
+  const ultimaCintura = cinturas.length
+    ? Number(cinturas[cinturas.length - 1].value)
+    : null;
+  const cinturaAltura =
+    ultimaCintura && p.height_cm ? ultimaCintura / p.height_cm : null;
 
 
   /* ── El contexto del día ───────────────────────────────────────────────
@@ -322,11 +329,13 @@ export function PatientView({ data, tab }: { data: PatientData; tab?: string }) 
     }));
 
 
+  // Con el nombre de su pestaña: es la misma palabra que tiene el punto ámbar
+  // arriba y la que el paciente ve en la app al elegir qué comparte.
   const apagadas = [
-    !p.share_meals && 'las comidas',
-    !p.share_photos && 'las fotos',
-    !p.share_body && 'el peso y las medidas',
-    !p.share_wellbeing && 'la actividad, el agua, el sueño y el contexto del día',
+    !p.share_meals && 'Comidas',
+    !p.share_photos && 'Fotos',
+    !p.share_body && 'Cuerpo',
+    !p.share_wellbeing && 'Hábitos',
   ].filter(Boolean) as string[];
 
   const header = (
@@ -405,6 +414,9 @@ export function PatientView({ data, tab }: { data: PatientData; tab?: string }) 
       })
     : null;
   const frecuentes = p.share_meals ? alimentosFrecuentes(meals) : [];
+  const bajoBasal = p.share_meals
+    ? diasBajoBasal(kcalEnVentana, goals)
+    : { dias: [], basal: null };
   const horariosDelPeriodo = p.share_meals ? calcularHorarios(meals) : null;
   const semanasDelPeriodo = calcularSemanas({
     fechas: ventana.fechas,
@@ -560,6 +572,18 @@ export function PatientView({ data, tab }: { data: PatientData; tab?: string }) 
           </KpiRow>
         )}
 
+        {/* Un día por debajo del basal casi nunca es un día así: es un día a
+            medio anotar. Se dice y no se saca del promedio (§6 de
+            `docs/panel-proximas-features.md`). */}
+        {bajoBasal.dias.length > 0 && bajoBasal.basal !== null && (
+          <p className="caption" style={{ margin: 'var(--s3) 0 0' }}>
+            {bajoBasal.dias.length}{' '}
+            {bajoBasal.dias.length === 1 ? 'día registrado' : 'días registrados'} muy
+            por debajo del basal ({miles(bajoBasal.basal)} kcal): suelen ser días a medio
+            anotar. El promedio los incluye.
+          </p>
+        )}
+
         {p.share_wellbeing && (
           <KpiRow>
             <Kpi
@@ -636,10 +660,7 @@ export function PatientView({ data, tab }: { data: PatientData; tab?: string }) 
           las dos que contestan "¿cómo viene?" de un vistazo. Qué días quedaron
           cargados lo muestra el calendario del día a día. */}
       {(p.share_meals || p.share_body) && (
-        <Section
-          title="Cómo viene"
-          hint="Lo mismo, con más detalle, está en Comidas y en Cuerpo."
-        >
+        <Section title="Cómo viene">
           <div className="grid grid--auto">
             {p.share_meals && (
               <div className="card">
@@ -664,7 +685,7 @@ export function PatientView({ data, tab }: { data: PatientData; tab?: string }) 
       {balance && (
         <Section
           title="¿Los números cierran?"
-          hint="El déficit que dice el registro, puesto contra lo que marcó la balanza. Es una estimación para chequear en la consulta, no un diagnóstico."
+          hint="El déficit registrado contra la balanza. Es una estimación, no un diagnóstico."
         >
           <BalanceCard b={balance} shareBody={p.share_body} />
         </Section>
@@ -673,7 +694,7 @@ export function PatientView({ data, tab }: { data: PatientData; tab?: string }) 
       {semanasDelPeriodo.length >= 2 && (
         <Section
           title="Semana contra semana"
-          hint="De lunes a domingo, sobre los días desde que empezó a registrar. La semana incompleta lo dice."
+          hint="De lunes a domingo."
         >
           <SemanasTable
             semanas={semanasDelPeriodo}
@@ -688,9 +709,8 @@ export function PatientView({ data, tab }: { data: PatientData; tab?: string }) 
         <Section title="Lo que no está compartido">
           <div className="card">
             <p className="muted" style={{ margin: 0 }}>
-              No {apagadas.length === 1 ? 'está compartida' : 'están compartidas'}{' '}
-              {enumerar(apagadas)}. Se prende desde la app, en Perfil → Mi
-              nutricionista, y no hace falta volver a dar el código.
+              No comparte {enumerar(apagadas, 'ni')}. Se activa desde la app, en
+              Perfil → Mi nutricionista.
             </p>
           </div>
         </Section>
@@ -706,7 +726,7 @@ export function PatientView({ data, tab }: { data: PatientData; tab?: string }) 
       {avisoTope}
       <Section
         title="Calorías por día"
-        hint="Solo los días con comidas cargadas. La línea punteada es el objetivo; el día en ámbar es el que lo pasó."
+        hint="Días con comidas. La línea punteada es el objetivo; en ámbar, los días que lo pasaron."
       >
         <div className="card">
           <CaloriesChart days={serieCalorias} target={target} />
@@ -718,7 +738,7 @@ export function PatientView({ data, tab }: { data: PatientData; tab?: string }) 
           `docs/panel-proximas-features.md` §2 y §3. */}
       <Section
         title="Lo que más se repite"
-        hint="Los alimentos que aparecen dos veces o más en el período, agrupados por nombre. Las kcal son las cargadas, con lo estimado por IA incluido."
+        hint="Los que aparecen dos veces o más en el período."
       >
         <FrecuentesTable items={frecuentes} />
       </Section>
@@ -726,7 +746,7 @@ export function PatientView({ data, tab }: { data: PatientData; tab?: string }) 
       {horariosDelPeriodo && (
         <Section
           title="Horarios"
-          hint="La hora que la persona eligió para cada comida, en el huso de Buenos Aires. Un punto por comida; la raya va de la primera a la última del día."
+          hint="Un punto por comida; la raya va de la primera a la última del día."
         >
           <HorariosStrip h={horariosDelPeriodo} />
         </Section>
@@ -734,7 +754,7 @@ export function PatientView({ data, tab }: { data: PatientData; tab?: string }) 
 
       <Section
         title="Cómo se compone el día"
-        hint={`Promedios sobre los ${diasConComida} días con comidas cargadas.`}
+        hint={`Promedio de ${diasConComida} ${diasConComida === 1 ? 'día' : 'días'} con comidas.`}
       >
         <div className="grid grid--auto grid--parejo">
           <div>
@@ -756,10 +776,7 @@ export function PatientView({ data, tab }: { data: PatientData; tab?: string }) 
         </div>
       </Section>
 
-      <Section
-        title="Proteínas por día"
-        hint="El promedio esconde la variación: es el macro donde un día flojo se compensa mal con el siguiente."
-      >
+      <Section title="Proteínas por día">
         <div className="card">
           {/* Sin la raya del objetivo: el objetivo de proteína ya está en el
               cuadro de macros de arriba, y acá la raya quedaba muy por encima
@@ -790,8 +807,7 @@ export function PatientView({ data, tab }: { data: PatientData; tab?: string }) 
     <Section title="Fotos">
       <div className="card">
         <p className="muted" style={{ margin: 0 }}>
-          Las fotos vienen con las comidas, y las comidas no están compartidas.
-          Se prende desde la app, en Perfil → Mi nutricionista.
+          Las fotos se ven con las comidas, y Comidas no está compartida.
         </p>
       </div>
     </Section>
@@ -800,8 +816,8 @@ export function PatientView({ data, tab }: { data: PatientData; tab?: string }) 
       title="Fotos de las comidas"
       hint={
         conFoto.length
-          ? `${conFoto.length} ${conFoto.length === 1 ? 'foto' : 'fotos'} en el período, de la más reciente a la más vieja. Tocá una para ver qué se estimó.`
-          : 'Las fotos que se sacaron al cargar cada comida.'
+          ? `${conFoto.length} ${conFoto.length === 1 ? 'foto' : 'fotos'} en el período. Tocá una para ver el detalle.`
+          : undefined
       }
     >
       <PhotoGallery meals={conFoto} photoUrls={photoUrls} />
@@ -849,18 +865,27 @@ export function PatientView({ data, tab }: { data: PatientData; tab?: string }) 
                 : categoriaIMC(indice)
             }
           />
+          {/* Mejor indicador de riesgo cardiometabólico que el IMC y no
+              confunde músculo con grasa (§5 de
+              `docs/panel-proximas-features.md`). Sin color, como el IMC. La
+              altura ya está en la cabecera. */}
           <Stat
-            label="Altura"
-            value={p.height_cm ? `${Math.round(p.height_cm)}` : '—'}
-            unit="cm"
-            caption="del perfil"
+            label="Cintura / altura"
+            value={cinturaAltura === null ? '—' : dec(cinturaAltura, 2)}
+            caption={
+              cinturaAltura !== null
+                ? 'referencia: 0,5'
+                : p.height_cm
+                  ? 'sin cintura cargada'
+                  : 'falta la altura en el perfil'
+            }
           />
         </StatRow>
       </Section>
 
       <Section
         title="Peso"
-        hint="Los puntos son cada pesaje; la línea es la media móvil de 7 días, que es la que muestra la tendencia."
+        hint="Un punto por pesaje; la línea es la media móvil de 7 días."
       >
         <div className="card">
           <WeightChart logs={weights} />
@@ -869,7 +894,7 @@ export function PatientView({ data, tab }: { data: PatientData; tab?: string }) 
 
       <Section
         title="Medidas corporales"
-        hint="Perímetros y bioimpedancia. La bioimpedancia es una estimación indirecta: cambia con la hidratación y la hora del día."
+        hint="Perímetros y bioimpedancia (estimada: varía con la hidratación)."
       >
         {porMetrica.size === 0 ? (
           <div className="card">
@@ -902,7 +927,7 @@ export function PatientView({ data, tab }: { data: PatientData; tab?: string }) 
   ) : (
     <Section
       title="Actividad, agua, sueño y contexto"
-      hint="Las calorías del ejercicio son una estimación por MET, no una medición."
+      hint="Las calorías del ejercicio son una estimación por MET."
     >
       <div className="grid grid--3">
         <div className="card habito">
@@ -1152,7 +1177,7 @@ export function PatientView({ data, tab }: { data: PatientData; tab?: string }) 
     {avisoTope}
     <Section
       title="Día a día"
-      hint="Tocá un día para ver qué comió, con el agua, el sueño y la actividad de ese día."
+      hint="Tocá un día para ver el detalle."
     >
       {!p.share_meals && !p.share_wellbeing ? (
         <div className="card">
@@ -1200,6 +1225,8 @@ export function PatientView({ data, tab }: { data: PatientData; tab?: string }) 
       initial={data.feedback}
       hoy={to}
       plan={data.plan}
+      objetivoActual={p.share_meals ? goal : null}
+      conoceObjetivo={p.share_meals}
     />
   );
 
@@ -1273,8 +1300,8 @@ function AvisoTope() {
     <div className="card aviso" role="status" style={{ marginTop: 'var(--s5)' }}>
       <strong>Se muestran las primeras {miles(TOPE_COMIDAS)} comidas del período.</strong>{' '}
       <span className="muted">
-        Puede haber más, y los promedios y conteos de esta ficha están hechos
-        sobre las que llegaron. Elegí un período más corto para verlo completo.
+        Los promedios usan solo esas. Elegí un período más corto para verlo
+        completo.
       </span>
     </div>
   );
@@ -1285,8 +1312,8 @@ function NoCompartido({ que }: { que: string }) {
     <Section title={que}>
       <div className="card">
         <p className="muted" style={{ margin: 0 }}>
-          No está compartido. Se prende desde la app, en Perfil → Mi
-          nutricionista.
+          Esta categoría no está compartida. Se activa desde la app, en Perfil →
+          Mi nutricionista.
         </p>
       </div>
     </Section>
@@ -1306,9 +1333,9 @@ function resumenEnfermedad(marcas: DayMarker[]): string {
 }
 
 /** "a, b y c" — con la "y" del final, que es como se lee en castellano. */
-function enumerar(items: string[]): string {
+function enumerar(items: string[], conjuncion: 'y' | 'ni' = 'y'): string {
   if (items.length === 1) return items[0];
-  return `${items.slice(0, -1).join(', ')} y ${items[items.length - 1]}`;
+  return `${items.slice(0, -1).join(', ')} ${conjuncion} ${items[items.length - 1]}`;
 }
 
 /** Cuántas noches de cada calidad, de la mejor a la peor.

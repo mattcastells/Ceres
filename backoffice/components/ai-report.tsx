@@ -66,7 +66,7 @@ export function AiReport({
     <>
       <Section
         title="Informe para la consulta"
-        hint="Las dos últimas semanas cerradas, hasta ayer. Los números los calcula Ceres sobre los registros; el texto lo redacta la IA a partir de esos números."
+        hint="Las dos últimas semanas, hasta ayer. Los números los calcula Ceres; el texto, la IA."
       >
         <div className="card ai-toolbar">
           <div style={{ minWidth: 0 }}>
@@ -78,13 +78,7 @@ export function AiReport({
                 <div className="caption tnum">generado el {fechaHora(report.created_at)}</div>
               </>
             ) : (
-              <>
-                <div>Todavía no generaste un informe de {patientName || 'esta persona'}.</div>
-                <div className="caption">
-                  Resume las últimas dos semanas, marca lo que conviene mirar y
-                  propone preguntas para la consulta.
-                </div>
-              </>
+              <div>Todavía no generaste un informe de {patientName || 'esta persona'}.</div>
             )}
           </div>
           <button
@@ -121,8 +115,7 @@ export function AiReport({
         )}
         {report && !contenido && (
           <p className="caption" style={{ marginTop: 'var(--s4)' }}>
-            Este informe se guardó con un formato que esta pantalla no reconoce.
-            Generá uno nuevo.
+            Este informe tiene un formato viejo. Generá uno nuevo.
           </p>
         )}
       </Section>
@@ -156,7 +149,6 @@ function Informe({ c }: { c: InformeConsulta }) {
         <div className="grid grid--auto grid--parejo" style={{ marginTop: 'var(--s4)' }}>
           <div className="card ai-text">
             <h3>Puntos clave</h3>
-            <EtiquetaIA />
             {c.puntosClave.length ? (
               <ul className="ai-lista">
                 {c.puntosClave.map((p, i) => <li key={i}>{p}</li>)}
@@ -167,7 +159,6 @@ function Informe({ c }: { c: InformeConsulta }) {
           </div>
           <div className="card ai-text">
             <h3>Preguntas para la consulta</h3>
-            <EtiquetaIA />
             {c.preguntas.length ? (
               <ol className="ai-lista">
                 {c.preguntas.map((p, i) => <li key={i}>{p}</li>)}
@@ -270,10 +261,7 @@ function Numeros({ m }: { m: MetricasPaciente }) {
   const dias = m.periodo?.dias ?? null;
 
   return (
-    <Section
-      title="Los números del informe"
-      hint="Los mismos con los que se redactó el texto de arriba, calculados por Ceres sobre lo que la persona registró."
-    >
+    <Section title="Los números del informe">
       <div style={{ marginBottom: 'var(--s4)' }}>
         <EtiquetaCalculado />
       </div>
@@ -371,9 +359,7 @@ function Numeros({ m }: { m: MetricasPaciente }) {
       {cal && cal.porDia.length > 0 && (
         <div className="card" style={{ marginTop: 'var(--s4)' }}>
           <h3>Calorías por día</h3>
-          <p className="caption" style={{ margin: 'var(--s1) 0 var(--s3)' }}>
-            Los días con registro del informe. La línea punteada es el objetivo.
-          </p>
+          <div style={{ height: 'var(--s3)' }} />
           <CaloriesChart
             days={cal.porDia.map((d) => ({ date: d.fecha, kcal: d.kcal }))}
             target={cal.objetivo}

@@ -22,10 +22,7 @@ export function BalanceCard({ b, shareBody }: { b: Balance; shareBody: boolean }
     return (
       <div className="card">
         <p className="muted" style={{ margin: 0 }}>
-          El objetivo de esta persona no tiene un gasto estimado (TDEE) cargado,
-          así que no hay contra qué poner lo que comió. La app lo calcula cuando
-          el objetivo se arma con sus datos; un objetivo cargado a mano no lo
-          trae.
+          Su objetivo no tiene gasto estimado (TDEE): no hay contra qué comparar.
         </p>
       </div>
     );
@@ -35,10 +32,8 @@ export function BalanceCard({ b, shareBody }: { b: Balance; shareBody: boolean }
     return (
       <div className="card">
         <p className="muted" style={{ margin: 0 }}>
-          Hay {b.dias} {b.dias === 1 ? 'día registrado' : 'días registrados'} en el
-          período. Con menos de una semana, un promedio de déficit son un par de
-          días sueltos y el peso se mueve más por agua que por grasa: la cuenta se
-          muestra desde los siete días.
+          {b.dias} {b.dias === 1 ? 'día registrado' : 'días registrados'}. La
+          cuenta se muestra desde los siete.
         </p>
       </div>
     );
@@ -61,8 +56,8 @@ export function BalanceCard({ b, shareBody }: { b: Balance; shareBody: boolean }
         {linea}
         <p className="caption" style={{ margin: 'var(--s4) 0 0' }}>
           {shareBody
-            ? 'Para compararlo con la balanza hacen falta dos pesajes con al menos una semana entre medio.'
-            : 'El peso no está compartido, así que no se puede comparar con la balanza.'}
+            ? 'Para compararlo con la balanza hacen falta dos pesajes separados por una semana.'
+            : 'El peso no está compartido.'}
         </p>
       </div>
     );
@@ -90,10 +85,9 @@ export function BalanceCard({ b, shareBody }: { b: Balance; shareBody: boolean }
 
       <p style={{ margin: 'var(--s5) 0 0' }}>{LECTURA[b.lectura]}</p>
       <p className="caption" style={{ margin: 'var(--s2) 0 0' }}>
-        El gasto es el TDEE que calculó la app al armar el objetivo (≈{' '}
-        {miles(b.gastoPromedio)} kcal/día) y 7.700 kcal por kilo. El déficit se
-        promedia sobre los días anotados y se proyecta a los días entre pesajes:
-        supone que los días sin registro se parecen a los registrados.
+        Gasto: el TDEE del objetivo (≈ {miles(b.gastoPromedio)} kcal/día) ·
+        7.700 kcal por kilo · supone que los días sin registro se parecen a los
+        registrados.
       </p>
     </div>
   );
@@ -101,11 +95,11 @@ export function BalanceCard({ b, shareBody }: { b: Balance; shareBody: boolean }
 
 const LECTURA: Record<'coincide' | 'menos-de-lo-esperado' | 'mas-de-lo-esperado', string> = {
   coincide:
-    'Lo que dice la balanza está cerca de lo que explica el registro, dentro del kilo que mueve el agua de un día para otro.',
+    'La balanza coincide con lo que explica el registro.',
   'menos-de-lo-esperado':
-    'La balanza se movió menos de lo que explica el registro. La diferencia suele venir de comidas sin registrar antes que del metabolismo: vale mirar los fines de semana y los días sueltos sin carga antes de bajar el objetivo.',
+    'La balanza se movió menos de lo esperado. Suele ser comida sin registrar antes que metabolismo: vale preguntar por los fines de semana.',
   'mas-de-lo-esperado':
-    'Bajó más de lo que explica el registro. Al principio de un plan suele ser agua; si se sostiene, el gasto real puede ser mayor que el estimado o el registro puede estar sobrestimando porciones.',
+    'Bajó más de lo esperado. Al principio suele ser agua; si sigue, el gasto real puede ser mayor que el estimado.',
 };
 
 /* ── 3 · Los alimentos que se repiten ─────────────────────────────────── */

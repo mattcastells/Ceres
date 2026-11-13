@@ -396,3 +396,33 @@ function redondear(v: number, digitos: number): number {
   // parece un error.
   return Math.round(v * f) / f + 0;
 }
+
+/**
+ * Los días registrados por debajo del metabolismo basal de su objetivo
+ * (`docs/panel-proximas-features.md` §6).
+ *
+ * Un día de 900 kcal casi nunca es un día de 900 kcal: es un día a medio
+ * anotar, y baja el promedio de todo el período. No se excluye de ninguna
+ * cuenta —eso sería la pantalla decidiendo qué datos son verdad—, pero se
+ * dice. El basal es el de cada día (`goals.bmr_kcal`); un día sin basal no
+ * cuenta.
+ */
+/** "Muy por debajo": a menos del 85 % del basal. Con un déficit indicado es
+ *  normal comer cerca del basal, y un aviso por 50 kcal sería ruido. */
+export const FRACCION_BASAL = 0.85;
+
+export function diasBajoBasal(
+  kcalPorDia: Map<string, number>,
+  goals: Goal[],
+): { dias: string[]; basal: number | null } {
+  const dias: string[] = [];
+  let basal: number | null = null;
+  for (const [fecha, kcal] of [...kcalPorDia].sort((a, b) => a[0].localeCompare(b[0]))) {
+    const b = goalForDay(goals, fecha)?.bmr_kcal ?? null;
+    if (b && b > 0 && kcal < b * FRACCION_BASAL) {
+      dias.push(fecha);
+      basal = b;
+    }
+  }
+  return { dias, basal };
+}

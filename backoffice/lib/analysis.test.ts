@@ -10,6 +10,7 @@ import assert from 'node:assert/strict';
 import {
   alimentosFrecuentes,
   balanceEnergetico,
+  diasBajoBasal,
   horarios,
   normalizarNombre,
   semanas,
@@ -233,5 +234,30 @@ describe('semana contra semana', () => {
     assert.equal(s[1].peso, 79.5);
     assert.equal(s[1].minutosActividad, 30);
     assert.equal(s[1].diasConAlcohol, 1);
+  });
+});
+
+describe('diasBajoBasal', () => {
+  const goal = (bmr: number | null): Goal => ({
+    base_calorie_target: 1800, protein_g: null, carbs_g: null, fat_g: null, goal_type: 'lose',
+    starts_on: '2026-01-01', ends_on: null, bmr_kcal: bmr,
+  });
+
+  test('cuenta los días muy por debajo del basal de su objetivo', () => {
+    // 1.400 está debajo de 1.450 pero dentro del margen: no se menciona.
+    const kcal = new Map([
+      ['2026-03-03', 1100], ['2026-03-02', 900], ['2026-03-01', 1500], ['2026-03-04', 1400],
+    ]);
+    assert.deepEqual(diasBajoBasal(kcal, [goal(1450)]), {
+      dias: ['2026-03-02', '2026-03-03'],
+      basal: 1450,
+    });
+  });
+
+  test('sin basal cargado no dice nada', () => {
+    assert.deepEqual(diasBajoBasal(new Map([['2026-03-02', 500]]), [goal(null)]), {
+      dias: [],
+      basal: null,
+    });
   });
 });
