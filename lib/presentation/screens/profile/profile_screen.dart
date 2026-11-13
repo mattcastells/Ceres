@@ -74,7 +74,7 @@ class ProfileScreen extends ConsumerWidget {
                     (profile.displayName?.trim().isNotEmpty ?? false)
                         ? profile.displayName!.trim().characters.first
                               .toUpperCase()
-                        : 'N',
+                        : 'C',
                     style: NmTextStyles.from(
                       NmType.h3,
                       color: nm.accentOnFill,
