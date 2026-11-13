@@ -31,8 +31,12 @@ class CareReportClient {
 
   String get _me => _db.auth.currentUser?.id ?? '';
 
-  /// El último resumen guardado, o `null` si nunca se pidió uno.
-  Future<WeeklyReport?> latestWeekly() async {
+  /// El último reporte guardado de un período de [days] días, o `null` si
+  /// nunca se pidió uno de ese largo.
+  ///
+  /// Todos se guardan con el mismo `kind`; el largo sale de las fechas. Se
+  /// traen los últimos y se elige acá: son pocos y no hace falta una columna.
+  Future<WeeklyReport?> latestWeekly({int days = 7}) async {
     try {
       final rows = await _db
           .from('care_reports')
@@ -42,10 +46,16 @@ class CareReportClient {
           .eq('kind', weeklyKind)
           .eq('patient_id', _me)
           .order('created_at', ascending: false)
-          .limit(1)
+          .limit(30)
           .timeout(readTimeout);
-      if (rows.isEmpty) return null;
-      return WeeklyReport.fromRow(rows.first);
+      for (final row in rows) {
+        final report = WeeklyReport.fromRow(row);
+        if (report != null &&
+            report.periodTo.difference(report.periodFrom).inDays + 1 == days) {
+          return report;
+        }
+      }
+      return null;
     } on Exception {
       throw const AppError(
         code: ApiErrorCode.offline,
@@ -54,11 +64,14 @@ class CareReportClient {
     }
   }
 
-  Future<WeeklyReport> generateWeekly() async {
+  Future<WeeklyReport> generateWeekly({int days = 7}) async {
     final FunctionResponse response;
     try {
       response = await _db.functions
-          .invoke(functionName, body: <String, dynamic>{'kind': weeklyKind})
+          .invoke(
+            functionName,
+            body: <String, dynamic>{'kind': weeklyKind, 'days': days},
+          )
           .timeout(generateTimeout);
     } on FunctionException catch (error) {
       throw translate(error.details);

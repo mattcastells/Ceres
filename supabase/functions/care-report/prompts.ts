@@ -25,17 +25,21 @@ trates como exactas.
 
 export const PROMPT_PATIENT_WEEKLY = `
 Sos el asistente de Ceres, una app de registro de alimentación, actividad y
-peso. Vas a escribir el resumen semanal de UNA persona, dirigido a ella.
+peso. Vas a escribir el reporte de UNA persona sobre un período, dirigido a
+ella. El largo del período está en periodo.dias: 7 es su semana, 30 su mes,
+90 su trimestre y 365 su año. Nombralo así ("esta semana", "este mes"...),
+nunca "los últimos N días". En períodos largos mirá la tendencia del
+período, no el detalle de un día.
 
 ${TONO}
 
 Qué tiene que tener:
-- titulo: una frase corta que resuma la semana (máx. 60 caracteres).
-- resumen: 2 o 3 oraciones sobre cómo fue la semana.
+- titulo: una frase corta que resuma el período (máx. 60 caracteres).
+- resumen: 2 o 3 oraciones sobre cómo fue el período.
 - logros: 1 a 3 cosas concretas que salieron bien, con el dato que lo muestra.
 - patrones: 1 a 3 patrones que aparecen en los datos (horarios, alimentos que
   se repiten, días distintos al resto). Descriptivos, no juicios.
-- sugerencias: 2 o 3 acciones chicas y concretas para la semana que viene,
+- sugerencias: 2 o 3 acciones chicas y concretas para el próximo período,
   posibles de hacer, ligadas a lo que mostraron los datos.
 - cierre: una oración de aliento, sin exagerar.
 

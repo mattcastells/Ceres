@@ -471,10 +471,7 @@ class StatCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: NmSpace.s2),
-          Text(
-            value,
-            style: NmTextStyles.from(NmType.h3, color: nm.text).tnum,
-          ),
+          Text(value, style: NmTextStyles.from(NmType.h3, color: nm.text).tnum),
           if (caption != null) ...<Widget>[
             const SizedBox(height: NmSpace.s1),
             Text(
@@ -497,24 +494,22 @@ class ConsistencyNote extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final nm = context.nm;
-    return NmCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Text(
-            'CONSISTENCIA',
-            style: NmTextStyles.from(NmType.overline, color: nm.textMuted),
-          ),
-          const SizedBox(height: NmSpace.s3),
-          for (final line in lines)
-            Padding(
-              padding: const EdgeInsets.only(bottom: NmSpace.s2),
-              child: Text(
-                line,
-                style: NmTextStyles.from(NmType.bodySm, color: nm.text),
+    return SizedBox(
+      width: double.infinity,
+      child: NmCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            for (final line in lines)
+              Padding(
+                padding: const EdgeInsets.only(bottom: NmSpace.s2),
+                child: Text(
+                  line,
+                  style: NmTextStyles.from(NmType.bodySm, color: nm.text),
+                ),
               ),
-            ),
-        ],
+          ],
+        ),
       ),
     );
   }

@@ -12,7 +12,6 @@ import '../../../domain/enums/enums.dart';
 import '../../../domain/models/activity.dart';
 import '../../../domain/models/summaries.dart';
 import '../../../domain/repositories/repositories.dart';
-import '../../../domain/services/summary_builder.dart';
 import '../../components/activity/activity_cards.dart';
 import '../../components/charts/charts.dart';
 import '../../components/feedback/feedback.dart';
@@ -205,7 +204,10 @@ class _WeightLogRow extends StatelessWidget {
                   child: Text(
                     value,
                     textAlign: TextAlign.right,
-                    style: NmTextStyles.from(NmType.bodySm, color: nm.text).tnum,
+                    style: NmTextStyles.from(
+                      NmType.bodySm,
+                      color: nm.text,
+                    ).tnum,
                   ),
                 ),
                 const SizedBox(width: NmSpace.s2),
@@ -252,6 +254,7 @@ class CaloriesChartScreen extends ConsumerWidget {
             child: CaloriesChart(
               id: 'calories-full',
               height: 240,
+              showData: true,
               days: progress.calorieDays,
             ),
           ),
@@ -310,6 +313,7 @@ class ActivityProgressScreen extends ConsumerWidget {
             child: ActivityHistoryChart(
               id: 'activity-full',
               height: 220,
+              showData: true,
               points: progress.activityByDay,
             ),
           ),
@@ -378,8 +382,6 @@ class ActivityProgressScreen extends ConsumerWidget {
               ],
             ),
           ),
-          const SizedBox(height: NmSpace.s6),
-          ConsistencyNote(lines: SummaryBuilder.consistencyNotes(progress)),
         ],
       ),
     );
@@ -409,7 +411,8 @@ class ActivityGoalsScreen extends ConsumerWidget {
             EmptyState(
               icon: PhosphorIcons.target(),
               title: 'Sin objetivos configurados',
-              body: 'Minutos, sesiones, pasos o días activos, por día o por '
+              body:
+                  'Minutos, sesiones, pasos o días activos, por día o por '
                   'semana.',
               primaryLabel: 'Crear un objetivo',
               onPrimary: () => _showGoalSheet(context, ref, null),
@@ -472,15 +475,17 @@ class ActivityGoalsScreen extends ConsumerWidget {
                 onPressed: () async {
                   final parsed = int.tryParse(value.text);
                   if (parsed == null || parsed <= 0) return;
-                  await ref.read(repositoryProvider).saveActivityGoal(
-                    ActivityGoal(
-                      id: existing?.goal.id ?? _uuid.v4(),
-                      goalType: type,
-                      targetValue: parsed,
-                      period: period,
-                      startDate: existing?.goal.startDate ?? today(),
-                    ),
-                  );
+                  await ref
+                      .read(repositoryProvider)
+                      .saveActivityGoal(
+                        ActivityGoal(
+                          id: existing?.goal.id ?? _uuid.v4(),
+                          goalType: type,
+                          targetValue: parsed,
+                          period: period,
+                          startDate: existing?.goal.startDate ?? today(),
+                        ),
+                      );
                   if (context.mounted) Navigator.of(context).pop();
                 },
               ),
@@ -491,18 +496,11 @@ class ActivityGoalsScreen extends ConsumerWidget {
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
               const NmSectionHeader(title: 'Tipo'),
-              Wrap(
-                spacing: NmSpace.s2,
-                runSpacing: NmSpace.s2,
-                children: <Widget>[
-                  for (final option in ActivityGoalType.values)
-                    NmChip(
-                      label: option.label,
-                      selected: option == type,
-                      semanticsInRadioGroup: true,
-                      onTap: () => setLocal(() => type = option),
-                    ),
-                ],
+              // Dos columnas con casilla: seis píldoras sueltas en tres filas
+              // de largos distintos no se leían como una sola elección.
+              _TypeGrid(
+                value: type,
+                onChanged: (option) => setLocal(() => type = option),
               ),
               const SizedBox(height: NmSpace.s6),
               NmNumberField(label: 'Valor objetivo', controller: value),
@@ -633,16 +631,15 @@ class _MeasurementsScreenState extends ConsumerState<MeasurementsScreen> {
                 label: metric.label,
                 controller: _draft.controller(metric),
                 decimals: 1,
-                suffix: metric.unitLabel.isEmpty
-                    ? 'índice'
-                    : metric.unitLabel,
+                suffix: metric.unitLabel.isEmpty ? 'índice' : metric.unitLabel,
                 helper: _lastLabel(repo, metric),
                 error: _draft.errors[metric],
                 onChanged: (_) => setState(() => _draft.errors.remove(metric)),
               ),
             ),
 
-          if (_group == MeasurementGroup.skinfolds && foldCount >= 2) ...<Widget>[
+          if (_group == MeasurementGroup.skinfolds &&
+              foldCount >= 2) ...<Widget>[
             NmCard(
               raised: true,
               child: ValueRow(
@@ -682,8 +679,7 @@ class _MeasurementsScreenState extends ConsumerState<MeasurementsScreen> {
                   for (final metric in withHistory)
                     NmListRow(
                       title: metric.longLabel,
-                      subtitle:
-                          '${repo.measurements(metric).length} registros',
+                      subtitle: '${repo.measurements(metric).length} registros',
                       trailing: Icon(
                         PhosphorIcons.caretRight(),
                         size: NmIconSize.md,
@@ -732,9 +728,10 @@ class _MeasurementsScreenState extends ConsumerState<MeasurementsScreen> {
                   for (final entry in entries.reversed.take(12))
                     ValueRow(
                       label: friendlyDay(entry.localDate),
-                      value: '${Fmt.decimal1(entry.value)} '
-                              '${metric.unitLabel}'
-                          .trim(),
+                      value:
+                          '${Fmt.decimal1(entry.value)} '
+                                  '${metric.unitLabel}'
+                              .trim(),
                     ),
                 ],
               ),
@@ -742,6 +739,62 @@ class _MeasurementsScreenState extends ConsumerState<MeasurementsScreen> {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Tipo de objetivo: una grilla de dos columnas, una casilla por opción. Es una
+/// sola elección, así que marcar una desmarca la anterior.
+class _TypeGrid extends StatelessWidget {
+  const _TypeGrid({required this.value, required this.onChanged});
+
+  final ActivityGoalType value;
+  final ValueChanged<ActivityGoalType> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final nm = context.nm;
+    const options = ActivityGoalType.values;
+    return Column(
+      children: <Widget>[
+        for (var i = 0; i < options.length; i += 2)
+          Row(
+            children: <Widget>[
+              for (final option in options.skip(i).take(2))
+                Expanded(
+                  child: Semantics(
+                    inMutuallyExclusiveGroup: true,
+                    checked: option == value,
+                    label: option.label,
+                    child: ExcludeSemantics(
+                      child: InkWell(
+                        onTap: () => onChanged(option),
+                        borderRadius: NmRadius.brSm,
+                        child: Row(
+                          children: <Widget>[
+                            Checkbox(
+                              value: option == value,
+                              onChanged: (_) => onChanged(option),
+                            ),
+                            Expanded(
+                              child: Text(
+                                option.label,
+                                style: NmTextStyles.from(
+                                  NmType.bodySm,
+                                  color: nm.text,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              if (options.length - i == 1) const Spacer(),
+            ],
+          ),
+      ],
     );
   }
 }

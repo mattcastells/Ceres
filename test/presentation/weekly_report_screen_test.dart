@@ -1,4 +1,4 @@
-// "Tu semana con IA": abrir lee lo guardado, generar es un botón, y el texto
+// El reporte con IA: abrir lee lo guardado, generar es un botón, y el texto
 // del modelo va separado —y etiquetado— de los números que calculó el
 // servidor.
 
@@ -43,10 +43,10 @@ class _FakeReportClient implements CareReportClient {
   Completer<void>? gate;
 
   @override
-  Future<WeeklyReport?> latestWeekly() async => stored;
+  Future<WeeklyReport?> latestWeekly({int days = 7}) async => stored;
 
   @override
-  Future<WeeklyReport> generateWeekly() async {
+  Future<WeeklyReport> generateWeekly({int days = 7}) async {
     generateCalls++;
     await gate?.future;
     if (error != null) throw error!;
@@ -110,8 +110,8 @@ void main() {
     await tester.pumpWidget(_wrap(await _boot(client)));
     await _settle(tester);
 
-    expect(find.text('Generar mi resumen'), findsOneWidget);
-    await tester.tap(find.text('Generar mi resumen'));
+    expect(find.text('Generar reporte'), findsOneWidget);
+    await tester.tap(find.text('Generar reporte'));
     await tester.pump();
     expect(find.text('Puede tardar hasta un minuto.'), findsOneWidget);
 
@@ -131,7 +131,7 @@ void main() {
     await tester.pumpWidget(_wrap(await _boot(client)));
     await _settle(tester);
 
-    await tester.tap(find.text('Generar mi resumen'));
+    await tester.tap(find.text('Generar reporte'));
     await _settle(tester);
     expect(find.text('Esto usa IA'), findsOneWidget);
   });
@@ -146,7 +146,7 @@ void main() {
     await tester.pumpWidget(_wrap(await _boot(client)));
     await _settle(tester);
 
-    await tester.tap(find.text('Generar mi resumen'));
+    await tester.tap(find.text('Generar reporte'));
     await _settle(tester);
     expect(
       find.text('No hay registros en la última semana para armar el resumen.'),

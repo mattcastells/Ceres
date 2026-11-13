@@ -166,8 +166,8 @@ void main() {
 
     await tester.tap(find.text('Progreso'));
     await _settle(tester);
-    expect(find.text('Promedio diario'), findsOneWidget);
-    expect(find.text('Adherencia'), findsOneWidget);
+    expect(find.textContaining('Promedio: '), findsOneWidget);
+    expect(find.text('Generar reporte'), findsNothing); // sin servidor
 
     // Historial ya no es una tab: se entra desde acá, más abajo en Progreso.
     final historyRow = find.text('Historial');

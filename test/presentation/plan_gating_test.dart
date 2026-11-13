@@ -66,9 +66,13 @@ Future<ProviderContainer> _boot(
     container = ProviderContainer(
       overrides: <Override>[
         repositoryProvider.overrideWithValue(repository),
-        authGatewayProvider.overrideWithValue(LocalAuthGateway(
-          initial: email == null ? null : AuthAccount(id: 'cuenta-de-prueba', email: email),
-        )),
+        authGatewayProvider.overrideWithValue(
+          LocalAuthGateway(
+            initial: email == null
+                ? null
+                : AuthAccount(id: 'cuenta-de-prueba', email: email),
+          ),
+        ),
         isCloudEnabledProvider.overrideWithValue(cloud),
         if (client != null) planClientProvider.overrideWithValue(client),
       ],
@@ -205,21 +209,23 @@ void main() {
   });
 
   group('Progreso', () {
-    testWidgets('en Gratis: "Tu semana con IA" ofrece Premium y hay anuncio', (
+    testWidgets('en Gratis: "Generar reporte" ofrece Premium y hay anuncio', (
       tester,
     ) async {
       final container = await _boot(tester, plan: AppPlan.free);
       await tester.pumpWidget(_wrap(container, const ProgressScreen()));
       await _settle(tester);
 
-      expect(find.text('Tu semana con IA'), findsOneWidget);
-      expect(find.text('Premium'), findsOneWidget);
+      expect(find.text('Generar reporte · Premium'), findsOneWidget);
 
       await tester.scrollUntilVisible(find.byType(AdBanner), 300);
       expect(find.text('Quitar anuncios'), findsOneWidget);
 
-      await tester.scrollUntilVisible(find.text('Tu semana con IA'), -300);
-      await tester.tap(find.text('Tu semana con IA'));
+      await tester.scrollUntilVisible(
+        find.text('Generar reporte · Premium'),
+        -300,
+      );
+      await tester.tap(find.text('Generar reporte · Premium'));
       await _settle(tester);
       expect(find.text('Esto usa IA'), findsOneWidget);
     });
@@ -229,8 +235,8 @@ void main() {
       await tester.pumpWidget(_wrap(container, const ProgressScreen()));
       await _settle(tester);
 
-      expect(find.text('Tu semana con IA'), findsOneWidget);
-      expect(find.text('Premium'), findsNothing);
+      expect(find.text('Generar reporte'), findsOneWidget);
+      expect(find.text('Generar reporte · Premium'), findsNothing);
       await tester.drag(find.byType(Scrollable).first, const Offset(0, -4000));
       await _settle(tester);
       expect(find.text('Quitar anuncios'), findsNothing);
@@ -248,7 +254,7 @@ void main() {
       );
       await tester.pumpWidget(_wrap(container, const ProgressScreen()));
       await _settle(tester);
-      expect(find.text('Tu semana con IA'), findsNothing);
+      expect(find.text('Generar reporte'), findsNothing);
       expect(container.read(planProvider), AppPlan.premium);
     });
   });

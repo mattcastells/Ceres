@@ -12,6 +12,7 @@ import '../../domain/models/care_article.dart';
 import '../../domain/models/care_feedback.dart';
 import '../../domain/models/plan.dart';
 import '../../domain/models/weekly_report.dart';
+import 'app_providers.dart';
 
 // ── Plan ─────────────────────────────────────────────────────────────────
 
@@ -178,7 +179,8 @@ final latestWeeklyReportProvider = FutureProvider.autoDispose<WeeklyReport?>((
 ) async {
   final client = ref.watch(careReportClientProvider);
   if (client == null) return null;
-  return client.latestWeekly();
+  // El del período elegido en Progreso: el del mes no es el de la semana.
+  return client.latestWeekly(days: ref.watch(progressRangeProvider).days);
 });
 
 /// Lo que se refresca al volver a la app o al tirar para actualizar: el plan

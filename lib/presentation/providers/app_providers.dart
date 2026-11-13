@@ -29,9 +29,7 @@ class AppRevision extends Notifier<int> {
   void bump() => state = state + 1;
 }
 
-final appRevisionProvider = NotifierProvider<AppRevision, int>(
-  AppRevision.new,
-);
+final appRevisionProvider = NotifierProvider<AppRevision, int>(AppRevision.new);
 
 /// Día visible en Inicio.
 ///
@@ -127,6 +125,30 @@ enum ProgressRange {
   const ProgressRange(this.label, this.days);
   final String label;
   final int days;
+
+  /// El título del reporte con IA de este período.
+  String get reportTitle => switch (this) {
+    d7 => 'Tu semana',
+    d30 => 'Tu mes',
+    d90 => 'Tu trimestre',
+    y1 => 'Tu año',
+  };
+
+  /// "la semana", "el mes"…, para armar frases.
+  String get noun => switch (this) {
+    d7 => 'la semana',
+    d30 => 'el mes',
+    d90 => 'el trimestre',
+    y1 => 'el año',
+  };
+
+  /// "esta semana", "este mes"…
+  String get thisOne => switch (this) {
+    d7 => 'esta semana',
+    d30 => 'este mes',
+    d90 => 'este trimestre',
+    y1 => 'este año',
+  };
 }
 
 final progressRangeProvider = StateProvider<ProgressRange>(
@@ -139,7 +161,6 @@ final profileProvider = Provider<UserProfile>((ref) {
   ref.watch(appRevisionProvider);
   return ref.watch(repositoryProvider).profile;
 });
-
 
 final currentGoalProvider = Provider<Goal?>((ref) {
   ref.watch(appRevisionProvider);
@@ -177,7 +198,10 @@ final historyProvider = Provider.family<List<HistoryDay>, int>((ref, days) {
   final to = ref.watch(currentDayProvider);
   return ref
       .watch(repositoryProvider)
-      .history(from: to.subtract(Duration(days: days - 1)), to: to);
+      .history(
+        from: to.subtract(Duration(days: days - 1)),
+        to: to,
+      );
 });
 
 final progressProvider = Provider<ProgressSummary>((ref) {
@@ -186,7 +210,10 @@ final progressProvider = Provider<ProgressSummary>((ref) {
   final to = ref.watch(currentDayProvider);
   return ref
       .watch(repositoryProvider)
-      .progress(from: to.subtract(Duration(days: range.days - 1)), to: to);
+      .progress(
+        from: to.subtract(Duration(days: range.days - 1)),
+        to: to,
+      );
 });
 
 final activityTypesProvider = Provider<List<ActivityType>>((ref) {
@@ -232,7 +259,6 @@ final integrationProvider = Provider((ref) {
   ref.watch(appRevisionProvider);
   return ref.watch(repositoryProvider).integration;
 });
-
 
 final daysWithRecordsProvider = Provider<Set<String>>((ref) {
   ref.watch(appRevisionProvider);

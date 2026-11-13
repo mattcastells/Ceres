@@ -45,6 +45,10 @@ import {
 type Kind = 'patient_weekly' | 'professional' | 'feedback_draft' | 'team';
 const KINDS: Kind[] = ['patient_weekly', 'professional', 'feedback_draft', 'team'];
 
+// Los períodos que ofrece Progreso: semana, mes, trimestre y año. El kind
+// sigue llamándose `patient_weekly` para no migrar filas ya guardadas.
+const PATIENT_DAYS = [7, 30, 90, 365];
+
 /** Cuántos informes por día. Son caros y no hay razón para pedir cincuenta. */
 const WEEKLY_QUOTA = Number(Deno.env.get('WEEKLY_REPORT_QUOTA') ?? '') || 5;
 const CARE_QUOTA = Number(Deno.env.get('CARE_REPORT_QUOTA') ?? '') || 40;
@@ -77,6 +81,7 @@ Deno.serve(async (req) => {
   let patientId: string | null = null;
   let focus = '';
   let localDate: string | null = null;
+  let patientDays = 7;
   try {
     const body = await req.json();
     kind = body.kind;
@@ -86,6 +91,7 @@ Deno.serve(async (req) => {
     localDate = typeof body.localDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(body.localDate)
       ? body.localDate
       : null;
+    if (PATIENT_DAYS.includes(body.days)) patientDays = body.days;
   } catch {
     return fail('ERR_VALIDATION', 'Falta indicar qué informe pedís.');
   }
@@ -111,9 +117,9 @@ Deno.serve(async (req) => {
     .from('profiles').select('display_name, timezone').eq('id', user.id).maybeSingle();
   const tz = (me?.timezone as string | undefined) ?? DEFAULT_TZ;
   const today = todayIn(tz);
-  // Semana cerrada para el paciente (los últimos 7 días sin contar hoy, que
+  // Para el paciente, el período que eligió en Progreso, cerrado ayer (hoy
   // todavía no terminó); dos semanas para la consulta, que es el ritmo típico.
-  const days = kind === 'patient_weekly' ? 7 : 14;
+  const days = kind === 'patient_weekly' ? patientDays : 14;
   const to = addDays(today, -1);
   const from = addDays(to, -(days - 1));
 
@@ -173,7 +179,7 @@ Deno.serve(async (req) => {
       return fail(
         'ERR_NO_DATA',
         kind === 'patient_weekly'
-          ? 'No hay registros en la última semana para armar el resumen.'
+          ? 'No hay registros en este período para armar el reporte.'
           : 'No hay registros compartidos en las últimas dos semanas.',
         422,
       );

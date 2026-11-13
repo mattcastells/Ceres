@@ -23,12 +23,18 @@ abstract final class ChartSession {
 
 /// Envoltura común: alternativa textual accesible + tabla de datos
 /// desplegable (15-accessibility.md §8).
+///
+/// La tabla ("Ver los datos") solo con [showData]: va en las pantallas de
+/// "Ampliar", no en el resumen de Progreso, donde eran tres botoncitos
+/// iguales que no agregaban nada. La descripción para lectores de pantalla
+/// está siempre.
 class ChartFrame extends StatefulWidget {
   const ChartFrame({
     required this.semanticsSummary,
     required this.child,
     required this.rows,
     this.height = 180,
+    this.showData = false,
     super.key,
   });
 
@@ -38,6 +44,7 @@ class ChartFrame extends StatefulWidget {
   /// Filas etiqueta–valor de la tabla accesible.
   final List<(String, String)> rows;
   final double height;
+  final bool showData;
 
   @override
   State<ChartFrame> createState() => _ChartFrameState();
@@ -58,71 +65,76 @@ class _ChartFrameState extends State<ChartFrame> {
             child: SizedBox(height: widget.height, child: widget.child),
           ),
         ),
-        const SizedBox(height: NmSpace.s2),
-        InkWell(
-          onTap: () => setState(() => _showTable = !_showTable),
-          borderRadius: NmRadius.brSm,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: NmSpace.s2),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                Icon(
-                  _showTable
-                      ? PhosphorIcons.caretUp()
-                      : PhosphorIcons.caretDown(),
-                  size: NmIconSize.sm,
-                  color: nm.textMuted,
-                ),
-                const SizedBox(width: NmSpace.s2),
-                Text(
-                  _showTable ? 'Ocultar los datos' : 'Ver los datos',
-                  style: NmTextStyles.from(NmType.caption, color: nm.textMuted),
-                ),
-              ],
+        if (widget.showData) ...<Widget>[
+          const SizedBox(height: NmSpace.s2),
+          InkWell(
+            onTap: () => setState(() => _showTable = !_showTable),
+            borderRadius: NmRadius.brSm,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: NmSpace.s2),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  Icon(
+                    _showTable
+                        ? PhosphorIcons.caretUp()
+                        : PhosphorIcons.caretDown(),
+                    size: NmIconSize.sm,
+                    color: nm.textMuted,
+                  ),
+                  const SizedBox(width: NmSpace.s2),
+                  Text(
+                    _showTable ? 'Ocultar los datos' : 'Ver los datos',
+                    style: NmTextStyles.from(
+                      NmType.caption,
+                      color: nm.textMuted,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
-        ),
-        if (_showTable)
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(NmSpace.s3),
-            decoration: BoxDecoration(
-              color: nm.surfaceRaised,
-              borderRadius: NmRadius.brMd,
-            ),
-            child: Column(
-              children: widget.rows
-                  .map(
-                    (row) => Padding(
-                      padding: const EdgeInsets.symmetric(
-                        vertical: NmSpace.s1,
-                      ),
-                      child: Row(
-                        children: <Widget>[
-                          Expanded(
-                            child: Text(
-                              row.$1,
-                              style: NmTextStyles.from(
-                                NmType.caption,
-                                color: nm.textMuted,
+          if (_showTable)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(NmSpace.s3),
+              decoration: BoxDecoration(
+                color: nm.surfaceRaised,
+                borderRadius: NmRadius.brMd,
+              ),
+              child: Column(
+                children: widget.rows
+                    .map(
+                      (row) => Padding(
+                        padding: const EdgeInsets.symmetric(
+                          vertical: NmSpace.s1,
+                        ),
+                        child: Row(
+                          children: <Widget>[
+                            Expanded(
+                              child: Text(
+                                row.$1,
+                                style: NmTextStyles.from(
+                                  NmType.caption,
+                                  color: nm.textMuted,
+                                ),
                               ),
                             ),
-                          ),
-                          Text(
-                            row.$2,
-                            style: NmTextStyles.from(
-                              NmType.caption,
-                              color: nm.text,
-                            ).tnum,
-                          ),
-                        ],
+                            Text(
+                              row.$2,
+                              style: NmTextStyles.from(
+                                NmType.caption,
+                                color: nm.text,
+                              ).tnum,
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                  )
-                  .toList(),
+                    )
+                    .toList(),
+              ),
             ),
-          ),
+        ],
       ],
     );
   }
@@ -152,7 +164,8 @@ class _ChartAnimationState extends State<_ChartAnimation>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       final animate =
-          context.motion.animatesCharts && ChartSession.shouldAnimate(widget.id);
+          context.motion.animatesCharts &&
+          ChartSession.shouldAnimate(widget.id);
       if (animate) {
         _controller.forward();
       } else {
@@ -184,6 +197,7 @@ class WeightChart extends StatelessWidget {
     required this.movingAverage,
     this.id = 'weight',
     this.height = 180,
+    this.showData = false,
     super.key,
   });
 
@@ -191,6 +205,7 @@ class WeightChart extends StatelessWidget {
   final List<ChartPoint> movingAverage;
   final String id;
   final double height;
+  final bool showData;
 
   @override
   Widget build(BuildContext context) {
@@ -198,7 +213,8 @@ class WeightChart extends StatelessWidget {
     if (points.length < 2) {
       return _ChartPlaceholder(
         height: height,
-        message: 'Necesitamos unos días más de registro para mostrar una '
+        message:
+            'Necesitamos unos días más de registro para mostrar una '
             'tendencia.',
       );
     }
@@ -209,6 +225,7 @@ class WeightChart extends StatelessWidget {
 
     return ChartFrame(
       height: height,
+      showData: showData,
       semanticsSummary:
           'Peso: de ${Fmt.decimal1(first)} a ${Fmt.decimal1(last)} kilos, '
           '${delta >= 0 ? 'una suba' : 'una baja'} de '
@@ -251,12 +268,14 @@ class CaloriesChart extends StatelessWidget {
     required this.days,
     this.id = 'calories',
     this.height = 180,
+    this.showData = false,
     super.key,
   });
 
   final List<CaloriesDay> days;
   final String id;
   final double height;
+  final bool showData;
 
   @override
   Widget build(BuildContext context) {
@@ -274,13 +293,17 @@ class CaloriesChart extends StatelessWidget {
 
     return ChartFrame(
       height: height,
+      showData: showData,
       semanticsSummary:
           'Calorías consumidas por día. Promedio de '
           '${Fmt.integer(average)} kilocalorías, objetivo '
           '${Fmt.integer(days.last.target)}.',
       rows: <(String, String)>[
         for (final d in days.reversed.take(10))
-          (shortDay(d.date), d.consumed == 0 ? 'sin registro' : Fmt.kcal(d.consumed)),
+          (
+            shortDay(d.date),
+            d.consumed == 0 ? 'sin registro' : Fmt.kcal(d.consumed),
+          ),
       ],
       child: _ChartAnimation(
         id: id,
@@ -312,12 +335,14 @@ class ActivityHistoryChart extends StatelessWidget {
     required this.points,
     this.id = 'activity-history',
     this.height = 180,
+    this.showData = false,
     super.key,
   });
 
   final List<ActivityDayPoint> points;
   final String id;
   final double height;
+  final bool showData;
 
   @override
   Widget build(BuildContext context) {
@@ -333,11 +358,15 @@ class ActivityHistoryChart extends StatelessWidget {
 
     return ChartFrame(
       height: height,
+      showData: showData,
       semanticsSummary:
           'Minutos de actividad por día. Total del período: $total minutos.',
       rows: <(String, String)>[
         for (final p in points.reversed.take(10))
-          (shortDay(p.date), '${p.minutes} min · ${Fmt.estimatedKcal(p.calories)}'),
+          (
+            shortDay(p.date),
+            '${p.minutes} min · ${Fmt.estimatedKcal(p.calories)}',
+          ),
       ],
       child: _ChartAnimation(
         id: id,
@@ -416,10 +445,7 @@ class ActivityCategoryChart extends StatelessWidget {
                         ),
                       if (t < 1)
                         Expanded(
-                          flex: math.max(
-                            1,
-                            (total * 100 * (1 - t)).round(),
-                          ),
+                          flex: math.max(1, (total * 100 * (1 - t)).round()),
                           child: ColoredBox(color: nm.divider),
                         ),
                     ],

@@ -36,6 +36,7 @@ class NmTextField extends StatelessWidget {
   });
 
   final String label;
+
   /// El controlador lo pone quien usa el campo, y **tiene que sobrevivir a los
   /// rebuilds**: crearlo dentro de un `build` hace que cada tecla lo reemplace
   /// y el cursor vuelva al principio. Antes había además un parámetro `value`
@@ -284,6 +285,9 @@ class _NmPasswordFieldState extends State<NmPasswordField> {
 }
 
 /// Segmentado de 2–4 opciones.
+///
+/// La opción elegida va con relleno sólido de acento y texto blanco. Antes era
+/// lila claro sobre gris claro y no se distinguía cuál estaba elegida.
 class NmSegmentedControl<T> extends StatelessWidget {
   const NmSegmentedControl({
     required this.options,
@@ -302,7 +306,7 @@ class NmSegmentedControl<T> extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(3),
       decoration: BoxDecoration(
-        color: nm.surfaceRaised,
+        color: nm.surface,
         borderRadius: NmRadius.brMd,
         border: Border.all(color: nm.divider),
       ),
@@ -323,7 +327,7 @@ class NmSegmentedControl<T> extends StatelessWidget {
                     constraints: const BoxConstraints(minHeight: 40),
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
-                      color: selected ? nm.accentFill : Colors.transparent,
+                      color: selected ? nm.accent : Colors.transparent,
                       borderRadius: BorderRadius.circular(NmRadius.sm + 2),
                     ),
                     child: Text(
@@ -331,8 +335,8 @@ class NmSegmentedControl<T> extends StatelessWidget {
                       textAlign: TextAlign.center,
                       style: NmTextStyles.from(
                         NmType.bodySm,
-                        color: selected ? nm.accentOnFill : nm.textMuted,
-                      ),
+                        color: selected ? Colors.white : nm.textMuted,
+                      ).copyWith(fontWeight: selected ? FontWeight.w600 : null),
                     ),
                   ),
                 ),
@@ -530,10 +534,7 @@ class NmCheckboxRow extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            Checkbox(
-              value: value,
-              onChanged: (v) => onChanged(v ?? false),
-            ),
+            Checkbox(value: value, onChanged: (v) => onChanged(v ?? false)),
             const SizedBox(width: NmSpace.s2),
             Expanded(
               child: Padding(
@@ -618,9 +619,7 @@ class NmDateField extends StatelessWidget {
             decoration: BoxDecoration(
               color: nm.surface,
               borderRadius: NmRadius.brMd,
-              border: Border.all(
-                color: error == null ? nm.divider : nm.danger,
-              ),
+              border: Border.all(color: error == null ? nm.divider : nm.danger),
             ),
             child: Row(
               children: <Widget>[

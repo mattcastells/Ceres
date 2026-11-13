@@ -17,10 +17,12 @@ import '../../components/plan/ai_gate.dart';
 import '../../components/system/buttons.dart';
 import '../../components/system/nm_screen.dart';
 import '../../components/system/surfaces.dart';
+import '../../providers/app_providers.dart';
 import '../../providers/auth_providers.dart';
 import '../../providers/plan_providers.dart';
 
-/// "Tu semana con IA": el último resumen guardado, o el botón para pedirlo.
+/// El reporte con IA del período elegido en Progreso ("Tu semana", "Tu
+/// mes"…): el último guardado de ese período, o el botón para pedirlo.
 ///
 /// Abrir la pantalla **no** genera nada: lee lo guardado. Generar cuesta —es
 /// un pedido al modelo con su cuota diaria— y lo decide la persona con el
@@ -47,11 +49,11 @@ class _WeeklyReportScreenState extends ConsumerState<WeeklyReportScreen> {
   /// Frases para la espera. La función tarda entre 10 y 40 s y no avisa por
   /// dónde va, así que esto no finge pasos: dice lo que hace en orden y,
   /// pasado el minuto, que sigue.
-  static const List<String> _phases = <String>[
-    'Juntando los registros de la semana…',
+  List<String> get _phases => <String>[
+    'Juntando los registros de ${ref.read(progressRangeProvider).noun}…',
     'Calculando promedios y días con registro…',
     'Buscando lo que se repite…',
-    'Redactando tu resumen…',
+    'Redactando tu reporte…',
     'Ya casi…',
   ];
 
@@ -77,7 +79,9 @@ class _WeeklyReportScreenState extends ConsumerState<WeeklyReportScreen> {
     });
 
     try {
-      final report = await client.generateWeekly();
+      final report = await client.generateWeekly(
+        days: ref.read(progressRangeProvider).days,
+      );
       if (!mounted) return;
       _tick?.cancel();
       setState(() {
@@ -98,7 +102,7 @@ class _WeeklyReportScreenState extends ConsumerState<WeeklyReportScreen> {
         _generating = false;
         _error = AppError(
           code: ApiErrorCode.server,
-          message: 'No pudimos armar el resumen. Probá de nuevo en un rato.',
+          message: 'No pudimos armar el reporte. Probá de nuevo en un rato.',
           requestId: error.toString(),
         );
       });
@@ -117,13 +121,15 @@ class _WeeklyReportScreenState extends ConsumerState<WeeklyReportScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final range = ref.watch(progressRangeProvider);
     if (!ref.watch(isCloudEnabledProvider)) {
       return NmScreen(
-        title: 'Tu semana con IA',
+        title: range.reportTitle,
         child: EmptyState(
           icon: PhosphorIcons.sparkle(),
           title: 'Necesitás una cuenta',
-          body: 'El resumen se arma en el servidor, y sin cuenta tus datos '
+          body:
+              'El resumen se arma en el servidor, y sin cuenta tus datos '
               'están solo en este teléfono.',
         ),
       );
@@ -135,7 +141,7 @@ class _WeeklyReportScreenState extends ConsumerState<WeeklyReportScreen> {
     return NmScreen(
       // Sin "Regenerar" en la barra: el botón con nombre está al pie del
       // resumen, que es donde se termina de leer. Eran dos para lo mismo.
-      title: 'Tu semana con IA',
+      title: range.reportTitle,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
@@ -155,23 +161,28 @@ class _WeeklyReportScreenState extends ConsumerState<WeeklyReportScreen> {
               elapsed: DateTime.now().difference(_startedAt),
             )
           else if (report != null)
-            _ReportView(report: report, onRegenerate: _generate)
+            _ReportView(
+              report: report,
+              onRegenerate: _generate,
+              tryLabel: 'Para probar ${range.thisOne}',
+            )
           else if (latest.isLoading)
             const SkeletonList(rows: 4, withAvatar: false)
           else if (latest.hasError)
             ErrorState(
               message: latest.error is AppError
                   ? (latest.error! as AppError).message
-                  : 'No pudimos traer tu resumen.',
+                  : 'No pudimos traer tu reporte.',
               onRetry: () => ref.invalidate(latestWeeklyReportProvider),
             )
           else
             EmptyState(
               icon: PhosphorIcons.sparkle(),
-              title: 'Tu semana, en un resumen',
-              body: 'Lo que salió bien, lo que se repite y algo para probar, '
-                  'con tus registros de los últimos siete días.',
-              primaryLabel: 'Generar mi resumen',
+              title: '${range.reportTitle}, en un reporte',
+              body:
+                  'Lo que salió bien, lo que se repite y algo para probar, '
+                  'con tus registros de ${range.noun}.',
+              primaryLabel: 'Generar reporte',
               onPrimary: _generate,
             ),
         ],
@@ -234,10 +245,15 @@ class _Generating extends StatelessWidget {
 }
 
 class _ReportView extends StatelessWidget {
-  const _ReportView({required this.report, required this.onRegenerate});
+  const _ReportView({
+    required this.report,
+    required this.onRegenerate,
+    required this.tryLabel,
+  });
 
   final WeeklyReport report;
   final VoidCallback onRegenerate;
+  final String tryLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -307,7 +323,7 @@ class _ReportView extends StatelessWidget {
           icon: PhosphorIcons.chartLine(),
         ),
         _Bullets(
-          title: 'Para probar esta semana',
+          title: tryLabel,
           items: report.suggestions,
           icon: PhosphorIcons.lightbulb(),
           emphasis: true,
