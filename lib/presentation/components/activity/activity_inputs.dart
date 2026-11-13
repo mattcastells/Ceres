@@ -361,12 +361,16 @@ class DistanceInput extends StatelessWidget {
 }
 
 /// Radios 0/50/75/100 + personalizado con slider, con el copy fijo de S-28.
+///
+/// Con el ajuste apagado se ve marcado "No sumar", que es lo que significa.
+/// Había además un interruptor "Desactivar completamente el ajuste por
+/// ejercicio" que hacía lo mismo que ese radio; elegir cualquier opción ahora
+/// lo deja prendido con ese porcentaje ([onChanged]).
 class ExerciseCreditSelector extends StatelessWidget {
   const ExerciseCreditSelector({
     required this.value,
     required this.enabled,
     required this.onChanged,
-    required this.onToggleEnabled,
     this.previewEstimatedCalories,
     super.key,
   });
@@ -374,7 +378,6 @@ class ExerciseCreditSelector extends StatelessWidget {
   final int value;
   final bool enabled;
   final ValueChanged<int> onChanged;
-  final ValueChanged<bool> onToggleEnabled;
   final int? previewEstimatedCalories;
 
   static const List<int> presets = <int>[0, 50, 75, 100];
@@ -382,16 +385,16 @@ class ExerciseCreditSelector extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final nm = context.nm;
-    final isCustom = !presets.contains(value);
+    final storedCustom = !presets.contains(value);
+    final isCustom = enabled && storedCustom;
     final preview = previewEstimatedCalories;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
         const InfoNote(
-          text: 'Las calorías quemadas durante el ejercicio suelen '
-              'sobreestimarse. Podés decidir cuánto de ese gasto agregar a tu '
-              'presupuesto diario.',
+          text: 'Las calorías de ejercicio suelen sobreestimarse. Elegí cuánto '
+              'sumar a tu objetivo.',
         ),
         const SizedBox(height: NmSpace.s4),
         for (final preset in presets)
@@ -407,21 +410,15 @@ class ExerciseCreditSelector extends StatelessWidget {
                   ? 'Tu objetivo no cambia por el ejercicio'
                   : null,
               value: preset,
-              groupValue: enabled ? value : -1,
-              onChanged: (v) {
-                if (!enabled) onToggleEnabled(true);
-                onChanged(v);
-              },
+              groupValue: enabled ? value : 0,
+              onChanged: onChanged,
             ),
           ),
         NmRadioRow<bool>(
           title: 'Porcentaje personalizado',
           value: true,
-          groupValue: enabled && isCustom,
-          onChanged: (_) {
-            if (!enabled) onToggleEnabled(true);
-            onChanged(isCustom ? value : 25);
-          },
+          groupValue: isCustom,
+          onChanged: (_) => onChanged(storedCustom ? value : 25),
         ),
         if (isCustom)
           Padding(
@@ -465,18 +462,12 @@ class ExerciseCreditSelector extends StatelessWidget {
                   enabled && value > 0
                       ? 'Con ${Fmt.integer(preview)} kcal de actividad, hoy '
                             'sumarías +${(preview * value / 100).round()} kcal'
-                      : 'El ejercicio no suma a tu presupuesto',
+                      : 'El ejercicio no suma a tu objetivo',
                   style: NmTextStyles.from(NmType.bodySm, color: nm.text).tnum,
                 ),
               ],
             ),
           ),
-        const SizedBox(height: NmSpace.s4),
-        NmSwitchRow(
-          title: 'Desactivar completamente el ajuste por ejercicio',
-          value: !enabled,
-          onChanged: (v) => onToggleEnabled(!v),
-        ),
       ],
     );
   }

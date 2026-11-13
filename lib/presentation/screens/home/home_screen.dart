@@ -148,10 +148,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             if (profile.birthDate == null ||
                                 profile.heightCm == null) ...<Widget>[
                               InfoNote(
-                                text:
-                                    'Este objetivo es genérico. Cargá tus '
-                                    'datos y se calcula con ellos.',
-                                action: 'Cargar',
+                                text: 'Este objetivo es genérico: sale de '
+                                    'tus datos cuando los cargues.',
+                                action: 'Cargar mis datos',
                                 onAction: () =>
                                     context.push(Routes.profileBody),
                               ),
@@ -186,18 +185,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             const SizedBox(height: NmSpace.s8),
 
                             if (summary.isEmpty && !isFutureDate) ...<Widget>[
+                              // Sin botones propios: el "+" de cada comida y
+                              // "Agregar actividad" están justo abajo, y el
+                              // vacío ofrecía las mismas dos cosas otra vez.
                               EmptyState(
                                 icon: PhosphorIcons.forkKnife(),
                                 title: 'Todavía no registraste nada',
-                                body: 'Empezá por lo que tengas más a mano: '
-                                    'una comida o una actividad.',
-                                primaryLabel: 'Registrá tu primera comida',
-                                onPrimary: () => showAddSheet(context),
-                                secondaryLabel: 'Registrá una actividad',
-                                onSecondary: () => showAddSheet(
-                                  context,
-                                  activityFirst: true,
-                                ),
+                                body: 'Empezá por una comida o una actividad.',
                               ),
                               const SizedBox(height: NmSpace.s8),
                             ],
@@ -271,8 +265,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                     creditPercentage:
                                         profile.effectiveCreditPercentage,
                                     isRestDay: summary.isRestDay,
-                                    onRestDay: () =>
-                                        repo.setRestDay(date, false),
                                   ),
                                   if (summary.activities.isNotEmpty) ...<Widget>[
                                     const SizedBox(height: NmSpace.s3),
@@ -382,7 +374,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               NmCard(
                                 child: ValueRow(
                                   label: 'Calorías netas',
-                                  caption: 'consumidas − aplicadas',
+                                  caption: 'consumido − ejercicio',
                                   value: Fmt.kcal(summary.netKcal),
                                   muted: true,
                                 ),

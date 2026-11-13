@@ -708,7 +708,7 @@ class _MyItemsScreenState extends ConsumerState<MyItemsScreen> {
     final weightKg = ref.watch(currentWeightProvider);
 
     return NmScreen(
-      title: 'Mis cosas',
+      title: 'Mis alimentos y plantillas',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[

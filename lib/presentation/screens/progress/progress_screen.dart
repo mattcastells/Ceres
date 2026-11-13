@@ -109,8 +109,7 @@ class ProgressScreen extends ConsumerWidget {
                           Expanded(
                             child: Text(
                               'Variación: '
-                              '${Fmt.signedDecimal1(progress.weightDeltaKg)} '
-                              '${Fmt.weightUnit(units)}',
+                              '${Fmt.signedWeight(progress.weightDeltaKg, units)}',
                               style: NmTextStyles.from(
                                 NmType.bodySm,
                                 color: nm.text,
@@ -120,8 +119,8 @@ class ProgressScreen extends ConsumerWidget {
                           if (progress.trendKgPerWeek != null)
                             Text(
                               'Tendencia: '
-                              '${Fmt.signedDecimal1(progress.trendKgPerWeek!)} '
-                              'kg/semana',
+                              '${Fmt.signedWeight(progress.trendKgPerWeek!, units)}'
+                              '/semana',
                               style: NmTextStyles.from(
                                 NmType.caption,
                                 color: nm.textMuted,
@@ -178,7 +177,7 @@ class ProgressScreen extends ConsumerWidget {
           // Actividad.
           NmSectionHeader(
             title: 'Actividad',
-            action: 'Ver todo',
+            action: 'Ampliar',
             onAction: () => context.push(Routes.progressActivity),
           ),
           NmCard(child: ActivityHistoryChart(points: progress.activityByDay)),
@@ -198,14 +197,14 @@ class ProgressScreen extends ConsumerWidget {
                 const NmDivider(),
                 NmListRow(
                   title: 'Medidas corporales',
-                  subtitle: 'Cintura, cadera, pecho y más',
+                  subtitle: 'Perímetros, pliegues y balanza',
                   leading: Icon(PhosphorIcons.ruler()),
                   onTap: () => context.push(Routes.progressMeasurements),
                 ),
                 const NmDivider(),
                 NmListRow(
                   title: 'Objetivos de actividad',
-                  subtitle: 'Opcionales: no cambian tu objetivo calórico',
+                  subtitle: 'Opcionales',
                   leading: Icon(PhosphorIcons.target()),
                   onTap: () => context.push(Routes.progressGoals),
                 ),

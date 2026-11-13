@@ -51,7 +51,7 @@ class SettingsScreen extends ConsumerWidget {
                 NmListRow(
                   title: 'Crédito de ejercicio',
                   subtitle: profile.effectiveCreditPercentage == 0
-                      ? 'El ejercicio no suma a tu presupuesto'
+                      ? 'El ejercicio no suma a tu objetivo'
                       : 'Suma el ${profile.effectiveCreditPercentage} %',
                   leading: Icon(PhosphorIcons.personSimpleRun()),
                   onTap: () => context.push(Routes.exerciseCredit),
@@ -130,7 +130,7 @@ class SettingsScreen extends ConsumerWidget {
               children: <Widget>[
                 NmSwitchRow(
                   title: 'Mostrar calorías netas',
-                  subtitle: 'Consumidas menos aplicadas, en Inicio',
+                  subtitle: 'Consumido − ejercicio, en Inicio',
                   value: profile.showNetCalories,
                   onChanged: repo.setShowNetCalories,
                 ),
@@ -177,7 +177,7 @@ class _ExerciseCreditScreenState extends ConsumerState<ExerciseCreditScreen> {
         children: <Widget>[
           const SizedBox(height: NmSpace.s4),
           Text(
-            'Sumar las calorías del ejercicio a mi presupuesto diario',
+            'Sumar las calorías del ejercicio a mi objetivo diario',
             style: NmTextStyles.from(NmType.h3, color: context.nm.text),
           ),
           const SizedBox(height: NmSpace.s6),
@@ -185,27 +185,19 @@ class _ExerciseCreditScreenState extends ConsumerState<ExerciseCreditScreen> {
             value: profile.exerciseCreditPercentage,
             enabled: profile.exerciseCreditEnabled,
             previewEstimatedCalories: summary.exerciseEstimatedKcal,
+            // Siempre prendido con lo elegido: el 0 % ya es "no sumar". Antes
+            // se pasaba el `enabled` del perfil, que con el ajuste apagado
+            // seguía en false y el porcentaje elegido no se aplicaba.
             onChanged: (value) {
               setState(() => _changed = true);
-              repo.setExerciseCredit(
-                percentage: value,
-                enabled: profile.exerciseCreditEnabled,
-              );
-            },
-            onToggleEnabled: (enabled) {
-              setState(() => _changed = true);
-              repo.setExerciseCredit(
-                percentage: profile.exerciseCreditPercentage,
-                enabled: enabled,
-              );
+              repo.setExerciseCredit(percentage: value, enabled: true);
             },
           ),
           if (_changed) ...<Widget>[
             const SizedBox(height: NmSpace.s6),
             const InfoNote(
               tone: NmNoteTone.info,
-              text: 'Aplicamos el cambio desde hoy. Los días anteriores '
-                  'quedan como estaban.',
+              text: 'Rige desde hoy; los días anteriores no cambian.',
             ),
           ],
         ],
@@ -265,12 +257,6 @@ class AppearanceScreen extends ConsumerWidget {
               ],
             ),
           ),
-          const SizedBox(height: NmSpace.s4),
-          const InfoNote(
-            text: 'El tema oscuro es el canónico del sistema de diseño; el '
-                'claro se deriva invirtiendo la rampa neutral y bajando el '
-                'acento un paso para conservar el contraste.',
-          ),
         ],
       ),
     );
@@ -304,8 +290,7 @@ class UnitsScreen extends ConsumerWidget {
             ),
           const SizedBox(height: NmSpace.s4),
           const InfoNote(
-            text: 'La conversión es solo de presentación: por dentro todo se '
-                'guarda en kilos, centímetros y metros.',
+            text: 'Por dentro todo se guarda en kilos, centímetros y metros.',
           ),
         ],
       ),
