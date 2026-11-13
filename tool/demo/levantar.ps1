@@ -123,6 +123,17 @@ $ApiPort = $PuertoBase + 1
 # ── 4 · Base de datos ─────────────────────────────────────────────────────
 Paso "Base de datos local (API en el puerto $ApiPort)"
 supabase start --workdir $Work -x realtime,imgproxy,studio,logflare,vector,supavisor,edge-runtime
+# Con Docker recién abierto, el contenedor de la base ya existe pero todavía
+# está arrancando, y `supabase start` falla con "container is not ready". Se
+# espera a que esté sano y se intenta una vez más.
+if ($LASTEXITCODE -ne 0) {
+  Write-Host 'La base todavía estaba arrancando; espero y reintento...'
+  for ($i = 0; $i -lt 45; $i++) {
+    if ((docker inspect -f '{{.State.Health.Status}}' supabase_db_ceres-demo 2>$null) -eq 'healthy') { break }
+    Start-Sleep -Seconds 4
+  }
+  supabase start --workdir $Work -x realtime,imgproxy,studio,logflare,vector,supavisor,edge-runtime
+}
 if ($LASTEXITCODE -ne 0) { Falla 'supabase start falló. Si es un tema de puertos, probá con -PuertoBase 57320.' }
 supabase migration up --workdir $Work --local | Out-Null
 $st = supabase status --workdir $Work -o json | ConvertFrom-Json
