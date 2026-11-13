@@ -84,12 +84,13 @@ void main() {
     );
     expect(find.text('Cintura (mínima)'), findsOneWidget);
     expect(find.text('Cadera (máxima)'), findsOneWidget);
-    // Sin registros lo dice, en vez de mostrar un vacío que parece un error.
-    expect(find.text('Sin registros'), findsWidgets);
+    // Sin registros el campo queda vacío, sin una leyenda debajo.
+    expect(find.text('Sin registros'), findsNothing);
+    expect(find.text('HISTORIAL'), findsNothing);
     expect(find.text('Guardar'), findsOneWidget);
   });
 
-  testWidgets('el campo muestra la última medida cargada', (tester) async {
+  testWidgets('el campo muestra la medida anterior', (tester) async {
     late ProviderContainer container;
     late CeresRepositories repo;
     await tester.runAsync(() async {
@@ -107,7 +108,42 @@ void main() {
     await tester.pumpWidget(_wrap(container));
     await _settle(tester);
 
-    expect(find.textContaining('Última: 82,5 cm'), findsOneWidget);
+    expect(find.textContaining('Anterior: 82,5 cm'), findsOneWidget);
+  });
+
+  testWidgets('el historial compara y deja corregir una fecha', (tester) async {
+    late ProviderContainer container;
+    late CeresRepositories repo;
+    await tester.runAsync(() async {
+      final booted = await _boot();
+      container = booted.$1;
+      repo = booted.$2;
+      await repo.logMeasurement(
+        metric: MeasurementMetric.waist,
+        value: 85,
+        date: today().subtract(const Duration(days: 10)),
+      );
+      await repo.logMeasurement(
+        metric: MeasurementMetric.waist,
+        value: 82.5,
+        date: today().subtract(const Duration(days: 4)),
+      );
+    });
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(_wrap(container));
+    await _settle(tester);
+
+    // La fila más nueva dice cuánto cambió respecto de la anterior.
+    final row = find.textContaining('Cintura (mínima): 82,5 cm (−2,5)');
+    await tester.ensureVisible(row);
+    await tester.pump();
+    expect(row, findsOneWidget);
+
+    // Tocarla la carga en el formulario para corregirla.
+    await tester.tap(row);
+    await _settle(tester);
+    expect(find.widgetWithText(TextField, '82,5'), findsOneWidget);
   });
 
   testWidgets('se cargan varias medidas de una y se guardan juntas', (

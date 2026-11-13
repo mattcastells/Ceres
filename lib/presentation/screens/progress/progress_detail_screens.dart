@@ -580,13 +580,31 @@ class _MeasurementsScreenState extends ConsumerState<MeasurementsScreen> {
     );
   }
 
-  /// La última medida cargada de esa métrica, cualquiera sea su fecha.
-  String _lastLabel(CeresRepositories repo, MeasurementMetric metric) {
-    final entries = repo.measurements(metric);
-    if (entries.isEmpty) return 'Sin registros';
-    final last = entries.last;
+  /// La medida anterior a la fecha del formulario, para comparar mientras se
+  /// carga la nueva. Sin ninguna anterior no dice nada: el campo vacío ya
+  /// cuenta que no hay datos.
+  String? _previousLabel(CeresRepositories repo, MeasurementMetric metric) {
+    final before = repo
+        .measurements(metric)
+        .where((m) => m.localDate.isBefore(_date))
+        .toList();
+    if (before.isEmpty) return null;
+    final last = before.last;
     final value = '${Fmt.decimal1(last.value)} ${metric.unitLabel}'.trim();
-    return 'Última: $value · ${friendlyDay(last.localDate)}';
+    return 'Anterior: $value · ${friendlyDay(last.localDate)}';
+  }
+
+  /// Cargar una fecha del historial en el formulario, para corregirla.
+  void _edit(DateTime date) {
+    setState(() {
+      _date = date;
+      _draft.loadFrom(ref.read(repositoryProvider), date);
+    });
+    Scrollable.maybeOf(context)?.position.animateTo(
+      0,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeOut,
+    );
   }
 
   @override
@@ -632,7 +650,7 @@ class _MeasurementsScreenState extends ConsumerState<MeasurementsScreen> {
                 controller: _draft.controller(metric),
                 decimals: 1,
                 suffix: metric.unitLabel.isEmpty ? 'índice' : metric.unitLabel,
-                helper: _lastLabel(repo, metric),
+                helper: _previousLabel(repo, metric),
                 error: _draft.errors[metric],
                 onChanged: (_) => setState(() => _draft.errors.remove(metric)),
               ),
@@ -669,9 +687,11 @@ class _MeasurementsScreenState extends ConsumerState<MeasurementsScreen> {
             onPressed: _save,
           ),
 
+          ..._history(repo, metrics),
+
           if (withHistory.isNotEmpty) ...<Widget>[
             const SizedBox(height: NmSpace.s8),
-            const NmSectionHeader(title: 'Series'),
+            const NmSectionHeader(title: 'Gráficos'),
             NmCard(
               padding: const EdgeInsets.symmetric(vertical: NmSpace.s1),
               child: Column(
@@ -694,6 +714,95 @@ class _MeasurementsScreenState extends ConsumerState<MeasurementsScreen> {
         ],
       ),
     );
+  }
+
+  /// Historial del grupo: una fila por fecha con lo que se midió ese día y
+  /// cuánto cambió cada medida respecto de la vez anterior. Tocar una fila la
+  /// carga arriba para corregirla.
+  List<Widget> _history(
+    CeresRepositories repo,
+    List<MeasurementMetric> metrics,
+  ) {
+    final nm = context.nm;
+    final byDate = <DateTime, List<(MeasurementMetric, double, double?)>>{};
+    for (final metric in metrics) {
+      final entries = repo.measurements(metric);
+      for (var i = 0; i < entries.length; i++) {
+        final e = entries[i];
+        final previous = i == 0 ? null : entries[i - 1].value;
+        (byDate[e.localDate] ??= <(MeasurementMetric, double, double?)>[]).add((
+          metric,
+          e.value,
+          previous == null ? null : e.value - previous,
+        ));
+      }
+    }
+    if (byDate.isEmpty) return const <Widget>[];
+    final dates = byDate.keys.toList()..sort((a, b) => b.compareTo(a));
+
+    return <Widget>[
+      const SizedBox(height: NmSpace.s8),
+      const NmSectionHeader(title: 'Historial'),
+      NmCard(
+        padding: const EdgeInsets.symmetric(vertical: NmSpace.s1),
+        child: Column(
+          children: <Widget>[
+            for (final (i, date) in dates.take(12).indexed) ...<Widget>[
+              if (i > 0) const NmDivider(indent: NmSpace.s4),
+              InkWell(
+                onTap: () => _edit(date),
+                borderRadius: NmRadius.brSm,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: NmSpace.s4,
+                    vertical: NmSpace.s3,
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            Text(
+                              friendlyDay(date),
+                              style: NmTextStyles.from(
+                                NmType.bodySm,
+                                color: nm.text,
+                              ).copyWith(fontWeight: FontWeight.w600),
+                            ),
+                            const SizedBox(height: NmSpace.s1),
+                            for (final (metric, value, delta) in byDate[date]!)
+                              Text(
+                                '${metric.label}: '
+                                            '${Fmt.decimal1(value)} ${metric.unitLabel}'
+                                        .trim() +
+                                    (delta == null || delta == 0
+                                        ? ''
+                                        : ' (${delta > 0 ? '+' : '−'}'
+                                              '${Fmt.decimal1(delta.abs())})'),
+                                style: NmTextStyles.from(
+                                  NmType.caption,
+                                  color: nm.textMuted,
+                                ).tnum,
+                              ),
+                          ],
+                        ),
+                      ),
+                      Icon(
+                        PhosphorIcons.pencilSimple(),
+                        size: NmIconSize.sm,
+                        color: nm.isDark ? nm.accentText : nm.accent,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    ];
   }
 
   /// La serie de una métrica: el gráfico y los últimos doce registros.
