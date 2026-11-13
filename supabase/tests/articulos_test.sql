@@ -197,8 +197,11 @@ update public.care_articles set deleted_at = now() - interval '31 days'
  where id = 'eeeeeeee-0000-0000-0000-000000000001';
 select public.purge_soft_deleted();
 
+-- Por id: sin rol, `count(*)` también contaría lo que haya en la base.
 select is(
-  (select count(*)::int from public.care_articles),
+  (select count(*)::int from public.care_articles
+    where id in ('eeeeeeee-0000-0000-0000-000000000001',
+                 'eeeeeeee-0000-0000-0000-000000000002')),
   1,
   'La purga se lleva el artículo borrado hace más de 30 días, y solo ese'
 );
