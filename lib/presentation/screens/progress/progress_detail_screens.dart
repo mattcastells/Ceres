@@ -58,15 +58,13 @@ class WeightChartScreen extends ConsumerWidget {
             children: <Widget>[
               StatCard(
                 label: 'Variación',
-                value:
-                    '${Fmt.signedDecimal1(progress.weightDeltaKg)} '
-                    '${Fmt.weightUnit(units)}',
+                value: Fmt.signedWeight(progress.weightDeltaKg, units),
               ),
               StatCard(
                 label: 'Tendencia semanal',
                 value: progress.trendKgPerWeek == null
                     ? '—'
-                    : '${Fmt.signedDecimal1(progress.trendKgPerWeek!)} kg',
+                    : Fmt.signedWeight(progress.trendKgPerWeek!, units),
                 caption: progress.trendKgPerWeek == null
                     ? 'Necesitamos unos días más de registro'
                     : null,

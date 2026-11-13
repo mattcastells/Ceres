@@ -616,7 +616,7 @@ class WeightRow extends StatelessWidget {
         ),
         if (delta != 0)
           Text(
-            '${Fmt.signedDecimal1(delta)} kg',
+            Fmt.signedWeight(delta, units),
             style: NmTextStyles.from(
               NmType.caption,
               color: nm.textMuted,

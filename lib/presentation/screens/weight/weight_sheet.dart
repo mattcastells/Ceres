@@ -21,6 +21,15 @@ Future<void> showWeightSheet(BuildContext context, {DateTime? date}) =>
       builder: (context) => _WeightSheet(date: date ?? DateTime.now()),
     );
 
+/// El peso es de un día que ya pasó: un día futuro abierto para planificar
+/// comidas cae en hoy. Sin esto el campo de fecha arrancaba en una fecha que su
+/// propio selector no deja elegir, y el peso quedaba guardado en el futuro.
+DateTime _notFuture(DateTime date) {
+  final hoy = today();
+  final dia = DateTime(date.year, date.month, date.day);
+  return dia.isAfter(hoy) ? hoy : date;
+}
+
 class _WeightSheet extends ConsumerStatefulWidget {
   const _WeightSheet({required this.date});
 
@@ -33,7 +42,7 @@ class _WeightSheet extends ConsumerStatefulWidget {
 class _WeightSheetState extends ConsumerState<_WeightSheet> {
   late final TextEditingController _weight;
   late final TextEditingController _notes;
-  late DateTime _date = widget.date;
+  late DateTime _date = _notFuture(widget.date);
   String? _error;
   bool _saving = false;
 
@@ -41,10 +50,15 @@ class _WeightSheetState extends ConsumerState<_WeightSheet> {
   void initState() {
     super.initState();
     final repo = ref.read(repositoryProvider);
-    final existing = repo.weightOn(widget.date);
+    final existing = repo.weightOn(_date);
     final last = existing?.weightKg ?? repo.currentWeightKg;
+    // En las unidades del perfil, igual que la etiqueta al lado del campo. Con
+    // libras se mostraba el número en kilos, y lo que se escribía en libras se
+    // guardaba como kilos.
     _weight = TextEditingController(
-      text: last == null ? '' : Fmt.decimal1(last),
+      text: last == null
+          ? ''
+          : Fmt.weightValue(last, ref.read(unitSystemProvider)),
     );
     _notes = TextEditingController(text: existing?.notes ?? '');
   }
@@ -56,8 +70,12 @@ class _WeightSheetState extends ConsumerState<_WeightSheet> {
     super.dispose();
   }
 
-  double? get _parsed =>
-      double.tryParse(_weight.text.replaceAll(',', '.').trim());
+  /// Lo escrito, pasado a kilos.
+  double? get _parsedKg {
+    final value = double.tryParse(_weight.text.replaceAll(',', '.').trim());
+    if (value == null) return null;
+    return Fmt.fromWeightUnits(value, ref.read(unitSystemProvider));
+  }
 
   /// Cambio grande en pocos días: se avisa, no se bloquea (F-11).
   ///
@@ -69,13 +87,14 @@ class _WeightSheetState extends ConsumerState<_WeightSheet> {
   /// confirmación tiene que tener el botón que confirma al lado.
   Future<bool> _confirmBigChange(double value, double previous) async {
     final delta = value - previous;
+    final units = ref.read(unitSystemProvider);
     final confirmed = await showNmDialog<bool>(
       context: context,
       builder: (context) => NmDialog(
         title: '¿Confirmás ese peso?',
         body:
-            'Son ${Fmt.signedDecimal1(delta)} kg respecto de tu último '
-            'registro (${Fmt.decimal1(previous)} kg). Puede ser un error de '
+            'Son ${Fmt.signedWeight(delta, units)} respecto de tu último '
+            'registro (${Fmt.weight(previous, units)}). Puede ser un error de '
             'tipeo.',
         actions: <Widget>[
           NmButton.ghost(
@@ -93,9 +112,15 @@ class _WeightSheetState extends ConsumerState<_WeightSheet> {
   }
 
   Future<void> _save() async {
-    final value = _parsed;
+    final value = _parsedKg;
     if (value == null || value < 25 || value > 400) {
-      setState(() => _error = 'Ingresá un peso entre 25 y 400 kg.');
+      final units = ref.read(unitSystemProvider);
+      String limit(double kg) => Fmt.integer(Fmt.toWeightUnits(kg, units));
+      setState(
+        () => _error =
+            'Ingresá un peso entre ${limit(25)} y ${limit(400)} '
+            '${Fmt.weightUnit(units)}.',
+      );
       return;
     }
 
@@ -124,7 +149,7 @@ class _WeightSheetState extends ConsumerState<_WeightSheet> {
     Navigator.of(context).pop();
     NmSnackbar.show(
       context,
-      existing == null ? 'Peso registrado' : 'Actualizamos el peso de ese día',
+      existing == null ? 'Peso registrado' : 'Peso actualizado',
     );
   }
 

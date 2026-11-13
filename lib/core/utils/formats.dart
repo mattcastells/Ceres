@@ -70,17 +70,30 @@ abstract final class Fmt {
   }
 
   /// "72,4 kg" o su equivalente imperial, según el perfil.
-  static String weight(double kg, UnitSystem units) => units == UnitSystem.metric
-      ? '${decimal1(kg)} kg'
-      : '${decimal1(kg * 2.20462)} lb';
+  static String weight(double kg, UnitSystem units) =>
+      '${weightValue(kg, units)} ${weightUnit(units)}';
 
   static String weightValue(double kg, UnitSystem units) =>
-      units == UnitSystem.metric
-      ? decimal1(kg)
-      : decimal1(kg * 2.20462);
+      decimal1(toWeightUnits(kg, units));
 
   static String weightUnit(UnitSystem units) =>
       units == UnitSystem.metric ? 'kg' : 'lb';
+
+  /// Una variación de peso ("−0,4 kg" / "−0,9 lb"), en las unidades del
+  /// perfil. Escrita a mano con `weightUnit` al lado quedaba el número en kilos
+  /// y la etiqueta en libras.
+  static String signedWeight(double kg, UnitSystem units) =>
+      '${signedDecimal1(toWeightUnits(kg, units))} ${weightUnit(units)}';
+
+  /// Kilos → la unidad del perfil, como número.
+  static double toWeightUnits(double kg, UnitSystem units) =>
+      units == UnitSystem.metric ? kg : kg * _lbPerKg;
+
+  /// La unidad del perfil → kilos, para guardar lo que se escribió.
+  static double fromWeightUnits(double value, UnitSystem units) =>
+      units == UnitSystem.metric ? value : value / _lbPerKg;
+
+  static const double _lbPerKg = 2.20462;
 
   /// "175 cm" o "5' 9\"".
   static String height(double cm, UnitSystem units) {
