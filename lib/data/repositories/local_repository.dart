@@ -696,13 +696,21 @@ class LocalRepository
   Future<Meal> duplicateMeal(String id, DateTime date, MealSlot slot) async {
     final source = mealById(id);
     if (source == null) throw StateError('La comida ya no existe');
-    final at = DateTime(
-      date.year,
-      date.month,
-      date.day,
-      source.eatenAt.hour,
-      source.eatenAt.minute,
-    );
+    // A otro día se copia con su hora de siempre (el desayuno de las 8 sigue
+    // siendo a las 8). Hoy no: repetir "lo de siempre" es comerlo ahora, y la
+    // hora de la original podía quedar en el futuro o ser la de una cena de
+    // madrugada.
+    final now = DateTime.now();
+    final esHoy = dateOnly(date) == dateOnly(now);
+    final at = esHoy
+        ? DateTime(now.year, now.month, now.day, now.hour, now.minute)
+        : DateTime(
+            date.year,
+            date.month,
+            date.day,
+            source.eatenAt.hour,
+            source.eatenAt.minute,
+          );
     final copy = Meal(
       id: _uuid.v4(),
       slot: slot,

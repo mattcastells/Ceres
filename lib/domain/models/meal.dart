@@ -36,12 +36,27 @@ class MealItem {
   final bool wasAiCorrected;
   final int position;
 
-  /// "150 g" · "1 taza".
+  /// "150 g" · "1 taza" · "2 porciones".
   String get portionLabel {
     final q = quantity == quantity.roundToDouble()
         ? quantity.toInt().toString()
         : quantity.toStringAsFixed(1).replaceAll('.', ',');
-    return '$q $unit';
+    return '$q ${unitLabel(unit, quantity)}';
+  }
+
+  /// La unidad como se lee. El valor guardado es el del contrato con el
+  /// servidor (`porcion`, `unidad`, sin tilde ni plural): se traduce solo al
+  /// mostrarlo, así no cambia lo que viaja ni lo que ya está en la base.
+  static String unitLabel(String unit, double quantity) {
+    final plural = quantity != 1;
+    return switch (unit) {
+      'porcion' => plural ? 'porciones' : 'porción',
+      'unidad' => plural ? 'unidades' : 'unidad',
+      'taza' => plural ? 'tazas' : 'taza',
+      'cucharada' => plural ? 'cucharadas' : 'cucharada',
+      'rebanada' => plural ? 'rebanadas' : 'rebanada',
+      _ => unit,
+    };
   }
 
   MealItem copyWith({

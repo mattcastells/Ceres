@@ -536,7 +536,8 @@ class _SuggestionCardState extends State<_SuggestionCard> {
             for (final i in o.items)
               ValueRow(
                 label: i.name,
-                caption: '${_cantidad(i.quantity)} ${i.unit}',
+                caption:
+                    '${_cantidad(i.quantity)} ${MealItem.unitLabel(i.unit, i.quantity)}',
                 value: '${i.kcal} kcal',
               ),
 
