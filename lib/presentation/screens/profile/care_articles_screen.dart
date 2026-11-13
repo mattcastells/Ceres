@@ -237,12 +237,14 @@ class _CareArticleScreenState extends ConsumerState<CareArticleScreen> {
       skipLoadingOnRefresh: true,
       skipLoadingOnReload: true,
       loading: () => const NmScreen(
+        title: 'Artículo',
         child: Padding(
           padding: EdgeInsets.only(top: NmSpace.s4),
           child: SkeletonList(rows: 4, withAvatar: false),
         ),
       ),
       error: (error, _) => NmScreen(
+        title: 'Artículo',
         child: ErrorState(
           message: error is AppError
               ? error.message
@@ -257,6 +259,7 @@ class _CareArticleScreenState extends ConsumerState<CareArticleScreen> {
         }
         if (article == null) {
           return NmScreen(
+            title: 'Artículo',
             child: EmptyState(
               icon: PhosphorIcons.bookOpenText(),
               title: 'Este artículo ya no está',
