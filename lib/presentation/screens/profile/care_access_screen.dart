@@ -120,8 +120,8 @@ class CareAccessScreen extends ConsumerWidget {
             const SizedBox(height: NmSpace.s6),
 
             const InfoNote(
-              text: 'Quien tenga acceso solo puede mirar: no puede cambiar ni '
-                  'borrar nada de lo tuyo. Y lo que no prendas, no lo ve.',
+              text: 'Quien tenga acceso solo puede mirar, y solo lo que '
+                  'prendas.',
             ),
           ],
         ),
@@ -319,7 +319,7 @@ class _GrantSheetState extends ConsumerState<_GrantSheet> {
       Navigator.of(context).pop();
       NmSnackbar.show(
         context,
-        _isEditing ? 'Listo, cambiamos qué ve' : 'Acceso dado',
+        _isEditing ? 'Cambios guardados' : 'Acceso dado',
       );
     } on AppError catch (error) {
       if (!mounted) return;
@@ -408,8 +408,7 @@ class _GrantSheetState extends ConsumerState<_GrantSheet> {
             const SizedBox(height: NmSpace.s3),
             const InfoNote(
               tone: NmNoteTone.caution,
-              text: 'Sin ninguna categoría prendida no va a ver nada. Es '
-                  'válido, pero probablemente no sea lo que buscás.',
+              text: 'Sin ninguna categoría prendida no va a ver nada.',
             ),
           ],
 

@@ -183,7 +183,7 @@ class _BodyProfileScreenState extends ConsumerState<BodyProfileScreen> {
                       const SizedBox(height: NmSpace.s1),
                       Text(
                         weightKg == null
-                            ? 'Sin registro'
+                            ? 'Sin registrar'
                             : Fmt.weight(weightKg, units),
                         style: NmTextStyles.from(
                           NmType.h3,
@@ -241,19 +241,9 @@ class _BodyProfileScreenState extends ConsumerState<BodyProfileScreen> {
                         '${Fmt.decimal1(bmi(weightKg: weightKg, heightCm: profile.heightCm!))}',
                   ),
                   const SizedBox(height: NmSpace.s3),
-                  Text(
-                    'Se actualiza solo cada vez que registrás un peso nuevo.',
-                    style: NmTextStyles.from(
-                      NmType.caption,
-                      color: nm.textMuted,
-                    ),
-                  ),
-                  const SizedBox(height: NmSpace.s3),
                   const InfoNote(
-                    text: 'Es una referencia poblacional y nada más: no '
-                        'distingue músculo de grasa ni dice nada sobre tu '
-                        'salud. Para composición corporal miran los pliegues '
-                        'y la bioimpedancia.',
+                    text: 'Es una referencia poblacional: no distingue músculo '
+                        'de grasa.',
                   ),
                   const SizedBox(height: NmSpace.s3),
                   NmButton.ghost(
@@ -565,9 +555,7 @@ class _TargetScreenState extends ConsumerState<TargetScreen> {
           ),
           const SizedBox(height: NmSpace.s6),
           const InfoNote(
-            text: 'Al guardar, el objetivo nuevo rige desde hoy. Los días '
-                'anteriores conservan el objetivo con el que fueron '
-                'registrados.',
+            text: 'Rige desde hoy; los días anteriores no cambian.',
           ),
           // Sin datos corporales no hay fórmula posible: el objetivo solo puede
           // ser manual, y conviene decir dónde se cargan en vez de dejar el
@@ -575,8 +563,7 @@ class _TargetScreenState extends ConsumerState<TargetScreen> {
           if (!profile.hasBodyData) ...<Widget>[
             const SizedBox(height: NmSpace.s4),
             InfoNote(
-              text: 'Sin altura, nacimiento y sexo no se puede calcular. '
-                  'Cargalos y el objetivo sale de tus datos.',
+              text: 'Sin altura, nacimiento y sexo no se puede calcular.',
               action: 'Cargar mis datos',
               onAction: () => context.push(Routes.profileBody),
             ),
@@ -742,8 +729,8 @@ class _MyItemsScreenState extends ConsumerState<MyItemsScreen> {
                     items: const <_MyItem>[],
                     emptyTitle: 'Sin plantillas',
                     emptyBody:
-                        'Guardá una actividad como plantilla para repetirla '
-                        'en dos toques.',
+                        'Guardá una actividad como plantilla para '
+                        'repetirla.',
                     icon: PhosphorIcons.barbell(),
                   )
                 : Column(

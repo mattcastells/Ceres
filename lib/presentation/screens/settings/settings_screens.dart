@@ -103,7 +103,7 @@ class SettingsScreen extends ConsumerWidget {
                   title: 'Respaldo en la nube',
                   subtitle: ref.watch(isCloudEnabledProvider)
                       ? 'Se guarda solo cada vez que registrás algo'
-                      : 'Esta compilación no tiene servidor',
+                      : 'Esta versión no tiene servidor',
                   leading: Icon(PhosphorIcons.cloudArrowUp()),
                   onTap: () => context.push(Routes.cloudBackup),
                 ),
@@ -326,14 +326,12 @@ class _IntegrationsScreenState extends ConsumerState<IntegrationsScreen> {
             InfoNote(
               tone: NmNoteTone.caution,
               text: repo.isPlatformSupported
-                  ? 'Esta compilación tiene la importación apagada '
-                        '(`NM_HEALTH_SYNC=false`).'
+                  ? 'Esta versión tiene la importación apagada.'
                   : 'Health Connect está disponible solo en Android.',
             ),
             const SizedBox(height: NmSpace.s6),
             const InfoNote(
-              text: 'Ceres funciona completo con registro manual: ninguna '
-                  'pantalla obligatoria depende de una integración externa.',
+              text: 'Podés usar Ceres completo cargando todo a mano.',
             ),
           ],
         ),
@@ -488,9 +486,8 @@ class _IntegrationsScreenState extends ConsumerState<IntegrationsScreen> {
           ),
           const SizedBox(height: NmSpace.s6),
           const InfoNote(
-            text: 'Usamos las calorías activas del proveedor, no el total: el '
-                'total incluye el metabolismo basal, que ya está dentro de tu '
-                'objetivo.',
+            text: 'Se importan solo las calorías activas: el metabolismo basal '
+                'ya está en tu objetivo.',
           ),
           const SizedBox(height: NmSpace.s4),
           if (integration.importedCount > 0)
@@ -573,7 +570,7 @@ class PrivacyScreen extends ConsumerWidget {
             text: cloudEnabled
                 ? 'Tus datos se guardan en Supabase a medida que registrás '
                       'algo; las fotos se analizan con Gemini.'
-                : 'Esta compilación no tiene servidor: todo vive solo en tu '
+                : 'Esta versión no tiene servidor: todo vive solo en tu '
                       'teléfono y no sale de acá.',
           ),
           const SizedBox(height: NmSpace.s3),
@@ -581,20 +578,17 @@ class PrivacyScreen extends ConsumerWidget {
           // arriba, y por eso se explica acá: cada permiso que pedimos tiene
           // que poder justificarse en esta pantalla.
           const InfoNote(
-            text: 'El micrófono se usa solo mientras dictás una comida, y lo '
-                'transcribe tu propio teléfono: no guardamos el audio ni lo '
-                'mandamos a ningún lado.',
+            text: 'El micrófono se usa solo mientras dictás, y la transcripción '
+                'la hace tu teléfono: el audio no se guarda ni se envía.',
           ),
           const SizedBox(height: NmSpace.s6),
           const NmSectionHeader(title: 'Respaldo'),
           InfoNote(
             tone: cloudEnabled ? NmNoteTone.info : NmNoteTone.caution,
             text: cloudEnabled
-                ? 'Ya tenés respaldo automático en la nube (Configuración → '
-                      'Respaldo en la nube). Este archivo es una copia '
-                      'portátil adicional, para llevarte los datos a mano.'
-                : 'Sin servidor, este archivo es tu único respaldo: si '
-                      'perdés el teléfono, perdés el historial. Guardalo '
+                ? 'Ya tenés respaldo automático en la nube. Este archivo es una '
+                      'copia extra para guardar vos.'
+                : 'Sin servidor, este archivo es tu único respaldo. Guardalo '
                       'cada tanto en Drive o mandátelo por correo.',
           ),
           const SizedBox(height: NmSpace.s4),
@@ -876,9 +870,8 @@ class AboutScreen extends ConsumerWidget {
           const Center(child: BrandWordmark(markSize: 40)),
           const SizedBox(height: NmSpace.s6),
           Text(
-            'Ceres muestra el cálculo completo del día en vez de un único '
-            'número mágico, y nunca presenta una estimación como si fuera una '
-            'medición.',
+            'Ceres muestra el cálculo completo del día y marca qué es una '
+            'estimación.',
             style: NmTextStyles.from(NmType.bodySm, color: nm.textMuted),
           ),
           const SizedBox(height: NmSpace.s6),

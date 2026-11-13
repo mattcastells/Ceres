@@ -277,8 +277,7 @@ class ActivityDetailScreen extends ConsumerWidget {
           const SizedBox(height: NmSpace.s4),
           InfoNote(
             text: profile.effectiveCreditPercentage == 0
-                ? 'Con tu configuración actual, el ejercicio no suma a tu '
-                      'objetivo del día.'
+                ? 'Con tu configuración, el ejercicio no suma a tu objetivo.'
                 : 'Aporta +${Fmt.integer(activity.appliedCalories)} kcal a tu '
                       'objetivo de ese día '
                       '(${activity.exerciseCreditPercentage} %).',
@@ -341,10 +340,12 @@ class ActivityDetailScreen extends ConsumerWidget {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setLocal) => NmDialog(
-          title: 'Editar calorías',
+          // Mismo título y texto que en el formulario: se abre desde el mismo
+          // botón, "Ingresar otro valor".
+          title: 'Ingresar otro valor',
           body: 'El valor calculado es '
-              '${Fmt.integer(activity.originalCalories ?? activity.estimatedCalories)} kcal. '
-              'Lo guardamos igual para que no se pierda.',
+              '${Fmt.integer(activity.originalCalories ?? activity.estimatedCalories)} '
+              'kcal y queda guardado aparte.',
           content: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[

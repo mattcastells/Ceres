@@ -418,8 +418,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       builder: (context) => NmDialog(
         title: '¿Salir sin completar?',
         body:
-            'Volvés a la bienvenida. Tu cuenta y lo que tengas cargado quedan '
-            'como están, y podés entrar de nuevo cuando quieras.',
+            'Volvés a la bienvenida. Tu cuenta queda como está y podés entrar '
+            'cuando quieras.',
         actions: <Widget>[
           NmButton.ghost(
             label: 'Seguir acá',
@@ -465,23 +465,19 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           Text(
             switch (_step) {
               0 =>
-                'La edad y el sexo entran en la fórmula del metabolismo basal. '
-                    'No se comparten con nadie, ni con tus pals.',
-              1 =>
-                'Con esto y lo anterior ya podemos calcular cuánto gastás. El '
-                    'peso lo vas a poder registrar todos los días.',
-              2 =>
-                'Es el multiplicador que convierte tu metabolismo basal en el '
-                    'gasto del día. Elegí lo que hacés en una semana normal.',
+                'La edad y el sexo entran en el cálculo de tu metabolismo '
+                    'basal. No se comparten con nadie.',
+              1 => 'Con esto calculamos cuánto gastás por día.',
+              2 => 'Elegí lo que hacés en una semana normal.',
               3 =>
-                'Si no hay nada, seguí de largo. Esto no cambia tus calorías: '
-                    'cambia lo que la IA te puede proponer para comer.',
+                'Si no hay nada, seguí de largo. No cambia tus calorías, solo '
+                    'lo que la IA te propone para comer.',
               4 =>
                 'De acá salen tus calorías, tus macros y tu objetivo semanal '
                     'de actividad. Se cambia cuando quieras.',
               _ =>
-                'Esto es lo que sale de tus datos. Mirálo, elegí a qué ritmo '
-                    'querés ir, y si no te cierra escribí el tuyo.',
+                'Lo que sale de tus datos. Elegí a qué ritmo ir, o escribí '
+                    'tu número.',
             },
             style: NmTextStyles.from(NmType.bodySm, color: nm.textMuted),
           ),
@@ -671,8 +667,7 @@ class _StepIdentity extends StatelessWidget {
         ),
         const SizedBox(height: NmSpace.s2),
         const InfoNote(
-          text: 'Se usa solo para la fórmula de metabolismo basal. Con "Otro" '
-              'se toma el promedio de las dos.',
+          text: 'Con "Otro" se toma el promedio de las dos fórmulas.',
         ),
         const SizedBox(height: NmSpace.s6),
         NmDateField(
@@ -965,8 +960,8 @@ class _StepPlan extends StatelessWidget {
           const NmSectionHeader(title: 'A qué ritmo'),
           if (plan != null) ...<Widget>[
             Text(
-              'Cada opción es una parte de tu gasto diario, que hoy es de '
-              '${Fmt.kcal(plan!.tdee)}. Los kilos por semana salen de ahí.',
+              'Cada opción es una parte de tu gasto diario '
+              '(${Fmt.kcal(plan!.tdee)}).',
               style: NmTextStyles.from(NmType.caption, color: nm.textMuted),
             ),
             const SizedBox(height: NmSpace.s3),
@@ -1098,8 +1093,7 @@ class _StepPlan extends StatelessWidget {
         const SizedBox(height: NmSpace.s4),
         const InfoNote(
           text: 'Es un punto de partida, no una indicación médica. Lo cambiás '
-              'cuando quieras desde Perfil, y los días ya registrados '
-              'conservan el objetivo con el que fueron cargados.',
+              'cuando quieras desde Perfil.',
         ),
       ],
     );

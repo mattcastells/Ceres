@@ -32,7 +32,7 @@ class WelcomeScreen extends ConsumerWidget {
         (
           Icons.tune_outlined,
           'Vos decidís cuánto suma el ejercicio',
-          'Por defecto no suma nada a tu presupuesto: es lo más conservador.',
+          'Por defecto no suma nada a tu objetivo.',
         ),
       ];
 
@@ -181,9 +181,8 @@ class WelcomeScreen extends ConsumerWidget {
                   // migración que no existe es peor que no ofrecer nada —
                   // alguien carga una semana confiando en eso y la pierde.
                   Text(
-                    'Sin cuenta no hay respaldo: los datos viven solo en este '
-                    'teléfono. Y crear una cuenta después arranca de cero, así '
-                    'que lo que cargues probando no se lleva.',
+                    'Sin cuenta no hay respaldo, y lo que cargues probando no '
+                    'pasa a una cuenta nueva.',
                     style: NmTextStyles.from(
                       NmType.caption,
                       color: nm.textMuted,

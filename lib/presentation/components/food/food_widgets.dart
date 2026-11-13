@@ -566,8 +566,8 @@ class AiEstimateBanner extends StatelessWidget {
   Widget build(BuildContext context) => InfoNote(
     tone: NmNoteTone.caution,
     icon: PhosphorIcons.sparkle(),
-    text: 'Estimación de IA — revisá antes de guardar. La estimación de '
-        'porciones a partir de una foto tiene un error típico de ±25 %.',
+    text: 'Estimación de IA: revisá antes de guardar. Con una foto, las '
+        'porciones tienen un error típico de ±25 %.',
   );
 }
 

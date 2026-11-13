@@ -55,7 +55,7 @@ class HistoryFilters {
 enum HistoryShow {
   all('Todo'),
   meals('Solo comidas'),
-  activities('Solo ejercicio');
+  activities('Solo actividad');
 
   const HistoryShow(this.label);
   final String label;
@@ -148,8 +148,7 @@ class HistoryScreen extends ConsumerWidget {
                         ? 'Todavía no hay registros'
                         : 'No hay registros en este período',
                     body: filters.isDefault
-                        ? 'A medida que registres comidas y actividades, los '
-                              'días van a aparecer acá.'
+                        ? 'Los días que registres van a aparecer acá.'
                         : 'Probá ampliando el rango o quitando los filtros.',
                     primaryLabel: filters.isDefault ? null : 'Quitar filtros',
                     onPrimary: () => ref
@@ -201,13 +200,16 @@ class HistoryScreen extends ConsumerWidget {
           // quedaría pegado al balance de un día en particular. Solo en el
           // plan gratis.
           const AdBanner(padding: EdgeInsets.only(bottom: NmSpace.s3)),
-          Padding(
-            padding: const EdgeInsets.only(bottom: NmSpace.s4),
-            child: Text(
-              '$matching ${matching == 1 ? 'día coincide' : 'días coinciden'}',
-              style: NmTextStyles.from(NmType.caption, color: nm.textMuted),
+          // "Coinciden" solo tiene sentido con filtros: sin ellos decía
+          // "23 días coinciden" con nada.
+          if (!filters.isDefault)
+            Padding(
+              padding: const EdgeInsets.only(bottom: NmSpace.s4),
+              child: Text(
+                '$matching ${matching == 1 ? 'día coincide' : 'días coinciden'}',
+                style: NmTextStyles.from(NmType.caption, color: nm.textMuted),
+              ),
             ),
-          ),
         ],
       ),
     );

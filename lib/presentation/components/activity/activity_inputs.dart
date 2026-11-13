@@ -299,7 +299,7 @@ class _DurationInputState extends State<DurationInput> {
             const SizedBox(width: NmSpace.s3),
             Expanded(
               child: Text(
-                'Hasta 24:00 — el deslizador llega a 4 h.',
+                'Hasta 24:00. El deslizador llega a 4 h.',
                 style: NmTextStyles.from(NmType.micro, color: nm.textMuted),
               ),
             ),

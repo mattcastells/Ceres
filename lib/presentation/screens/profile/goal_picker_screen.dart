@@ -107,8 +107,7 @@ class _GoalPickerScreenState extends ConsumerState<GoalPickerScreen> {
           else
             const InfoNote(
               text: 'Los valores son un punto de partida, no una indicación '
-                  'médica. Si seguís un plan profesional, ajustalos a ese '
-                  'plan.',
+                  'médica.',
             ),
 
           const SizedBox(height: NmSpace.s6),

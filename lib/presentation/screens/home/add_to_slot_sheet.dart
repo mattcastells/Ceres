@@ -120,9 +120,9 @@ class _AddToSlotSheet extends ConsumerWidget {
           ),
           ActionRow(
             icon: PhosphorIcons.camera(),
-            label: 'Sacar foto y analizarla con IA',
-            subtitle: 'La IA estima los ítems y vos los revisás antes de '
-                'guardar',
+            // El mismo nombre que en la pantalla de la comida.
+            label: 'Sacar foto y analizarla',
+            subtitle: 'La IA estima los ítems y vos los revisás',
             // Sin servidor no hay Edge Function a la que preguntarle, así que
             // se muestra deshabilitado en vez de fallar al tocarlo.
             enabled: FeatureFlags.aiPhotoAnalysis && SupabaseConfig.isConfigured,
@@ -172,8 +172,8 @@ class _AddToSlotSheet extends ConsumerWidget {
                 // Decía "acá arriba" y la lista se mudó abajo. El cartel
                 // ocupa exactamente el lugar donde van a aparecer, así que
                 // ahora alcanza con "acá".
-                'Cuando repitas una comida va a aparecer acá para cargarla '
-                'de una. También podés marcarla con la estrella.',
+                'Las comidas que repitas o marques con la estrella van a '
+                'aparecer acá.',
                 style: NmTextStyles.from(NmType.caption, color: nm.textMuted),
               ),
             ),

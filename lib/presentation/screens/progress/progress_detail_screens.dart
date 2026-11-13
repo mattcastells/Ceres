@@ -290,9 +290,8 @@ class ActivityProgressScreen extends ConsumerWidget {
         title: 'Actividad',
         child: EmptyState(
           icon: PhosphorIcons.personSimpleRun(),
-          title: 'Todavía no registraste actividad en este período',
-          body: 'Cuando registres una, vas a ver acá los minutos, las '
-              'sesiones y la distribución por categoría.',
+          title: 'Sin actividad en este período',
+          body: 'Acá vas a ver los minutos, las sesiones y las categorías.',
         ),
       );
     }
@@ -399,16 +398,15 @@ class ActivityGoalsScreen extends ConsumerWidget {
         children: <Widget>[
           const SizedBox(height: NmSpace.s4),
           const InfoNote(
-            text: 'Los objetivos de actividad nunca reducen tu objetivo '
-                'calórico ni bloquean nada. Podés usar Ceres sin '
-                'configurar ninguno.',
+            text: 'Son opcionales y no cambian tu objetivo calórico.',
           ),
           const SizedBox(height: NmSpace.s6),
           if (progress.goals.isEmpty)
             EmptyState(
               icon: PhosphorIcons.target(),
               title: 'Sin objetivos configurados',
-              body: 'Los objetivos de actividad son opcionales.',
+              body: 'Minutos, sesiones, pasos o días activos, por día o por '
+                  'semana.',
               primaryLabel: 'Crear un objetivo',
               onPrimary: () => _showGoalSheet(context, ref, null),
             )
@@ -664,7 +662,7 @@ class _MeasurementsScreenState extends ConsumerState<MeasurementsScreen> {
           ),
           const SizedBox(height: NmSpace.s5),
           NmButton(
-            label: 'Guardar medidas',
+            label: 'Guardar',
             block: true,
             loading: _saving,
             onPressed: _save,

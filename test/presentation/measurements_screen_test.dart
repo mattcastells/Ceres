@@ -86,7 +86,7 @@ void main() {
     expect(find.text('Cadera (máxima)'), findsOneWidget);
     // Sin registros lo dice, en vez de mostrar un vacío que parece un error.
     expect(find.text('Sin registros'), findsWidgets);
-    expect(find.text('Guardar medidas'), findsOneWidget);
+    expect(find.text('Guardar'), findsOneWidget);
   });
 
   testWidgets('el campo muestra la última medida cargada', (tester) async {
@@ -131,9 +131,9 @@ void main() {
 
     // Con ocho campos el botón queda abajo del pliegue: se lo trae a la vista
     // como haría cualquiera antes de tocarlo.
-    await tester.ensureVisible(find.text('Guardar medidas'));
+    await tester.ensureVisible(find.text('Guardar'));
     await tester.pump();
-    await tester.tap(find.text('Guardar medidas'));
+    await tester.tap(find.text('Guardar'));
     await _settle(tester);
 
     expect(repo.measurements(MeasurementMetric.arm).last.value, 32.5);
@@ -158,9 +158,9 @@ void main() {
     await tester.pump();
     // Con ocho campos el botón queda abajo del pliegue: se lo trae a la vista
     // como haría cualquiera antes de tocarlo.
-    await tester.ensureVisible(find.text('Guardar medidas'));
+    await tester.ensureVisible(find.text('Guardar'));
     await tester.pump();
-    await tester.tap(find.text('Guardar medidas'));
+    await tester.tap(find.text('Guardar'));
     await _settle(tester);
 
     expect(find.textContaining('Va de 40,0 a 200,0 cm'), findsOneWidget);

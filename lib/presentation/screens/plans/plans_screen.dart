@@ -88,7 +88,7 @@ class _PlansScreenState extends ConsumerState<PlansScreen> {
             const InfoNote(
               tone: NmNoteTone.info,
               text:
-                  'Esta compilación no tiene servidor: la app funciona '
+                  'Esta versión no tiene servidor: la app funciona '
                   'completa en este teléfono y no hay plan que elegir.',
             )
           else
@@ -182,8 +182,8 @@ class _PlansScreenState extends ConsumerState<PlansScreen> {
               'IA incluida para sus pacientes vinculados',
             ],
             footnote: plan == AppPlan.patient
-                ? 'Tu nutricionista tiene Pro: por eso la IA te viene '
-                      'incluida mientras le des acceso.'
+                ? 'Tu nutricionista tiene Pro: la IA te viene incluida '
+                      'mientras le des acceso.'
                 : 'Si tu nutricionista tiene Pro y le das acceso, la IA te '
                       'viene incluida.',
           ),

@@ -190,7 +190,7 @@ class _MainPane extends ConsumerWidget {
           ),
           ActionRow(
             icon: PhosphorIcons.ruler(),
-            label: 'Registrar medidas corporales',
+            label: 'Registrar medidas',
             subtitle: 'Perímetros, pliegues y lo que dijo la balanza',
             onTap: () {
               Navigator.of(context).pop();
@@ -201,7 +201,7 @@ class _MainPane extends ConsumerWidget {
           // del día como el peso o el sueño, son lo que explica al resto.
           ActionRow(
             icon: PhosphorIcons.wine(),
-            label: 'Anotar alcohol',
+            label: 'Registrar alcohol',
             subtitle: 'Qué tomaste y cuánto',
             onTap: () {
               Navigator.of(context).pop();
@@ -289,7 +289,7 @@ class _ActivityPane extends ConsumerWidget {
           ],
           ActionRow(
             icon: PhosphorIcons.plusCircle(),
-            label: 'Crear actividad manual',
+            label: 'Crear actividad personalizada',
             subtitle: 'Definir tu propio tipo y su MET',
             onTap: () => onGo('${Routes.activityNew}?mode=custom'),
           ),
