@@ -59,6 +59,10 @@ abstract final class Routes {
   /// Devoluciones e indicaciones de la nutricionista.
   static const String careFeedback = '/profile/care/feedback';
 
+  /// Artículos y recetas que publicó la nutricionista.
+  static const String careArticles = '/profile/care/articles';
+  static String careArticle(String id) => '/profile/care/articles/$id';
+
   /// Gratis, Premium y Pro, con la compra simulada de la demo.
   static const String plans = '/profile/plans';
 

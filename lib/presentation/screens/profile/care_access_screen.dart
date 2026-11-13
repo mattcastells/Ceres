@@ -12,6 +12,7 @@ import '../../../core/theme/nm_theme.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/utils/dates.dart';
+import '../../../domain/models/care_article.dart';
 import '../../../domain/models/care_grant.dart';
 import '../../components/feedback/feedback.dart';
 import '../../components/system/buttons.dart';
@@ -54,6 +55,10 @@ class CareAccessScreen extends ConsumerWidget {
     }
 
     final grantsAsync = ref.watch(careGrantsProvider);
+    final articles =
+        ref.watch(careArticlesProvider).valueOrNull ?? const <CareArticle>[];
+    final seen = ref.watch(articleSeenProvider).valueOrNull;
+    final unseen = seen == null ? 0 : articles.where(seen.isNew).length;
 
     return NmScreen(
       title: 'Mi nutricionista',
@@ -80,16 +85,34 @@ class CareAccessScreen extends ConsumerWidget {
             // Lo que la profesional devuelve. Vive acá además de en Inicio
             // porque Inicio lo muestra solo cuando hay algo nuevo o vigente, y
             // las devoluciones viejas también se buscan.
+            //
+            // Los artículos van debajo solo si hay alguno: sin nada publicado
+            // la fila sería una promesa vacía, y si la consulta falla tampoco
+            // se muestra.
             NmCard(
               padding: const EdgeInsets.symmetric(vertical: NmSpace.s2),
-              child: NmListRow(
-                title: 'Devoluciones e indicaciones',
-                subtitle: _feedbackSubtitle(
-                  ref.watch(careFeedbackProvider).valueOrNull?.unreadCount ??
-                      0,
-                ),
-                leading: Icon(PhosphorIcons.chatCircleText()),
-                onTap: () => context.push(Routes.careFeedback),
+              child: Column(
+                children: <Widget>[
+                  NmListRow(
+                    title: 'Devoluciones e indicaciones',
+                    subtitle: _feedbackSubtitle(
+                      ref
+                              .watch(careFeedbackProvider)
+                              .valueOrNull
+                              ?.unreadCount ??
+                          0,
+                    ),
+                    leading: Icon(PhosphorIcons.chatCircleText()),
+                    onTap: () => context.push(Routes.careFeedback),
+                  ),
+                  if (articles.isNotEmpty)
+                    NmListRow(
+                      title: 'Artículos y recetas',
+                      subtitle: _articlesSubtitle(articles.length, unseen),
+                      leading: Icon(PhosphorIcons.bookOpenText()),
+                      onTap: () => context.push(Routes.careArticles),
+                    ),
+                ],
               ),
             ),
             const SizedBox(height: NmSpace.s6),
@@ -432,6 +455,12 @@ class _GrantSheetState extends ConsumerState<_GrantSheet> {
     );
   }
 }
+
+String _articlesSubtitle(int total, int unseen) => switch (unseen) {
+  0 => total == 1 ? '1 publicado' : '$total publicados',
+  1 => '1 sin leer',
+  _ => '$unseen sin leer',
+};
 
 String _feedbackSubtitle(int unread) => switch (unread) {
   0 => 'Lo que tu nutricionista te escribe desde su panel',

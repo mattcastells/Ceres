@@ -17,6 +17,7 @@ import 'data/local/home_widget_publisher.dart';
 import 'data/local/local_auth_gateway.dart';
 import 'data/local/local_store.dart';
 import 'data/remote/calorie_target_client.dart';
+import 'data/remote/care_articles_client.dart';
 import 'data/remote/care_client.dart';
 import 'data/remote/care_feedback_client.dart';
 import 'data/remote/care_report_client.dart';
@@ -259,6 +260,9 @@ Future<void> bootstrap() async {
   final CareReportClient? careReportClient = SupabaseConfig.isConfigured
       ? CareReportClient.fromInstance()
       : null;
+  final CareArticlesClient? careArticlesClient = SupabaseConfig.isConfigured
+      ? CareArticlesClient.fromInstance()
+      : null;
 
   final container = ProviderContainer(
     overrides: <Override>[
@@ -267,6 +271,8 @@ Future<void> bootstrap() async {
         careFeedbackClientProvider.overrideWithValue(careFeedbackClient),
       if (careReportClient != null)
         careReportClientProvider.overrideWithValue(careReportClient),
+      if (careArticlesClient != null)
+        careArticlesClientProvider.overrideWithValue(careArticlesClient),
       repositoryProvider.overrideWithValue(repository),
       authGatewayProvider.overrideWithValue(auth),
       if (backup != null) cloudBackupProvider.overrideWithValue(backup),
@@ -297,7 +303,9 @@ Future<void> bootstrap() async {
       } else {
         unawaited(plan.refresh());
       }
-      container.invalidate(careFeedbackProvider);
+      container
+        ..invalidate(careFeedbackProvider)
+        ..invalidate(careArticlesProvider);
     });
   }
 

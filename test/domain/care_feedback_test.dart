@@ -6,8 +6,11 @@
 // sigue valiendo hasta que la profesional la saque; una devolución leída ya
 // cumplió.
 
+import 'package:ceres/data/local/article_seen_store.dart';
+import 'package:ceres/data/remote/care_articles_client.dart';
 import 'package:ceres/data/remote/care_feedback_client.dart';
 import 'package:ceres/domain/enums/enums.dart';
+import 'package:ceres/domain/models/care_article.dart';
 import 'package:ceres/domain/models/care_feedback.dart';
 import 'package:ceres/domain/models/goal.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -309,6 +312,64 @@ void main() {
       expect(applied.readAt, isNotNull);
       expect(applied.target, same(f.target));
       expect(f.markedRead(at).target, same(f.target));
+    });
+  });
+
+  group('artículos', () {
+    Map<String, dynamic> article({
+      String id = 'a1',
+      String kind = 'recipe',
+      String title = 'Budín de avena',
+      String? tag = 'Desayunos',
+      String publishedAt = '2026-11-08T14:00:00Z',
+    }) => <String, dynamic>{
+      'id': id,
+      'author_id': 'pro-1',
+      'kind': kind,
+      'title': title,
+      'body': '- Avena',
+      'tag': tag,
+      'published_at': publishedAt,
+    };
+
+    test('lee las filas y descarta las rotas', () {
+      final list = CareArticlesClient.parseRows(
+        <dynamic>[
+          article(),
+          article(id: 'b', kind: 'otra', tag: '  '),
+          article(id: 'c', title: ' '),
+          <String, dynamic>{'id': 'd'},
+          'no es un mapa',
+        ],
+        namesById: const <String, String>{'pro-1': 'Lic. Valentina Ruiz'},
+      );
+      expect(list.map((a) => a.id), <String>['a1', 'b']);
+      expect(list.first.kind, CareArticleKind.recipe);
+      expect(list.first.kind.label, 'Receta');
+      expect(list.first.tag, 'Desayunos');
+      expect(list.first.authorName, 'Lic. Valentina Ruiz');
+      // Un tipo desconocido se muestra como artículo, y una etiqueta en
+      // blanco no es etiqueta.
+      expect(list[1].kind, CareArticleKind.article);
+      expect(list[1].tag, isNull);
+    });
+
+    test('nuevos: sin abrir, y para Inicio además después de ver la lista', () {
+      final list = CareArticlesClient.parseRows(<dynamic>[
+        article(id: 'nuevo', publishedAt: '2026-11-10T14:00:00Z'),
+        article(id: 'viejo', publishedAt: '2026-11-01T14:00:00Z'),
+        article(id: 'abierto', publishedAt: '2026-11-11T14:00:00Z'),
+      ]);
+      final seen = ArticleSeen(
+        opened: const <String>{'abierto'},
+        listVisitedAt: DateTime.utc(2026, 11, 5),
+      );
+      expect(list.where(seen.isNew).map((a) => a.id), <String>[
+        'nuevo',
+        'viejo',
+      ]);
+      expect(seen.newForHome(list).map((a) => a.id), <String>['nuevo']);
+      expect(const ArticleSeen().newForHome(list), hasLength(3));
     });
   });
 }

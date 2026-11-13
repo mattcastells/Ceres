@@ -8,6 +8,7 @@ import '../../../core/theme/nm_theme.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/utils/dates.dart';
+import '../../../domain/models/care_article.dart';
 import '../../../domain/models/care_feedback.dart';
 import '../../providers/plan_providers.dart';
 import '../system/surfaces.dart';
@@ -16,8 +17,8 @@ import 'care_target_block.dart';
 /// "De tu nutricionista", en Inicio.
 ///
 /// Aparece solo cuando hay algo que decir: la última devolución sin leer, el
-/// objetivo recomendado y las indicaciones vigentes. Sin nada de eso no
-/// ocupa lugar —Inicio es para el
+/// objetivo recomendado, las indicaciones vigentes y los artículos nuevos.
+/// Sin nada de eso no ocupa lugar —Inicio es para el
 /// día, y una tarjeta vacía que dice "no hay nada" es ruido todos los días—.
 ///
 /// Mientras carga o si la consulta falla, tampoco: es información que suma,
@@ -34,14 +35,17 @@ class CareFeedbackHomeCard extends ConsumerWidget {
     final inbox =
         ref.watch(careFeedbackProvider).valueOrNull ??
         CareInbox(const <CareFeedback>[]);
-    if (!inbox.hasSomethingForHome) {
+    final newArticles = ref.watch(newArticlesProvider);
+    if (!inbox.hasSomethingForHome && newArticles.isEmpty) {
       return const SizedBox.shrink();
     }
     return Padding(
       padding: const EdgeInsets.only(top: NmSpace.s6),
       child: CareFeedbackSummary(
         inbox: inbox,
+        newArticles: newArticles,
         onTap: () => GoRouter.maybeOf(context)?.push(Routes.careFeedback),
+        onArticles: () => GoRouter.maybeOf(context)?.push(Routes.careArticles),
       ),
     );
   }
@@ -52,12 +56,19 @@ class CareFeedbackHomeCard extends ConsumerWidget {
 class CareFeedbackSummary extends StatelessWidget {
   const CareFeedbackSummary({
     required this.inbox,
+    this.newArticles = const <CareArticle>[],
     this.onTap,
+    this.onArticles,
     super.key,
   });
 
   final CareInbox inbox;
+
+  /// Lo publicado que todavía no se vio. Va como una fila al pie: es para
+  /// leer con tiempo, no algo del día.
+  final List<CareArticle> newArticles;
   final VoidCallback? onTap;
+  final VoidCallback? onArticles;
 
   @override
   Widget build(BuildContext context) {
@@ -176,11 +187,82 @@ class CareFeedbackSummary extends StatelessWidget {
                   style: NmTextStyles.from(NmType.caption, color: nm.textMuted),
                 ),
             ],
+            if (newArticles.isNotEmpty) ...<Widget>[
+              if (inbox.hasSomethingForHome) ...<Widget>[
+                const SizedBox(height: NmSpace.s3),
+                const NmDivider(),
+              ],
+              _ArticlesRow(articles: newArticles, onTap: onArticles),
+            ],
           ],
         ),
       ),
     );
   }
+}
+
+/// "2 artículos nuevos", con su propio toque: lleva a los artículos, no a las
+/// devoluciones.
+class _ArticlesRow extends StatelessWidget {
+  const _ArticlesRow({required this.articles, this.onTap});
+
+  final List<CareArticle> articles;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final nm = context.nm;
+    final label = newArticlesLabel(articles);
+    return Semantics(
+      button: onTap != null,
+      label: label,
+      child: ExcludeSemantics(
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: NmRadius.brSm,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(
+              minHeight: NmLayout.minTouchTarget,
+            ),
+            child: Row(
+              children: <Widget>[
+                Icon(
+                  PhosphorIcons.bookOpenText(),
+                  size: NmIconSize.sm,
+                  color: nm.textMuted,
+                ),
+                const SizedBox(width: NmSpace.s2),
+                Expanded(
+                  child: Text(
+                    label,
+                    style: NmTextStyles.from(NmType.bodySm, color: nm.text),
+                  ),
+                ),
+                Icon(
+                  PhosphorIcons.caretRight(),
+                  size: NmIconSize.sm,
+                  color: nm.textMuted,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// "1 receta nueva", "2 artículos nuevos", "3 artículos y recetas nuevos".
+String newArticlesLabel(List<CareArticle> articles) {
+  final n = articles.length;
+  final recipes = articles.where((a) => a.kind == CareArticleKind.recipe);
+  if (recipes.length == n) {
+    return n == 1 ? '1 receta nueva' : '$n recetas nuevas';
+  }
+  if (recipes.isEmpty) {
+    return n == 1 ? '1 artículo nuevo' : '$n artículos nuevos';
+  }
+  return '$n artículos y recetas nuevos';
 }
 
 /// "Lic. Natalia Pérez · Ayer". Sin nombre, solo la fecha.

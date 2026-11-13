@@ -24,6 +24,7 @@ import '../../presentation/screens/photo/photo_screens.dart';
 import '../../presentation/screens/plans/plans_screen.dart';
 import '../../presentation/screens/profile/body_target_screens.dart';
 import '../../presentation/screens/profile/care_access_screen.dart';
+import '../../presentation/screens/profile/care_articles_screen.dart';
 import '../../presentation/screens/profile/care_feedback_screen.dart';
 import '../../presentation/screens/profile/dietary_screen.dart';
 import '../../presentation/screens/profile/goal_picker_screen.dart';
@@ -242,6 +243,15 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: Routes.careFeedback,
         builder: (context, state) => const CareFeedbackScreen(),
+      ),
+      GoRoute(
+        path: Routes.careArticles,
+        builder: (context, state) => const CareArticlesScreen(),
+      ),
+      GoRoute(
+        path: '${Routes.careArticles}/:articleId',
+        builder: (context, state) =>
+            CareArticleScreen(articleId: state.pathParameters['articleId']!),
       ),
       GoRoute(
         path: Routes.plans,
