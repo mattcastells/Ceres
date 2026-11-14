@@ -53,6 +53,12 @@ Los pacientes están armados para que el panel tenga algo que contar:
    nutricionista**, cargar el código de Valentina (`CE-VRUZ26`, fijo). Desde ahí aparecés en su
    panel. (Esto mismo se puede hacer en vivo en la defensa.)
 
+   La otra forma, desde la migración 56: Valentina toca **Dar de alta** en el
+   panel y escribe el mail; la invitación aparece en Perfil → Mi
+   nutricionista y se acepta ahí. Para la defensa sirve con Tomás
+   (`tomas@demo.ceres.app`, gratis y sin nutricionista): al aceptar deja de
+   ver anuncios y le aparece la IA, porque se la paga Valentina.
+
 Panel: http://localhost:3100, con `valentina@demo.ceres.app`.
 
 ## Con el teléfono real

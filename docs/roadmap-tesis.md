@@ -6,13 +6,23 @@ el final.
 
 **Fecha de este documento:** 13 de noviembre de 2026.
 
+**Actualización del 14 de noviembre.** Etapas 2 a 5 hechas en una tirada,
+pendientes de revisión: alta por invitación desde el panel, una sola
+nutricionista por persona, cuentas profesionales propias, baja de los dos
+lados (migraciones 55 a 57); el consultorio con pacientes de todas,
+reasignar, sumar y sacar profesionales y números agregados; comentarios sobre
+una comida o su foto; búsqueda y orden del equipo; hoja de consulta
+imprimible (§8) y días con alcohol o enfermedad contra sin (§7); la tabla de
+planes y las reglas de la publicidad en `docs/planes.md`. §9 (síntomas y
+ánimo) quedó afuera a propósito.
+
 ```
   1. App del paciente       ✔ terminada (sujeta a retoques chicos)
-  2. Backoffice             ← siguiente
-  3. Paciente ↔ nutricionista
-  4. Pacientes y organizaciones
-  5. Planes y funciones premium
-  6. Presentación de la tesis
+  2. Backoffice             ✔ hecho el 14/11 · a revisar
+  3. Paciente ↔ nutricionista ✔ hecho el 14/11 · a revisar
+  4. Pacientes y organizaciones ✔ hecho el 14/11 · a revisar
+  5. Planes y funciones premium ✔ docs/planes.md · a revisar
+  6. Presentación de la tesis  ← primer borrador de las slides
 ```
 
 El orden importa: cada etapa define lo que la siguiente necesita. Los planes
