@@ -116,6 +116,57 @@ class CareClient {
     }
   }
 
+  /// Las invitaciones pendientes a tu mail (migración 56). Si la consulta
+  /// falla se devuelve vacío: la pantalla sigue andando con el código.
+  Future<List<CareInvite>> invites() async {
+    try {
+      final rows = await _db
+          .rpc<List<dynamic>>('my_care_invites')
+          .timeout(timeout);
+      return rows
+          .whereType<Map<String, dynamic>>()
+          .map(CareInvite.fromRow)
+          .whereType<CareInvite>()
+          .toList();
+    } on Exception {
+      return const <CareInvite>[];
+    }
+  }
+
+  /// Aceptar una invitación: desde acá la nutricionista ve lo que registrás.
+  /// Si ya tenés otra, la base lo rechaza con un `hint` que lo dice.
+  Future<void> acceptInvite(String id) async {
+    try {
+      await _db
+          .rpc<String>(
+            'accept_care_invite',
+            params: <String, dynamic>{'p_id': id},
+          )
+          .timeout(timeout);
+    } on PostgrestException catch (error) {
+      throw AppError(
+        code: ApiErrorCode.validation,
+        message: error.hint ?? 'No pudimos aceptar la invitación.',
+        requestId: error.message,
+      );
+    } on Exception {
+      throw _offline;
+    }
+  }
+
+  Future<void> declineInvite(String id) async {
+    try {
+      await _db
+          .rpc<void>(
+            'decline_care_invite',
+            params: <String, dynamic>{'p_id': id},
+          )
+          .timeout(timeout);
+    } on Exception {
+      throw _offline;
+    }
+  }
+
   static const AppError _offline = AppError(
     code: ApiErrorCode.offline,
     message: 'No pudimos conectarnos. Revisá tu conexión.',

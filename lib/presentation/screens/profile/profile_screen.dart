@@ -44,6 +44,8 @@ class ProfileScreen extends ConsumerWidget {
     final plan = ref.watch(planProvider);
     final unreadFeedback =
         ref.watch(careFeedbackProvider).valueOrNull?.unreadCount ?? 0;
+    final pendingInvites =
+        ref.watch(careInvitesProvider).valueOrNull?.length ?? 0;
 
     final preset = goal == null ? null : GoalPreset.of(goal.goalType);
     final minutes = activityGoals
@@ -247,15 +249,21 @@ class ProfileScreen extends ConsumerWidget {
                 const NmDivider(indent: NmSpace.s6),
                 NmListRow(
                   title: 'Mi nutricionista',
-                  subtitle: unreadFeedback > 0
+                  // Una invitación de una nutricionista va primero: es lo
+                  // único de esta fila que espera una respuesta tuya.
+                  subtitle: pendingInvites > 0
+                      ? pendingInvites == 1
+                            ? 'Una nutricionista te invitó'
+                            : '$pendingInvites invitaciones de nutricionistas'
+                      : unreadFeedback > 0
                       ? '$unreadFeedback '
                             '${unreadFeedback == 1 ? 'devolución nueva' : 'devoluciones nuevas'}'
                       : 'Acceso a tu seguimiento y sus devoluciones',
                   leading: Icon(PhosphorIcons.stethoscope()),
-                  trailing: unreadFeedback == 0
+                  trailing: unreadFeedback + pendingInvites == 0
                       ? null
                       : NmTag(
-                          label: '$unreadFeedback',
+                          label: '${unreadFeedback + pendingInvites}',
                           variant: NmTagVariant.accent,
                         ),
                   onTap: () => context.push(Routes.profileCare),

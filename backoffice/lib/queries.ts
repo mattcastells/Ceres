@@ -140,12 +140,14 @@ export type CareFeedback = {
   target_fat_g?: number | null;
   /** Lo marca el paciente al aplicarlo en la app (`mark_care_target_applied`). */
   applied_at?: string | null;
+  /** La comida sobre la que es la devolución (migración 56), si es sobre una. */
+  meal_id?: string | null;
 };
 
 export const FEEDBACK_COLUMNS =
   'id, patient_id, kind, local_date, body, source, published_at, read_at, ' +
   'created_at, updated_at, target_kcal, target_protein_g, target_carbs_g, ' +
-  'target_fat_g, applied_at';
+  'target_fat_g, applied_at, meal_id';
 
 /**
  * Un artículo o una receta para todo el equipo (migración 52).

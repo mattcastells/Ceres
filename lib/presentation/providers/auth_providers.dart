@@ -19,7 +19,6 @@ final authGatewayProvider = Provider<AuthGateway>(
   (ref) => throw UnimplementedError('authGatewayProvider sin inicializar'),
 );
 
-
 /// `true` cuando la sesión es real contra el servidor. En `false` la app anda
 /// igual, pero los datos no salen del teléfono.
 final isCloudEnabledProvider = Provider<bool>(
@@ -91,6 +90,15 @@ final careGrantsProvider = FutureProvider.autoDispose<List<CareGrant>>((
   final client = ref.watch(careClientProvider);
   if (client == null) return <CareGrant>[];
   return client.list();
+});
+
+/// Las invitaciones de nutricionistas que esperan respuesta (migración 56).
+final careInvitesProvider = FutureProvider.autoDispose<List<CareInvite>>((
+  ref,
+) async {
+  final client = ref.watch(careClientProvider);
+  if (client == null) return const <CareInvite>[];
+  return client.invites();
 });
 
 /// Los vínculos, recargables tras aceptar o quitar uno.

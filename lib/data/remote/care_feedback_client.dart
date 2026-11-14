@@ -41,7 +41,9 @@ class CareFeedbackClient {
             // el vigente es la indicación más reciente que los trae, y la
             // lista ya viene ordenada así.
             'target_kcal, target_protein_g, target_carbs_g, target_fat_g, '
-            'applied_at',
+            'applied_at, '
+            // La comida sobre la que es el comentario (migración 56).
+            'meal_id',
           )
           .eq('patient_id', _me)
           .not('published_at', 'is', null)

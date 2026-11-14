@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import { serverClient } from '@/lib/supabase';
 import { OrgView, type OrgRow } from '@/components/org-view';
+import type { OrgPatientRow } from '@/lib/org';
+import { hoyISO } from '@/lib/format';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,9 +16,12 @@ export const dynamic = 'force-dynamic';
  */
 export default async function OrganizacionPage() {
   const supabase = await serverClient();
-  const [{ data, error }, { data: auth }] = await Promise.all([
+  // `org_patients()` devuelve vacío a quien no administra: la vista decide
+  // por el rol, no por si llegaron filas.
+  const [{ data, error }, { data: auth }, pacientes] = await Promise.all([
     supabase.rpc('my_organization'),
     supabase.auth.getUser(),
+    supabase.rpc('org_patients'),
   ]);
 
   const rows = (data ?? []) as OrgRow[];
@@ -44,5 +49,18 @@ export default async function OrganizacionPage() {
     );
   }
 
-  return <OrgView rows={rows} viewerId={auth.user?.id ?? null} />;
+  const viewerId = auth.user?.id ?? null;
+  const rol = rows.find((r) => r.member_id === viewerId)?.member_role;
+  const administra = rol === 'owner' || rol === 'admin';
+
+  return (
+    <OrgView
+      rows={rows}
+      viewerId={viewerId}
+      pacientes={
+        administra && !pacientes.error ? ((pacientes.data ?? []) as OrgPatientRow[]) : null
+      }
+      hoy={hoyISO()}
+    />
+  );
 }

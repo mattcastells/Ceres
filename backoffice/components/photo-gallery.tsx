@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { MealComments } from '@/components/meal-notes';
 import { SLOT_LABEL, esEstimacionIA, type Meal } from '@/lib/queries';
 import { fechaCorta, fechaLarga, hora, miles, num } from '@/lib/format';
 
@@ -254,6 +255,8 @@ export function PhotoGallery({
                   </tbody>
                 </table>
               </div>
+
+              <MealComments mealId={meal.id} localDate={meal.local_date} />
             </div>
           </div>
         )}

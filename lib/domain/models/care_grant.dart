@@ -51,3 +51,33 @@ class CareGrant {
         : DateTime.tryParse(row['expires_at'] as String)?.toLocal(),
   );
 }
+
+/// Una invitación de una nutricionista a sumarse (migración 56): la manda
+/// desde su panel con tu mail, y vos la aceptás o la rechazás. Hasta que la
+/// aceptás no ve nada.
+class CareInvite {
+  const CareInvite({
+    required this.id,
+    required this.professionalName,
+    this.orgName,
+  });
+
+  final String id;
+
+  /// Vacío si el perfil no tiene nombre: la pantalla dice "Una nutricionista".
+  final String professionalName;
+
+  /// El consultorio, si es parte de uno.
+  final String? orgName;
+
+  static CareInvite? fromRow(Map<String, dynamic> row) {
+    final id = row['id'];
+    if (id is! String || id.isEmpty) return null;
+    final org = row['org_name'];
+    return CareInvite(
+      id: id,
+      professionalName: (row['professional_name'] as String?)?.trim() ?? '',
+      orgName: org is String && org.trim().isNotEmpty ? org.trim() : null,
+    );
+  }
+}

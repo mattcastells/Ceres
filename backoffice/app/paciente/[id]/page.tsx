@@ -21,6 +21,7 @@ import {
   PatientView,
   type PatientProfile,
 } from '@/components/patient-view';
+import type { OrgPatientRow } from '@/lib/org';
 
 export const dynamic = 'force-dynamic';
 
@@ -84,9 +85,33 @@ export default async function PatientPage({
 
   // Sin fila no hay acceso, y no se distingue de "no existe" a propósito: decir
   // "existe pero no podés verlo" ya cuenta algo sobre esa persona.
-  if (!row) notFound();
-
-  const p = row as unknown as PatientProfile;
+  // No es paciente de quien mira: puede ser de otra profesional del
+  // consultorio que administra (migración 56). Entonces la ficha se abre en
+  // modo lectura; `org_patients()` devuelve vacío a quien no administra.
+  let soloLectura: { profesional: string | null } | null = null;
+  let p: PatientProfile;
+  if (row) {
+    p = row as unknown as PatientProfile;
+  } else {
+    const { data: delConsultorio } = await supabase.rpc('org_patients');
+    const otro = ((delConsultorio ?? []) as OrgPatientRow[]).find(
+      (r) => r.patient_id === id,
+    );
+    if (!otro) notFound();
+    soloLectura = { profesional: otro.professional_name };
+    p = {
+      patient_id: otro.patient_id,
+      patient_name: otro.patient_name,
+      birth_date: otro.birth_date,
+      height_cm: otro.height_cm === null ? null : Number(otro.height_cm),
+      // Desde la migración 55 se comparte todo.
+      share_meals: true,
+      share_photos: true,
+      share_body: true,
+      share_wellbeing: true,
+      tracking_since: otro.tracking_since,
+    };
+  }
 
   const to = hoyISO();
   // `days - 1` porque hoy cuenta: "últimos 7 días" son siete cuadrados en el
@@ -133,8 +158,10 @@ export default async function PatientPage({
       // actividad, el agua y el sueño.
       p.share_wellbeing ? fetchDayMarkers(supabase, id, from, to) : [],
       p.share_wellbeing ? fetchAlcohol(supabase, id, from, to) : [],
-      fetchFeedback(supabase, user.id, id),
-      fetchLatestReport(supabase, user.id, 'professional', id),
+      soloLectura ? [] : fetchFeedback(supabase, user.id, id),
+      soloLectura
+        ? null
+        : fetchLatestReport(supabase, user.id, 'professional', id),
       // El plan solo decide si se ofrecen los botones de IA; si no se puede
       // saber, se deja intentar y la función contesta. No tumba la ficha.
       supabase
@@ -184,6 +211,7 @@ export default async function PatientPage({
         ventana: ventanaEfectiva(from, to, p.tracking_since),
         ...cargado,
         viewerId: user.id,
+        soloLectura,
       }}
     />
   );

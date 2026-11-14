@@ -15,5 +15,5 @@ const FILAS: OrgRow[] = [
 
 export default function PreviewOrganizacion() {
   if (process.env.NODE_ENV === 'production') notFound();
-  return <OrgView rows={FILAS} viewerId="m1" />;
+  return <OrgView rows={FILAS} viewerId="m1" hoy="2026-11-14" />;
 }

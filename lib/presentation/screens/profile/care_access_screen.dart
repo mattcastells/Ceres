@@ -23,19 +23,19 @@ import '../../components/system/surfaces.dart';
 import '../../providers/auth_providers.dart';
 import '../../providers/plan_providers.dart';
 
-/// S-35 · Tu nutricionista: sumarte con su código y darte de baja.
+/// S-35 · Tu nutricionista: la invitación que te mandó, sumarte con su código
+/// y darte de baja.
 ///
 /// Desde la migración 55 no hay categorías que elegir: sumarse es darle a la
-/// profesional acceso a todo lo que registrás.
+/// profesional acceso a todo lo que registrás. Desde la 56 hay **una sola**
+/// nutricionista a la vez, y ella puede darte de alta desde su panel: te llega
+/// una invitación acá y, hasta que la aceptás, no ve nada.
 ///
-/// Es lo mismo que Pals en la forma —un código, un vínculo, categorías— y algo
-/// muy distinto en el fondo. Un pal ve una proyección: qué comiste y si te
+/// Es lo mismo que Pals en la forma —un código, un vínculo— y algo muy
+/// distinto en el fondo. Un pal ve una proyección: qué comiste y si te
 /// moviste. Acá se abre lo que esa proyección deja afuera a propósito: el
-/// detalle de cada ítem, los macros, el peso, las medidas.
-///
-/// Por eso la pantalla dice qué se abre en cada interruptor en vez de dejarlo
-/// en "compartir mi progreso". La decisión de conceder esto tiene que poder
-/// tomarse leyendo, no adivinando.
+/// detalle de cada ítem, los macros, el peso, las medidas. Por eso cada
+/// pantalla que lo concede lo dice antes del botón.
 class CareAccessScreen extends ConsumerWidget {
   const CareAccessScreen({super.key});
 
@@ -57,6 +57,8 @@ class CareAccessScreen extends ConsumerWidget {
     }
 
     final grantsAsync = ref.watch(careGrantsProvider);
+    final invites =
+        ref.watch(careInvitesProvider).valueOrNull ?? const <CareInvite>[];
     final articles =
         ref.watch(careArticlesProvider).valueOrNull ?? const <CareArticle>[];
     final seen = ref.watch(articleSeenProvider).valueOrNull;
@@ -112,6 +114,19 @@ class CareAccessScreen extends ConsumerWidget {
             ),
             const SizedBox(height: NmSpace.s6),
 
+            if (invites.isNotEmpty) ...<Widget>[
+              const NmSectionHeader(title: 'Te invitaron'),
+              for (final invite in invites)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: NmSpace.s3),
+                  child: _InviteCard(
+                    invite: invite,
+                    current: grants.isEmpty ? null : grants.first,
+                  ),
+                ),
+              const SizedBox(height: NmSpace.s4),
+            ],
+
             if (grants.isNotEmpty) ...<Widget>[
               const NmSectionHeader(title: 'Tu nutricionista'),
               for (final grant in grants)
@@ -122,14 +137,121 @@ class CareAccessScreen extends ConsumerWidget {
               const SizedBox(height: NmSpace.s4),
             ],
 
-            NmButton.secondary(
-              label: 'Sumarme con un código',
-              block: true,
-              icon: PhosphorIcons.plus(),
-              onPressed: () => _openGrantSheet(context, ref),
-            ),
+            // Una sola nutricionista a la vez: con una, para cambiar primero
+            // hay que darse de baja.
+            if (grants.isEmpty)
+              NmButton.secondary(
+                label: 'Sumarme con un código',
+                block: true,
+                icon: PhosphorIcons.plus(),
+                onPressed: () => _openGrantSheet(context, ref),
+              ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Una invitación de una nutricionista: quién es, qué ve si aceptás, y las dos
+/// respuestas. Con otra nutricionista vigente, aceptar no se ofrece: primero
+/// hay que darse de baja de la actual (la base lo exige igual).
+class _InviteCard extends ConsumerStatefulWidget {
+  const _InviteCard({required this.invite, required this.current});
+
+  final CareInvite invite;
+  final CareGrant? current;
+
+  @override
+  ConsumerState<_InviteCard> createState() => _InviteCardState();
+}
+
+class _InviteCardState extends ConsumerState<_InviteCard> {
+  bool _busy = false;
+
+  Future<void> _answer({required bool accept}) async {
+    final client = ref.read(careClientProvider);
+    if (client == null) return;
+    setState(() => _busy = true);
+    try {
+      if (accept) {
+        await client.acceptInvite(widget.invite.id);
+        // Con una profesional Pro del otro lado, una cuenta gratis pasa a
+        // tener la IA incluida.
+        unawaited(ref.read(planProvider.notifier).refresh());
+      } else {
+        await client.declineInvite(widget.invite.id);
+      }
+      ref
+        ..invalidate(careInvitesProvider)
+        ..invalidate(careGrantsProvider);
+      if (mounted) {
+        NmSnackbar.show(
+          context,
+          accept
+              ? 'Listo, ya estás con tu nutricionista'
+              : 'Invitación rechazada',
+        );
+      }
+    } on AppError catch (error) {
+      if (mounted) NmSnackbar.show(context, error.message);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final nm = context.nm;
+    final invite = widget.invite;
+    final name = invite.professionalName.isEmpty
+        ? 'Una nutricionista'
+        : invite.professionalName;
+    final current = widget.current;
+
+    return NmCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(name, style: NmTextStyles.from(NmType.h4, color: nm.text)),
+          if (invite.orgName != null) ...<Widget>[
+            const SizedBox(height: NmSpace.s1),
+            Text(
+              invite.orgName!,
+              style: NmTextStyles.from(NmType.caption, color: nm.textMuted),
+            ),
+          ],
+          const SizedBox(height: NmSpace.s2),
+          Text(
+            current == null
+                ? 'Te invitó a sumarte. Si aceptás, ve todo lo que registrás '
+                      'y te puede escribir devoluciones.'
+                : 'Te invitó a sumarte. Para aceptar, primero date de baja de '
+                      '${current.displayName.isEmpty ? 'tu nutricionista actual' : current.displayName}.',
+            style: NmTextStyles.from(NmType.bodySm, color: nm.textMuted),
+          ),
+          const SizedBox(height: NmSpace.s3),
+          Row(
+            children: <Widget>[
+              if (current == null) ...<Widget>[
+                Expanded(
+                  child: NmButton(
+                    label: 'Aceptar',
+                    loading: _busy,
+                    onPressed: _busy ? null : () => _answer(accept: true),
+                  ),
+                ),
+                const SizedBox(width: NmSpace.s3),
+              ],
+              Expanded(
+                child: NmButton.ghost(
+                  label: 'Rechazar',
+                  onPressed: _busy ? null : () => _answer(accept: false),
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

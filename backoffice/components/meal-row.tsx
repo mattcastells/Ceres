@@ -1,5 +1,6 @@
 import { SLOT_LABEL, type Meal } from '@/lib/queries';
 import { hora, miles, num } from '@/lib/format';
+import { MealComments } from '@/components/meal-notes';
 
 /**
  * Cómo se llama una comida en la lista.
@@ -135,6 +136,8 @@ export function MealRow({
             }}
           />
         )}
+
+        <MealComments mealId={meal.id} localDate={meal.local_date} />
       </div>
     </details>
   );

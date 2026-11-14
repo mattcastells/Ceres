@@ -17,6 +17,7 @@ import '../../components/care/care_target_block.dart';
 import '../../components/feedback/feedback.dart';
 import '../../components/system/nm_screen.dart';
 import '../../components/system/surfaces.dart';
+import '../../providers/app_providers.dart';
 import '../../providers/auth_providers.dart';
 import '../../providers/plan_providers.dart';
 
@@ -226,16 +227,22 @@ class _TargetItem extends StatelessWidget {
   }
 }
 
-class _Item extends StatelessWidget {
+class _Item extends ConsumerWidget {
   const _Item({required this.feedback, required this.isNew});
 
   final CareFeedback feedback;
   final bool isNew;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final nm = context.nm;
     final day = feedback.localDate;
+    // Un comentario sobre una comida dice cuál: se busca en el registro del
+    // teléfono, que es donde está. Si se borró, queda como del día.
+    final mealId = feedback.mealId;
+    final meal = mealId == null
+        ? null
+        : ref.read(repositoryProvider).mealById(mealId);
     return Padding(
       padding: const EdgeInsets.only(bottom: NmSpace.s3),
       child: NmCard(
@@ -257,7 +264,14 @@ class _Item extends StatelessWidget {
                   const NmTag(label: 'Nueva', variant: NmTagVariant.accent),
               ],
             ),
-            if (day != null) ...<Widget>[
+            if (meal != null && !meal.isDeleted) ...<Widget>[
+              const SizedBox(height: NmSpace.s1),
+              Text(
+                'Sobre tu ${meal.slot.label.toLowerCase()} del '
+                '${longDay(meal.localDate).toLowerCase()} · ${meal.title}',
+                style: NmTextStyles.from(NmType.caption, color: nm.textMuted),
+              ),
+            ] else if (day != null) ...<Widget>[
               const SizedBox(height: NmSpace.s1),
               Text(
                 'Sobre el ${longDay(day).toLowerCase()}',

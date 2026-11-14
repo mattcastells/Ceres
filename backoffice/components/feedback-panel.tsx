@@ -18,6 +18,7 @@ import {
 } from '@/lib/objetivo';
 import { Section } from '@/components/stat';
 import { AiProgress } from '@/components/ai-progress';
+import { useFeedbackItems } from '@/components/meal-notes';
 
 type Kind = CareFeedback['kind'];
 
@@ -65,6 +66,7 @@ export function FeedbackPanel({
   plan,
   objetivoActual = null,
   conoceObjetivo = true,
+  titulosDeComidas = {},
 }: {
   patientId: string;
   authorId: string;
@@ -75,9 +77,13 @@ export function FeedbackPanel({
   objetivoActual?: Goal | null;
   /** `false` si no comparte comidas: su objetivo no se puede ver. */
   conoceObjetivo?: boolean;
+  /** "Milanesa con puré · 5 nov", por id de comida: para decir sobre qué
+   *  comida es un comentario. */
+  titulosDeComidas?: Record<string, string>;
 }) {
   const db = useMemo(() => browserClient(), []);
-  const [items, setItems] = useState(initial);
+  // Compartido con los comentarios de cada comida (`components/meal-notes`).
+  const [items, setItems] = useFeedbackItems(initial);
   const [editor, setEditor] = useState<Editor>(VACIO);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -412,6 +418,7 @@ export function FeedbackPanel({
         vacio="Ninguna indicación vigente."
         items={indicaciones}
         busy={busy}
+        titulosDeComidas={titulosDeComidas}
         onEditar={abrirEnEditor}
         onPublicar={publicar}
         onBorrar={borrar}
@@ -422,6 +429,7 @@ export function FeedbackPanel({
         hint="Privados: el paciente no los ve."
         items={borradores}
         busy={busy}
+        titulosDeComidas={titulosDeComidas}
         onEditar={abrirEnEditor}
         onPublicar={publicar}
         onBorrar={borrar}
@@ -431,6 +439,7 @@ export function FeedbackPanel({
         vacio="Ninguna devolución publicada."
         items={publicadas}
         busy={busy}
+        titulosDeComidas={titulosDeComidas}
         onEditar={abrirEnEditor}
         onPublicar={publicar}
         onBorrar={borrar}
@@ -700,6 +709,7 @@ function Lista({
   vacio,
   items,
   busy,
+  titulosDeComidas,
   onEditar,
   onPublicar,
   onBorrar,
@@ -709,6 +719,7 @@ function Lista({
   vacio: string;
   items: CareFeedback[];
   busy: string | null;
+  titulosDeComidas: Record<string, string>;
   onEditar: (f: CareFeedback) => void;
   onPublicar: (f: CareFeedback) => void;
   onBorrar: (f: CareFeedback) => void;
@@ -723,19 +734,23 @@ function Lista({
         <div className="fb-list">
           {items.map((f) => (
             <article key={f.id} className="card fb-item">
-              <div className="chips">
-                <span className="chip chip--on">
-                  {f.kind === 'indication' ? 'Indicación' : 'Devolución'}
+              {/* Una línea de texto y no una fila de pastillas: de qué es,
+                  sobre qué y en qué estado. La única pastilla es la de la IA,
+                  en ámbar como en la app, aunque después se haya editado. */}
+              <div className="row fb-meta">
+                <span className="caption tnum">
+                  <strong className="fb-kind">
+                    {f.meal_id ? 'Comentario' : f.kind === 'indication' ? 'Indicación' : 'Devolución'}
+                  </strong>
+                  {f.meal_id
+                    ? ` · ${titulosDeComidas[f.meal_id] ?? `una comida del ${fechaCorta(f.local_date ?? '')}`}`
+                    : f.local_date
+                      ? ` · sobre el ${fechaCorta(f.local_date)}`
+                      : ''}
+                  {' · '}
+                  {estado(f)}
                 </span>
-                {f.local_date && (
-                  <span className="chip tnum">sobre el {fechaCorta(f.local_date)}</span>
-                )}
-                <Estado f={f} />
-                {f.source === 'ai_draft' && (
-                  // Como en la app: lo que salió de la IA se marca en ámbar
-                  // aunque después se haya editado.
-                  <span className="chip chip--warn">Propuesto por IA</span>
-                )}
+                {f.source === 'ai_draft' && <span className="chip chip--warn">Propuesto por IA</span>}
               </div>
               <p className="fb-body">{f.body}</p>
               <div className="row fb-actions">
@@ -771,10 +786,10 @@ function Lista({
 
 /** Borrador, publicada sin leer, o leída. "Leída" lo marca el paciente al
  *  abrirla en la app (`mark_care_feedback_read`); el panel no puede tocarlo. */
-function Estado({ f }: { f: CareFeedback }) {
-  if (!f.published_at) return <span className="chip">Borrador</span>;
-  if (f.read_at) return <span className="chip chip--on tnum">Leída el {fechaHora(f.read_at)}</span>;
-  return <span className="chip">Publicada · sin leer</span>;
+function estado(f: CareFeedback): string {
+  if (!f.published_at) return 'borrador';
+  if (f.read_at) return `leída el ${fechaHora(f.read_at)}`;
+  return 'sin leer';
 }
 
 /** El error de una escritura, en una frase que diga qué hacer.

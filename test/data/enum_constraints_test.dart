@@ -111,6 +111,9 @@ const Set<String> _noLasEscribeLaApp = <String>{
   // Artículos y recetas (migración 52): los escribe el panel; la app los lee.
   'care_articles_kind',
   'care_reports_kind',
+  // Invitaciones (migración 56): las crea el panel y la app solo llama a
+  // `accept_care_invite` / `decline_care_invite`, nunca manda el literal.
+  'care_invites_status',
   'org_members_role',
   'foods_source', // el cliente manda 'user' fijo, no el enum
   'goals_macro_method',

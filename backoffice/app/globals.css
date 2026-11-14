@@ -2170,3 +2170,258 @@ button,
 .fb-actions > .caption {
   flex: 1 1 240px;
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * Alta, baja, comentarios por comida y el consultorio (migración 56)
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Lo que borra o corta se dice con el `danger` de los tokens, sin relleno:
+ * igual que el resto de los botones, teñido apenas. */
+.button--danger {
+  border-color: var(--danger);
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 10%, transparent);
+}
+
+.button--danger:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--danger) 20%, transparent);
+}
+
+/* El diálogo de una acción: angosto, el texto arriba y los botones abajo a
+ * la derecha, la principal al final. */
+/* Una sola columna: el modal de la foto parte la caja en dos (foto y datos)
+ * desde 760 px, y acá no hay foto. */
+.modal--form {
+  max-width: min(460px, 94vw);
+}
+
+.modal--form .modal-box {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.dialog-actions {
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  margin-top: var(--s2);
+}
+
+.invite-form {
+  display: grid;
+  gap: var(--s3);
+}
+
+.invite-form input {
+  width: 100%;
+}
+
+.invite-mail {
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+/* Las invitaciones, una por renglón, entrando como el resto. */
+.invites-list {
+  display: grid;
+  gap: 0;
+  padding-top: var(--s2);
+  padding-bottom: var(--s2);
+}
+
+.invite-row {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--s2) var(--s4);
+  padding: var(--s3) 0;
+  animation: nm-entrar 0.2s ease-out both;
+}
+
+.invite-row + .invite-row {
+  border-top: 1px solid var(--divider);
+}
+
+/* Buscar y ordenar el equipo. */
+.team-tools {
+  flex-wrap: wrap;
+  gap: var(--s4);
+  margin-bottom: var(--s4);
+}
+
+.team-tools input[type='search'] {
+  flex: 1 1 240px;
+  max-width: 360px;
+}
+
+/* Las cartas del equipo entran escalonadas (el retraso lo pone cada una). */
+.plist--in {
+  animation: nm-subir 0.25s ease-out both;
+}
+
+/* Las bajas, plegadas: se buscan poco. */
+.bajas > summary {
+  cursor: pointer;
+  list-style: none;
+}
+
+.bajas > summary::-webkit-details-marker {
+  display: none;
+}
+
+.bajas > summary::after {
+  content: ' ▸';
+}
+
+.bajas[open] > summary::after {
+  content: ' ▾';
+}
+
+.bajas[open] > .card {
+  animation: nm-entrar 0.2s ease-out both;
+}
+
+/* Una devolución: de qué es y en qué estado, en una línea de texto. */
+.fb-meta {
+  justify-content: space-between;
+  gap: var(--s3);
+}
+
+.fb-kind {
+  font-weight: 500;
+  color: var(--text);
+}
+
+/* Los comentarios de una comida, debajo de sus ítems. */
+.meal-notes {
+  display: grid;
+  gap: var(--s3);
+  margin-top: var(--s4);
+}
+
+.meal-note {
+  display: grid;
+  gap: 2px;
+  padding: var(--s3) var(--s4);
+  border-left: 2px solid var(--accent);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  animation: nm-entrar 0.2s ease-out both;
+}
+
+.meal-note p {
+  margin: 0;
+  white-space: pre-wrap;
+  line-height: 1.5;
+}
+
+.meal-note-editor {
+  display: grid;
+  gap: var(--s3);
+  animation: nm-entrar 0.2s ease-out both;
+}
+
+.meal-note-add {
+  justify-self: start;
+}
+
+/* ── El consultorio ─────────────────────────────────────────────────────── */
+
+.org-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--s4);
+}
+
+.org-kpi {
+  display: grid;
+  gap: var(--s2);
+  align-content: start;
+  animation: nm-subir 0.25s ease-out both;
+}
+
+.org-kpi-value {
+  font-size: 25px;
+  line-height: 1.15;
+}
+
+/* El reparto del peso: tres tramos en una sola pista. */
+.org-split {
+  display: flex;
+  height: 8px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--surface-raised);
+}
+
+.org-split > span {
+  transform-origin: 0 50%;
+  animation: nm-crecer-x 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.org-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s2) var(--s4);
+}
+
+.org-legend > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.org-legend i {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  display: inline-block;
+}
+
+.org-pros {
+  display: grid;
+  gap: var(--s4);
+}
+
+.org-pro {
+  display: grid;
+  grid-template-columns: minmax(120px, 1fr) minmax(0, 2fr) auto;
+  align-items: center;
+  gap: var(--s4);
+}
+
+.org-tools {
+  flex-wrap: wrap;
+  gap: var(--s3);
+}
+
+.org-tools input {
+  flex: 1 1 220px;
+}
+
+.tabla-datos select {
+  padding: 2px var(--s3);
+  font-size: 13px;
+}
+
+.tabla-datos tbody tr {
+  animation: nm-entrar 0.2s ease-out both;
+}
+
+@media (max-width: 640px) {
+  .org-pro {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--s2);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .invite-row,
+  .plist--in,
+  .bajas[open] > .card,
+  .meal-note,
+  .meal-note-editor,
+  .org-kpi,
+  .org-split > span,
+  .tabla-datos tbody tr {
+    animation: none;
+  }
+}

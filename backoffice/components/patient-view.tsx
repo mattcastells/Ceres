@@ -54,7 +54,9 @@ import { MeasureCard } from '@/components/measure-card';
 import { Kpi, KpiRow, Stat, StatRow, Section } from '@/components/stat';
 import { Spark } from '@/components/spark';
 import { RangePicker } from '@/components/range-picker';
-import { DischargeButton } from './discharge-button';
+import { DischargeButton } from '@/components/discharge-button';
+import { FeedbackStore } from '@/components/meal-notes';
+import { tituloDeComida } from '@/components/meal-row';
 import { SignOut } from '@/components/sign-out';
 import { Tabs, type Tab } from '@/components/tabs';
 
@@ -100,6 +102,10 @@ export type PatientData = {
   plan: string | null;
   /** El id de quien mira: es el `author_id` de lo que escribe. */
   viewerId: string;
+  /** Quien mira no es la profesional del paciente sino la titular (o quien
+   *  administra) del consultorio: ve la ficha, no le escribe. Trae el nombre
+   *  de la profesional responsable. Ver la migración 56. */
+  soloLectura?: { profesional: string | null } | null;
 };
 
 /**
@@ -343,11 +349,18 @@ export function PatientView({ data, tab }: { data: PatientData; tab?: string }) 
     <div className="topbar-id">
       <div style={{ minWidth: 0 }}>
         <p className="topbar-back caption">
-          <Link href="/">← Tu equipo</Link>
+          {data.soloLectura ? (
+            <Link href="/organizacion">← Organización</Link>
+          ) : (
+            <Link href="/">← Tu equipo</Link>
+          )}
         </p>
         <h1>{p.patient_name || 'Sin nombre'}</h1>
         <p className="topbar-sub caption">
           {[
+            data.soloLectura
+              ? `Paciente de ${data.soloLectura.profesional || 'otra profesional'}`
+              : null,
             p.birth_date ? `${edad(p.birth_date)} años` : null,
             p.height_cm ? `${Math.round(p.height_cm)} cm` : null,
             goal?.goal_type ? OBJETIVO[goal.goal_type] : null,
@@ -1220,6 +1233,10 @@ export function PatientView({ data, tab }: { data: PatientData; tab?: string }) 
     />
   );
 
+  const titulosDeComidas = Object.fromEntries(
+    meals.map((m) => [m.id, `${tituloDeComida(m)} · ${fechaCorta(m.local_date)}`]),
+  );
+
   const devoluciones = (
     <FeedbackPanel
       patientId={p.patient_id}
@@ -1229,6 +1246,7 @@ export function PatientView({ data, tab }: { data: PatientData; tab?: string }) 
       plan={data.plan}
       objetivoActual={p.share_meals ? goal : null}
       conoceObjetivo={p.share_meals}
+      titulosDeComidas={titulosDeComidas}
     />
   );
 
@@ -1237,10 +1255,19 @@ export function PatientView({ data, tab }: { data: PatientData; tab?: string }) 
   // calendario del día a día y los hábitos, y al final el detalle por
   // categoría. Las cuatro categorías del permiso siguen teniendo una pestaña
   // cada una, con su punto ámbar si no está compartida.
+  // La titular que mira la ficha de un paciente de otra profesional no tiene
+  // las dos pestañas de escribir: el informe y las devoluciones son de quien
+  // lo atiende.
+  const deLaProfesional: Tab[] = data.soloLectura
+    ? []
+    : [
+        { id: 'informe', label: 'Informe con IA', content: informe },
+        { id: 'devoluciones', label: 'Devoluciones', content: devoluciones },
+      ];
+
   const tabs: Tab[] = [
     { id: 'resumen', label: 'Resumen', content: resumen },
-    { id: 'informe', label: 'Informe con IA', content: informe },
-    { id: 'devoluciones', label: 'Devoluciones', content: devoluciones },
+    ...deLaProfesional,
     { id: 'diario', label: 'Día a día', content: diario },
     {
       id: 'habitos',
@@ -1257,6 +1284,12 @@ export function PatientView({ data, tab }: { data: PatientData; tab?: string }) 
   // calendario y el gráfico de calorías, que son islas de cliente separadas.
   // Ver `components/day-modal.tsx`.
   return (
+    <FeedbackStore
+      initial={data.feedback}
+      patientId={p.patient_id}
+      authorId={data.viewerId}
+      canWrite={!data.soloLectura}
+    >
     <DayModalProvider
       dias={bolsas}
       targetKcal={target}
@@ -1268,6 +1301,7 @@ export function PatientView({ data, tab }: { data: PatientData; tab?: string }) 
     >
       <Tabs header={header} tabs={tabs} initial={tab ?? 'resumen'} />
     </DayModalProvider>
+    </FeedbackStore>
   );
 }
 

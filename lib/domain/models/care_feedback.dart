@@ -43,6 +43,7 @@ class CareFeedback {
     this.readAt,
     this.target,
     this.appliedAt,
+    this.mealId,
   });
 
   final String id;
@@ -68,6 +69,10 @@ class CareFeedback {
   /// Cuándo la persona aplicó [target]. Lo pone `mark_care_target_applied`.
   final DateTime? appliedAt;
 
+  /// La comida sobre la que es (migración 56): un comentario de la
+  /// nutricionista sobre algo puntual que comiste, o sobre su foto.
+  final String? mealId;
+
   bool get isUnread => readAt == null;
   bool get isIndication => kind == CareFeedbackKind.indication;
   bool get isTarget => target != null;
@@ -88,6 +93,7 @@ class CareFeedback {
     readAt: readAt ?? at,
     target: target,
     appliedAt: appliedAt,
+    mealId: mealId,
   );
 
   /// Como queda después de aplicarla: aplicar implica haberla leído, igual
@@ -103,6 +109,7 @@ class CareFeedback {
     readAt: readAt ?? at,
     target: target,
     appliedAt: appliedAt ?? at,
+    mealId: mealId,
   );
 
   /// Lee una fila de `care_feedback`, o devuelve `null` si no cierra.
@@ -143,6 +150,10 @@ class CareFeedback {
       readAt: _parseInstant(row['read_at']),
       target: target,
       appliedAt: target == null ? null : _parseInstant(row['applied_at']),
+      mealId: switch (row['meal_id']) {
+        final String id when id.isNotEmpty => id,
+        _ => null,
+      },
     );
   }
 
@@ -155,12 +166,7 @@ class CareFeedback {
 /// La profesional no escribe en `goals` —el objetivo es del paciente—: publica
 /// una indicación con estos números y la persona la aplica desde la app.
 class CareTarget {
-  const CareTarget({
-    required this.kcal,
-    this.proteinG,
-    this.carbsG,
-    this.fatG,
-  });
+  const CareTarget({required this.kcal, this.proteinG, this.carbsG, this.fatG});
 
   final int kcal;
 
