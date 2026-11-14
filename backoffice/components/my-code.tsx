@@ -27,6 +27,9 @@ const PLAN_LABEL: Record<string, string> = {
 export function MyCode({ plan }: { plan?: string | null }) {
   const [code, setCode] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
+  // El motivo, cuando la base lo da: una cuenta de paciente no tiene código
+  // de profesional (migración 56), y reintentar no lo arregla.
+  const [motivo, setMotivo] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
   const load = useCallback(() => {
@@ -37,6 +40,7 @@ export function MyCode({ plan }: { plan?: string | null }) {
         ({ data, error }) => {
           if (error || typeof data !== 'string') {
             setFailed(true);
+            setMotivo(error?.hint ?? null);
             return;
           }
           setCode(data);
@@ -64,7 +68,7 @@ export function MyCode({ plan }: { plan?: string | null }) {
         {failed ? (
           <div style={{ marginTop: 'var(--s1)' }}>
             <span className="form-error" style={{ margin: 0 }}>
-              No pudimos traer tu código.
+              {motivo ?? 'No pudimos traer tu código.'}
             </span>
           </div>
         ) : (
@@ -73,7 +77,7 @@ export function MyCode({ plan }: { plan?: string | null }) {
       </div>
 
       {failed ? (
-        <button type="button" onClick={load}>
+        !motivo && <button type="button" onClick={load}>
           Reintentar
         </button>
       ) : (

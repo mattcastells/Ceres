@@ -30,6 +30,9 @@ type Editor = {
   body: string;
   /** Si la que se edita ya está publicada: el cambio lo ve el paciente. */
   publicada: boolean;
+  /** Es un comentario sobre una comida: tipo y día quedan fijos (son los de
+   *  la comida; la base rechaza una indicación con comida). */
+  deComida?: boolean;
 };
 
 const VACIO: Editor = { id: null, kind: 'feedback', localDate: '', body: '', publicada: false };
@@ -110,6 +113,7 @@ export function FeedbackPanel({
       localDate: f.local_date ?? '',
       body: f.body,
       publicada: f.published_at !== null,
+      deComida: !!f.meal_id,
     });
     setError(null);
     // El editor está arriba de la lista: sin esto, "Editar" en la décima
@@ -148,8 +152,7 @@ export function FeedbackPanel({
       : await db
           .from('care_feedback')
           .update({
-            kind: editor.kind,
-            local_date: localDate,
+            ...(editor.deComida ? {} : { kind: editor.kind, local_date: localDate }),
             body,
             ...(publicar && !editor.publicada ? { published_at: ahora } : {}),
           })
@@ -261,6 +264,11 @@ export function FeedbackPanel({
         hint="Los borradores son privados. Lo publicado lo ve el paciente en la app."
       >
         <div className="card fb-editor" ref={editorRef}>
+          {editor.deComida ? (
+            <p className="caption" style={{ margin: 0 }}>
+              Comentario sobre una comida: se edita el texto; la comida y el día quedan.
+            </p>
+          ) : (
           <div className="row" style={{ flexWrap: 'wrap', gap: 'var(--s4)' }}>
             <div className="seg seg--buttons" role="group" aria-label="Tipo">
               {(['feedback', 'indication'] as const).map((k) => (
@@ -297,6 +305,7 @@ export function FeedbackPanel({
               <span className="caption">Queda en el Inicio del paciente hasta que la saques.</span>
             )}
           </div>
+          )}
 
           <textarea
             ref={textoRef}

@@ -62,18 +62,19 @@ $$;
 revoke all on function public.has_active_professional(uuid) from public;
 
 -- ── 2 · Una sola nutricionista por persona ───────────────────────────────
--- Si alguien quedó con dos (antes se podía), queda la más reciente.
+-- Si alguien quedó con dos (antes se podía), queda la más reciente. El
+-- desempate por `id` evita que dos fechas iguales (o nulas) dejen dos vivas y
+-- el índice de abajo no se pueda crear.
 update public.care_grants g
    set status = 'revoked', revoked_at = now()
- where g.status = 'accepted'
-   and g.revoked_at is null
-   and exists (
-     select 1 from public.care_grants n
-      where n.owner_id = g.owner_id
-        and n.status = 'accepted'
-        and n.revoked_at is null
-        and n.accepted_at > g.accepted_at
-   );
+  from (
+    select id, row_number() over (
+             partition by owner_id
+             order by accepted_at desc nulls last, created_at desc, id desc) as rn
+      from public.care_grants
+     where status = 'accepted' and revoked_at is null
+  ) d
+ where g.id = d.id and d.rn > 1;
 
 create unique index if not exists care_grants_one_active_per_owner
   on public.care_grants (owner_id)
@@ -188,10 +189,12 @@ end $$;
 
 -- ── 3 · Una profesional, un consultorio ──────────────────────────────────
 delete from public.org_members m
- where exists (
-   select 1 from public.org_members o
-    where o.user_id = m.user_id and o.created_at < m.created_at
- );
+ using (
+   select org_id, user_id, row_number() over (
+            partition by user_id order by created_at, org_id) as rn
+     from public.org_members
+ ) d
+ where m.org_id = d.org_id and m.user_id = d.user_id and d.rn > 1;
 
 create unique index if not exists org_members_one_org_per_user
   on public.org_members (user_id);

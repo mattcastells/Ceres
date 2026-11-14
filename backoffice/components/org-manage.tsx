@@ -63,8 +63,8 @@ export function AddMember({ esTitular }: { esTitular: boolean }) {
       <Dialog open={open} onClose={cerrar} title="Sumar una profesional">
         <form onSubmit={sumar} className="invite-form">
           <p className="muted" style={{ margin: 0 }}>
-            Con el mail de su cuenta de Ceres. Entra con el plan Pro del
-            consultorio y trae a sus pacientes, si ya tiene.
+            Con el mail de su cuenta de Ceres: una cuenta propia, todavía sin
+            pacientes. Entra con el plan Pro del consultorio.
           </p>
           <label className="caption" htmlFor="member-email">
             Mail

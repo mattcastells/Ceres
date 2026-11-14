@@ -59,8 +59,8 @@ select isnt(public.invite_patient('  Pac@Ceres.test '), null,
 select is(public.invite_patient('pac@ceres.test'),
   (select id from public.care_invites where email = 'pac@ceres.test'),
   'Invitar dos veces al mismo mail devuelve la misma invitación');
-select throws_ok($$select public.invite_patient('socia@ceres.test')$$,
-  'P0001', 'ERR_VALIDATION', 'No se invita a una cuenta profesional');
+select lives_ok($$select public.invite_patient('socia@ceres.test')$$,
+  'Una cuenta profesional queda invitada igual: el panel no revela de quién es cada mail (57)');
 select throws_ok($$select public.invite_patient('no-es-un-mail')$$,
   'P0001', 'ERR_VALIDATION', 'Un mail mal escrito no se invita');
 select lives_ok($$select public.invite_patient('nadie@ceres.test')$$,
@@ -159,7 +159,7 @@ set local role authenticated;
 select set_config('request.jwt.claims',
   '{"sub":"22222222-0000-0000-0000-000000000001","role":"authenticated"}', true);
 select throws_ok($$select public.org_add_member('afuera@ceres.test')$$,
-  'P0001', 'ERR_CONFLICT', 'Una profesional de otro consultorio no se suma');
+  'P0001', 'ERR_VALIDATION', 'Una profesional de otro consultorio no se suma (mismo mensaje que el resto, 57)');
 select lives_ok($$select public.org_add_member('suelta@ceres.test')$$,
   'Una cuenta libre se suma al consultorio');
 select throws_ok(

@@ -378,7 +378,11 @@ export function PatientView({ data, tab }: { data: PatientData; tab?: string }) 
       <div className="row" style={{ flex: 'none' }}>
         <RangePicker current={String(days)} />
         <PrintButton />
-        <DischargeButton patientId={p.patient_id} name={p.patient_name ?? ''} />
+        <DischargeButton
+          patientId={p.patient_id}
+          name={p.patient_name ?? ''}
+          volverA={data.soloLectura ? '/organizacion' : '/'}
+        />
         <SignOut />
       </div>
     </div>

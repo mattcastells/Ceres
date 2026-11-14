@@ -13,11 +13,16 @@ export function Dialog({
   onClose,
   title,
   children,
+  locked = false,
 }: {
   open: boolean;
   onClose: () => void;
   title: string;
   children: ReactNode;
+  /** Mientras corre la acción no se cierra: ni Escape ni clic afuera. Si se
+   *  cerrara, el error de la acción quedaría sin mostrarse y el estado de
+   *  React diría "abierto" con el diálogo cerrado. */
+  locked?: boolean;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
 
@@ -39,8 +44,11 @@ export function Dialog({
       className="modal modal--form"
       aria-label={title}
       onClose={onClose}
+      onCancel={(e) => {
+        if (locked) e.preventDefault();
+      }}
       onClick={(e) => {
-        if (e.target === ref.current) onClose();
+        if (e.target === ref.current && !locked) onClose();
       }}
     >
       {open && (
@@ -85,7 +93,7 @@ export function ConfirmDialog({
   onClose: () => void;
 }) {
   return (
-    <Dialog open={open} onClose={busy ? () => {} : onClose} title={title}>
+    <Dialog open={open} onClose={onClose} title={title} locked={busy}>
       <div className="muted" style={{ margin: 0 }}>{body}</div>
       {error && <p className="form-error" style={{ margin: 0 }}>{error}</p>}
       <div className="row dialog-actions">

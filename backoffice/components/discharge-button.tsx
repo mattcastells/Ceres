@@ -19,11 +19,14 @@ export function DischargeButton({
   name,
   quiet = false,
   onDone,
+  volverA = '/',
 }: {
   patientId: string;
   name: string;
   quiet?: boolean;
   onDone?: () => void;
+  /** A dónde ir después de la baja dada desde la ficha. */
+  volverA?: string;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -46,7 +49,7 @@ export function DischargeButton({
     if (onDone) {
       onDone();
     } else {
-      router.push('/');
+      router.push(volverA);
     }
     router.refresh();
   }
