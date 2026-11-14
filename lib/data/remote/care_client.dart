@@ -73,39 +73,27 @@ class CareClient {
     }
   }
 
-  /// Concede o actualiza el permiso de un profesional, por su código.
+  /// Se suma a la nutricionista dueña de ese código.
   ///
-  /// El mismo llamado sirve para las dos cosas a propósito: cambiar qué ve es
-  /// volver a decir qué ve. Un camino aparte para "editar" sería otra ruta que
-  /// mantener hacia el mismo lugar.
-  Future<void> grant({
-    required String code,
-    required CareCategories categories,
-    DateTime? expiresAt,
-  }) async {
+  /// Desde la migración 55 no hay categorías: la profesional ve todo. La
+  /// función conserva sus parámetros de categorías por la app publicada, pero
+  /// los ignora.
+  Future<void> grant({required String code}) async {
     try {
       await _db
           .rpc<String>(
             'grant_care_access',
-            params: <String, dynamic>{
-              'p_code': code.trim().toUpperCase(),
-              'p_share_meals': categories.meals,
-              'p_share_photos': categories.photos,
-              'p_share_body': categories.body,
-              'p_share_wellbeing': categories.wellbeing,
-              'p_expires_at': expiresAt?.toUtc().toIso8601String(),
-            },
+            params: <String, dynamic>{'p_code': code.trim().toUpperCase()},
           )
           .timeout(timeout);
     } on PostgrestException catch (error) {
       // La función levanta `ERR_NOT_FOUND` y `ERR_VALIDATION` con un `hint`
-      // ya redactado para mostrar. Se respeta ese texto en vez de reescribirlo
-      // acá: el servidor sabe por qué falló y el cliente no.
+      // ya redactado para mostrar.
       throw AppError(
         code: error.message.contains('ERR_NOT_FOUND')
             ? ApiErrorCode.notFound
             : ApiErrorCode.validation,
-        message: error.hint ?? 'No pudimos dar el acceso. Revisá el código.',
+        message: error.hint ?? 'No pudimos sumarte. Revisá el código.',
         requestId: error.message,
       );
     } on Exception {
@@ -113,35 +101,8 @@ class CareClient {
     }
   }
 
-  /// Cambia qué ve un permiso que ya existe.
-  ///
-  /// Va por `update` directo y no por `grant_care_access` porque esa función
-  /// toma el **código** del profesional, y el dueño no lo tiene ni puede
-  /// leerlo: `care_professionals` expone id y nombre, nada más, para que el
-  /// código ajeno no viaje. La policy `care_grants_owner_manages` ya permite
-  /// este update, así que no hace falta una función para algo que RLS resuelve.
-  Future<void> updateCategories({
-    required String grantId,
-    required CareCategories categories,
-  }) async {
-    try {
-      await _db
-          .from('care_grants')
-          .update(<String, dynamic>{
-            'share_meals': categories.meals,
-            'share_photos': categories.photos,
-            'share_body': categories.body,
-            'share_wellbeing': categories.wellbeing,
-          })
-          .eq('id', grantId)
-          .timeout(timeout);
-    } on Exception {
-      throw _offline;
-    }
-  }
-
-  /// Corta el acceso. La fila queda con `revoked_at`, no se borra: un permiso
-  /// sobre datos de salud que desaparece sin rastro no se puede auditar.
+  /// Darse de baja. La fila queda con `revoked_at`, no se borra: un acceso a
+  /// datos de salud que desaparece sin rastro no se puede auditar.
   Future<void> revoke(String grantId) async {
     try {
       await _db
@@ -154,7 +115,6 @@ class CareClient {
       throw _offline;
     }
   }
-
 
   static const AppError _offline = AppError(
     code: ApiErrorCode.offline,

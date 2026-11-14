@@ -54,6 +54,7 @@ import { MeasureCard } from '@/components/measure-card';
 import { Kpi, KpiRow, Stat, StatRow, Section } from '@/components/stat';
 import { Spark } from '@/components/spark';
 import { RangePicker } from '@/components/range-picker';
+import { DischargeButton } from './discharge-button';
 import { SignOut } from '@/components/sign-out';
 import { Tabs, type Tab } from '@/components/tabs';
 
@@ -359,6 +360,7 @@ export function PatientView({ data, tab }: { data: PatientData; tab?: string }) 
 
       <div className="row" style={{ flex: 'none' }}>
         <RangePicker current={String(days)} />
+        <DischargeButton patientId={p.patient_id} name={p.patient_name ?? ''} />
         <SignOut />
       </div>
     </div>

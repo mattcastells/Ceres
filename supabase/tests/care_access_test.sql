@@ -140,7 +140,7 @@ select throws_ok(
   'La profesional no puede concederse el permiso ella misma'
 );
 
--- ── Ana concede, y solo comidas ──────────────────────────────────────────
+-- ── Ana concede (desde la migración 55, siempre todo) ────────────────────
 select set_config('request.jwt.claims',
   '{"sub":"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa","role":"authenticated"}', true);
 
@@ -152,12 +152,12 @@ select ok(
     (select care_code from codigos
       where id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'),
     p_share_meals => true) is not null,
-  'Ana concede acceso a las comidas, y nada más'
+  'Ana se suma con el código de la profesional'
 );
 
--- ── Lo concedido se ve; lo demás no ──────────────────────────────────────
--- Esta es la prueba de que las categorías son categorías y no un interruptor
--- único disfrazado.
+-- ── La profesional ve todo ───────────────────────────────────────────────
+-- Migración 55: el paciente ya no elige categorías. Aunque la app vieja pida
+-- solo comidas, el acceso abre todo.
 select set_config('request.jwt.claims',
   '{"sub":"bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb","role":"authenticated"}', true);
 
@@ -178,15 +178,15 @@ select is(
 select is(
   (select count(*)::int from public.weight_logs
     where user_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'),
-  0,
-  'Pero el peso sigue cerrado: esa categoría no se prendió'
+  1,
+  'También ve el peso, aunque la app vieja pidiera solo comidas'
 );
 
 select is(
   (select count(*)::int from public.water_logs
     where user_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'),
-  0,
-  'Y el agua tampoco'
+  1,
+  'Y el agua'
 );
 
 select is(
@@ -257,17 +257,13 @@ select is(
   'Ni borrarla'
 );
 
--- ── El permiso no se lo amplía la profesional ────────────────────────────
--- Sin esto, el acceso a comidas sería en la práctica acceso a todo: le
--- alcanzaría con prender las otras categorías de su propia fila.
-update public.care_grants set share_body = true, share_wellbeing = true
- where owner_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
-
-select is(
-  (select count(*)::int from public.weight_logs
-    where user_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'),
-  0,
-  'No puede prenderse sola las categorías que Ana no le dio'
+-- ── Nadie toca las categorías a mano ─────────────────────────────────────
+select throws_ok(
+  $q$update public.care_grants set share_body = false
+      where owner_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'$q$,
+  '42501',
+  null,
+  'Las categorías ya no se editan desde el cliente'
 );
 
 -- ── Ana suma el cuerpo ───────────────────────────────────────────────────
@@ -279,7 +275,7 @@ select ok(
     (select care_code from codigos
       where id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'),
     p_share_meals => true, p_share_body => true) is not null,
-  'Ana suma el peso al permiso que ya existía'
+  'Volver a sumarse con el mismo código no falla'
 );
 
 select set_config('request.jwt.claims',
@@ -289,7 +285,7 @@ select is(
   (select weight_kg::numeric(5,1) from public.weight_logs
     where user_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'),
   100.0::numeric(5,1),
-  'Y recién ahora ve el peso'
+  'Y sigue viendo el peso'
 );
 
 -- ── Revocar cierra ───────────────────────────────────────────────────────

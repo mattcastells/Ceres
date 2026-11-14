@@ -176,6 +176,11 @@ async function escribirEnDestino(c) {
   const { id: _i, pal_code: _p, care_code: _c, created_at: _ca, updated_at: _u, ...perfil } = c.perfil ?? {};
   await escribir('PATCH', `/rest/v1/profiles?id=eq.${NEW}`, perfil, { Prefer: 'return=minimal' });
 
+  // Tu cuenta real es Premium. Desde la migración 55 una cuenta sin fila en
+  // `account_plans` es Gratis, y esta se acaba de crear.
+  await escribir('POST', '/rest/v1/account_plans', { user_id: NEW, plan: 'premium' },
+    { Prefer: 'resolution=merge-duplicates,return=minimal' });
+
   // Los ids de `activity_types` no coinciden entre proyectos: se traducen por slug.
   const tiposD = Object.fromEntries((await escribir('GET', '/rest/v1/activity_types?select=id,slug')).map((t) => [t.slug, t.id]));
   const mover = (p) => (typeof p === 'string' && p.startsWith(`${OLD}/`) ? `${NEW}/${p.slice(OLD.length + 1)}` : p);

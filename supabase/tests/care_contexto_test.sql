@@ -6,7 +6,8 @@
 --
 -- Lo que se comprueba acá:
 --
---   1. Las dos tablas nuevas se abren con `share_wellbeing` y con nada más.
+--   1. Las dos tablas nuevas se abren con el acceso (desde la migración 55,
+--      todo acceso abre todo).
 --   2. La profesional las lee, pero **no las puede escribir**: la promesa de la
 --      migración 32 —los datos del paciente son de solo lectura— sigue en pie
 --      aunque ahora exista una escritura en el panel.
@@ -116,12 +117,12 @@ select ok(
 select set_config('request.jwt.claims',
   '{"sub":"bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb","role":"authenticated"}', true);
 
--- El contexto va con `wellbeing`, así que un permiso de comidas no lo abre.
+-- Desde la migración 55 el acceso abre todo, también el contexto del día.
 select is(
   (select count(*)::int from public.day_markers
     where user_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'),
-  0,
-  'El permiso de comidas no abre el contexto del día'
+  1,
+  'El acceso abre también el contexto del día'
 );
 
 -- ── Ana suma el bienestar ────────────────────────────────────────────────
@@ -143,7 +144,7 @@ select is(
   (select note from public.day_markers
     where user_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'),
   'Angina',
-  'Y recién ahora ve el día de enfermedad'
+  'Y ve el día de enfermedad'
 );
 
 select is(
@@ -309,12 +310,12 @@ select is(
   'El tablero muestra la última comida de Ana'
 );
 
--- Ana no comparte el peso: el tablero lo deja en null, no en un número.
+-- Con todo compartido, el tablero muestra el peso.
 select is(
   (select weight_last_30 from public.care_overview()
     where patient_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'),
-  null,
-  'Sin la categoría de cuerpo, el peso no aparece'
+  100.00::numeric,
+  'El tablero muestra el peso de Ana'
 );
 
 select set_config('request.jwt.claims',

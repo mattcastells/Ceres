@@ -51,7 +51,8 @@ set local role authenticated;
 -- ── Planes ───────────────────────────────────────────────────────────────
 select set_config('request.jwt.claims',
   '{"sub":"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa","role":"authenticated"}', true);
-select is(public.effective_plan(), 'premium', 'Una cuenta sin plan asignado es Premium');
+select is(public.effective_plan(), 'free',
+  'Una cuenta nueva, sin plan asignado, es Gratis (migración 55)');
 
 select throws_ok(
   $$insert into public.account_plans (user_id, plan)
