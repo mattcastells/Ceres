@@ -105,7 +105,8 @@ const SLOT_TIME = { breakfast: 8 * 60, lunch: 13 * 60 + 15, snack: 17 * 60 + 30,
 
 // ── Un día de una persona ─────────────────────────────────────────────────
 function generar(p, userId, activityTypes, r) {
-  const analyses = [], meals = [], items = [], weights = [], activities = [], water = [], sleep = [], markers = [], shared = [];
+  const analyses = [], meals = [], items = [], weights = [], activities = [], water = [], sleep = [], markers = [], shared = [], alcohol = [];
+  let ultimoTrago = null;
   const days = Math.min(p.days ?? DIAS, DIAS);
   const nowMs = Date.now();
 
@@ -125,6 +126,25 @@ function generar(p, userId, activityTypes, r) {
       weights.push({ id: randomUUID(), user_id: userId, local_date: date, weight_kg: Math.round(kg * 10) / 10, source: 'manual' });
     }
     if (!loggedToday) continue;
+
+    // Viernes y sábado con alcohol, casi siempre. La noche que sigue se anota
+    // al día siguiente (la de quien se despierta), y es la que sale más corta.
+    const tomoAyer = ultimoTrago === addDays(date, -1);
+    const dow = new Date(`${date}T12:00:00Z`).getUTCDay();
+    if (p.drinks === 'weekend' && (dow === 5 || dow === 6) && r() < 0.85) {
+      const cerveza = r() < 0.6;
+      const cantidad = 2 + Math.floor(r() * 3);
+      const ml = cerveza ? 473 : 150;
+      const abv = cerveza ? 5 : 13;
+      alcohol.push({
+        id: randomUUID(), user_id: userId, local_date: date,
+        drink_type: cerveza ? 'beer' : 'wine', quantity: cantidad, volume_ml: ml, abv_pct: abv,
+        std_drinks: Math.round(((cantidad * ml * abv * 0.789) / 1000 / 10) * 100) / 100,
+        kcal: cantidad * (cerveza ? 200 : 125),
+        logged_at: atLocal(date, 22 * 60).toISOString(),
+      });
+      ultimoTrago = date;
+    }
 
     const dayFactor = (isWeekend(date) ? p.weekend : 1) * (sick ? 0.7 : 1) * (0.9 + r() * 0.2);
     const dayTarget = p.target * p.eats * dayFactor;
@@ -175,7 +195,7 @@ function generar(p, userId, activityTypes, r) {
     }
 
     let dayActivities = [];
-    if (!sick && r() < p.actPerWeek / 7) {
+    if (!sick && !tomoAyer && r() < p.actPerWeek / 7) {
       const slug = pick(r, p.act);
       const type = activityTypes[slug] ?? activityTypes.walking;
       const duration = 30 + Math.round(r() * 6) * 5;
@@ -197,8 +217,8 @@ function generar(p, userId, activityTypes, r) {
     let glasses = null, sleepMin = null, quality = null;
     if (r() < 0.75) { glasses = 3 + Math.floor(r() * 6); water.push({ id: randomUUID(), user_id: userId, local_date: date, glasses }); }
     if (r() < 0.7) {
-      sleepMin = 330 + Math.round(r() * 150);
-      quality = pick(r, ['poor', 'ok', 'ok', 'good', 'good', 'great']);
+      sleepMin = 330 + Math.round(r() * 150) - (tomoAyer ? 80 : 0);
+      quality = tomoAyer ? pick(r, ['poor', 'ok']) : pick(r, ['poor', 'ok', 'ok', 'good', 'good', 'great']);
       sleep.push({ id: randomUUID(), user_id: userId, local_date: date, minutes: sleepMin, quality });
     }
 
@@ -214,7 +234,7 @@ function generar(p, userId, activityTypes, r) {
       });
     }
   }
-  return { analyses, meals, items, weights, activities, water, sleep, markers, shared };
+  return { analyses, meals, items, weights, activities, water, sleep, markers, shared, alcohol };
 }
 
 // ── Main ──────────────────────────────────────────────────────────────────
@@ -275,6 +295,7 @@ for (const p of [...PACIENTES, ...AMIGOS]) {
   await insert('activities', g.activities);
   await insert('water_logs', g.water);
   await insert('sleep_logs', g.sleep);
+  await insert('alcohol_logs', g.alcohol);
   await insert('day_markers', g.markers);
   if (!p.of) await insert('shared_days', g.shared);
   totales.meals += g.meals.length; totales.items += g.items.length;

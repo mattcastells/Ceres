@@ -256,6 +256,7 @@ export function FeedbackPanel({
   return (
     <>
       <Section
+        className="no-print"
         title={editor.id === null ? 'Escribirle' : 'Editar'}
         hint="Los borradores son privados. Lo publicado lo ve el paciente en la app."
       >
@@ -424,6 +425,7 @@ export function FeedbackPanel({
         onBorrar={borrar}
       />
       <Lista
+        noPrint
         titulo="Borradores"
         vacio="Sin borradores."
         hint="Privados: el paciente no los ve."
@@ -713,7 +715,9 @@ function Lista({
   onEditar,
   onPublicar,
   onBorrar,
+  noPrint = false,
 }: {
+  noPrint?: boolean;
   titulo: string;
   hint?: string;
   vacio: string;
@@ -725,7 +729,11 @@ function Lista({
   onBorrar: (f: CareFeedback) => void;
 }) {
   return (
-    <Section title={`${titulo}${items.length ? ` · ${items.length}` : ''}`} hint={hint}>
+    <Section
+      title={`${titulo}${items.length ? ` · ${items.length}` : ''}`}
+      hint={hint}
+      className={noPrint ? 'no-print' : undefined}
+    >
       {items.length === 0 ? (
         <div className="card">
           <p className="muted" style={{ margin: 0 }}>{vacio}</p>

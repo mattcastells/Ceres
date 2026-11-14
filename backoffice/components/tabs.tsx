@@ -7,6 +7,9 @@ export type Tab = {
   label: string;
   /** Marca la pestaña de una categoría que el paciente no comparte. */
   off?: boolean;
+  /** `false` = no va en la hoja impresa de la consulta (el calendario y las
+   *  fotos: en papel no se pueden abrir). */
+  print?: boolean;
   content: ReactNode;
 };
 
@@ -131,6 +134,8 @@ export function Tabs({
             aria-labelledby={`tab-${t.id}`}
             tabIndex={0}
             hidden={t.id !== active}
+            data-title={t.label}
+            data-print={t.print === false ? 'no' : undefined}
           >
             {t.content}
           </div>

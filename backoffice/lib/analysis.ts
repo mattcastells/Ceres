@@ -426,3 +426,80 @@ export function diasBajoBasal(
   }
   return { dias, basal };
 }
+
+/* ── Los días con X contra los días sin X (§7) ──────────────────────────── */
+
+/** Con menos días de cada lado no se muestra: con un solo día de alcohol, la
+ *  "comparación" es ese día contra el resto, y dice más del día que del
+ *  hábito. */
+export const MIN_DIAS_CON = 2;
+export const MIN_DIAS_SIN = 3;
+
+/** Hasta acá se aclara que es una observación y no un resultado. */
+export const DIAS_OBSERVACION = 8;
+
+export type LadoComparado = { con: number | null; sin: number | null };
+
+export type ConContraSin = {
+  diasCon: number;
+  diasSin: number;
+  /** Calorías del día, sobre los días con comidas. */
+  kcal: LadoComparado;
+  /** Horas de sueño de esa noche: la fila del día siguiente, porque la noche
+   *  se anota el día en que uno se despierta (`lib/domain/models/sleep.dart`). */
+  suenoNoche: LadoComparado;
+  /** Minutos de actividad al día siguiente; sin sesiones cuenta como cero. */
+  actividadSiguiente: LadoComparado;
+};
+
+/**
+ * Promedios de los días marcados (con alcohol, con enfermedad) contra los
+ * demás, con el n a la vista. **Dos promedios y no una correlación**: con un
+ * mes de datos no hay potencia para un coeficiente, y publicarlo le daría
+ * cara de hallazgo a un número que cambia con un solo día distinto.
+ *
+ * `fechas` es la ventana efectiva: los días anteriores al primer registro no
+ * son "días sin". Las medidas del día siguiente no usan el último día de la
+ * ventana, que todavía no tiene siguiente.
+ */
+export function conContraSin(input: {
+  fechas: string[];
+  marcados: Set<string>;
+  kcalPorDia: Map<string, number>;
+  suenoMinPorDia: Map<string, number>;
+  minutosPorDia: Map<string, number>;
+}): ConContraSin | null {
+  const { fechas, marcados, kcalPorDia, suenoMinPorDia, minutosPorDia } = input;
+  const con = fechas.filter((f) => marcados.has(f));
+  const sin = fechas.filter((f) => !marcados.has(f));
+  if (con.length < MIN_DIAS_CON || sin.length < MIN_DIAS_SIN) return null;
+
+  const ultimo = fechas[fechas.length - 1];
+  const prom = (xs: number[]) =>
+    xs.length ? xs.reduce((a, x) => a + x, 0) / xs.length : null;
+
+  const lado = (dias: string[], medir: (f: string) => number | null) =>
+    prom(dias.map(medir).filter((x): x is number => x !== null));
+
+  const kcal = (f: string) => kcalPorDia.get(f) ?? null;
+  const sueno = (f: string) => {
+    if (f === ultimo) return null;
+    const m = suenoMinPorDia.get(siguiente(f));
+    return m === undefined ? null : m / 60;
+  };
+  const actividad = (f: string) => (f === ultimo ? null : minutosPorDia.get(siguiente(f)) ?? 0);
+
+  return {
+    diasCon: con.length,
+    diasSin: sin.length,
+    kcal: { con: lado(con, kcal), sin: lado(sin, kcal) },
+    suenoNoche: { con: lado(con, sueno), sin: lado(sin, sueno) },
+    actividadSiguiente: { con: lado(con, actividad), sin: lado(sin, actividad) },
+  };
+}
+
+function siguiente(iso: string): string {
+  const d = new Date(`${iso.slice(0, 10)}T12:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + 1);
+  return d.toISOString().slice(0, 10);
+}

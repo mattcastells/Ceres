@@ -29,9 +29,12 @@ import { currentGoal, goalForDay, targetsByDay } from '@/lib/goals';
 import {
   alimentosFrecuentes,
   balanceEnergetico,
+  conContraSin,
   diasBajoBasal,
+  DIAS_OBSERVACION,
   horarios as calcularHorarios,
   semanas as calcularSemanas,
+  type ConContraSin,
 } from '@/lib/analysis';
 import {
   BalanceCard,
@@ -58,6 +61,7 @@ import { DischargeButton } from '@/components/discharge-button';
 import { FeedbackStore } from '@/components/meal-notes';
 import { tituloDeComida } from '@/components/meal-row';
 import { SignOut } from '@/components/sign-out';
+import { PrintButton } from '@/components/print-button';
 import { Tabs, type Tab } from '@/components/tabs';
 
 export type PatientProfile = {
@@ -373,6 +377,7 @@ export function PatientView({ data, tab }: { data: PatientData; tab?: string }) 
 
       <div className="row" style={{ flex: 'none' }}>
         <RangePicker current={String(days)} />
+        <PrintButton />
         <DischargeButton patientId={p.patient_id} name={p.patient_name ?? ''} />
         <SignOut />
       </div>
@@ -937,6 +942,22 @@ export function PatientView({ data, tab }: { data: PatientData; tab?: string }) 
   );
 
   /* ── Hábitos ────────────────────────────────────────────────────────── */
+  // Los días con alcohol o enfermedad contra los demás (§7 de
+  // `docs/panel-proximas-features.md`): dos promedios con el n a la vista,
+  // nunca una correlación. Ver `conContraSin` en `lib/analysis.ts`.
+  const paraComparar = {
+    fechas: ventana.fechas,
+    kcalPorDia: kcalEnVentana,
+    suenoMinPorDia: new Map(sleep.map((s) => [s.local_date, s.minutes])),
+    minutosPorDia: new Map(actPorDia.map((x) => [x.date, x.value])),
+  };
+  const compAlcohol = p.share_wellbeing
+    ? conContraSin({ ...paraComparar, marcados: new Set(ubePorDia.keys()) })
+    : null;
+  const compEnfermedad = p.share_wellbeing
+    ? conContraSin({ ...paraComparar, marcados: new Set(enfermos.map((m) => m.local_date)) })
+    : null;
+
   const habitos = !p.share_wellbeing ? (
     <NoCompartido que="La actividad, el agua, el sueño y el contexto del día" />
   ) : (
@@ -1183,6 +1204,13 @@ export function PatientView({ data, tab }: { data: PatientData; tab?: string }) 
           </div>
         )}
       </div>
+
+      {(compAlcohol || compEnfermedad) && (
+        <div className="grid grid--parejo" style={{ marginTop: 'var(--s5)' }}>
+          {compAlcohol && <ComparacionDias titulo="Con alcohol" c={compAlcohol} />}
+          {compEnfermedad && <ComparacionDias titulo="Con enfermedad" c={compEnfermedad} />}
+        </div>
+      )}
     </Section>
   );
 
@@ -1268,7 +1296,7 @@ export function PatientView({ data, tab }: { data: PatientData; tab?: string }) 
   const tabs: Tab[] = [
     { id: 'resumen', label: 'Resumen', content: resumen },
     ...deLaProfesional,
-    { id: 'diario', label: 'Día a día', content: diario },
+    { id: 'diario', label: 'Día a día', content: diario, print: false },
     {
       id: 'habitos',
       label: 'Hábitos',
@@ -1276,7 +1304,7 @@ export function PatientView({ data, tab }: { data: PatientData; tab?: string }) 
       content: habitos,
     },
     { id: 'comidas', label: 'Comidas', off: !p.share_meals, content: comidas },
-    { id: 'fotos', label: 'Fotos', off: !p.share_photos, content: fotos },
+    { id: 'fotos', label: 'Fotos', off: !p.share_photos, content: fotos, print: false },
     { id: 'cuerpo', label: 'Cuerpo', off: !p.share_body, content: cuerpo },
   ];
 
@@ -1339,6 +1367,52 @@ function AvisoTope() {
         Los promedios usan solo esas. Elegí un período más corto para verlo
         completo.
       </span>
+    </div>
+  );
+}
+
+/** Los días marcados contra los demás, en tres filas. Con pocos días lo dice:
+ *  es una observación para charlar en la consulta, no un resultado. */
+function ComparacionDias({ titulo, c }: { titulo: string; c: ConContraSin }) {
+  const kcal = (v: number | null) => (v === null ? '—' : `${miles(v)} kcal`);
+  const hs = (v: number | null) => (v === null ? '—' : horas(Math.round(v * 60)));
+  const min = (v: number | null) => (v === null ? '—' : `${miles(v)} min`);
+  const filas: [string, string, string][] = [
+    ['Calorías del día', kcal(c.kcal.con), kcal(c.kcal.sin)],
+    ['Sueño esa noche', hs(c.suenoNoche.con), hs(c.suenoNoche.sin)],
+    ['Actividad al día siguiente', min(c.actividadSiguiente.con), min(c.actividadSiguiente.sin)],
+  ];
+  return (
+    <div className="card">
+      <h3>{titulo} contra sin</h3>
+      <div className="scroll-x" style={{ marginTop: 'var(--s3)' }}>
+        <table className="tabla-datos">
+          <thead>
+            <tr>
+              <th />
+              <th className="num">
+                {titulo.toLowerCase()} · {c.diasCon} {c.diasCon === 1 ? 'día' : 'días'}
+              </th>
+              <th className="num">el resto · {c.diasSin} días</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filas.map(([label, a, b]) => (
+              <tr key={label}>
+                <td>{label}</td>
+                <td className="num tnum">{a}</td>
+                <td className="num tnum">{b}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {c.diasCon < DIAS_OBSERVACION && (
+        <p className="caption" style={{ margin: 'var(--s3) 0 0' }}>
+          Con {c.diasCon} días es una observación para charlar, no un resultado:
+          un solo día distinto mueve el promedio.
+        </p>
+      )}
     </div>
   );
 }

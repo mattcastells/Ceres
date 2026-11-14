@@ -99,13 +99,17 @@ export function Section({
   title,
   hint,
   children,
+  className,
 }: {
   title: string;
   hint?: string;
   children: React.ReactNode;
+  /** `no-print` para lo que no va en la hoja de la consulta (editores,
+   *  borradores privados). */
+  className?: string;
 }) {
   return (
-    <section className="section">
+    <section className={className ? `section ${className}` : 'section'}>
       <h2>{title}</h2>
       {hint && (
         <p className="caption" style={{ marginTop: 2, marginBottom: 'var(--s4)' }}>

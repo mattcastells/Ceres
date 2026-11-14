@@ -10,6 +10,7 @@ import assert from 'node:assert/strict';
 import {
   alimentosFrecuentes,
   balanceEnergetico,
+  conContraSin,
   diasBajoBasal,
   horarios,
   normalizarNombre,
@@ -259,5 +260,53 @@ describe('diasBajoBasal', () => {
       dias: [],
       basal: null,
     });
+  });
+});
+
+describe('conContraSin (§7)', () => {
+  const fechas = ['2026-11-01', '2026-11-02', '2026-11-03', '2026-11-04', '2026-11-05', '2026-11-06'];
+
+  test('con pocos días de un lado no compara', () => {
+    assert.equal(
+      conContraSin({
+        fechas,
+        marcados: new Set(['2026-11-02']),
+        kcalPorDia: new Map(),
+        suenoMinPorDia: new Map(),
+        minutosPorDia: new Map(),
+      }),
+      null,
+    );
+  });
+
+  test('la noche de un día es la fila del día siguiente', () => {
+    const r = conContraSin({
+      fechas,
+      marcados: new Set(['2026-11-02', '2026-11-04']),
+      kcalPorDia: new Map([
+        ['2026-11-02', 2400],
+        ['2026-11-04', 2600],
+        ['2026-11-01', 1800],
+        ['2026-11-03', 1600],
+      ]),
+      // Se despertó el 3 y el 5 después de dormir poco.
+      suenoMinPorDia: new Map([
+        ['2026-11-03', 300],
+        ['2026-11-05', 360],
+        ['2026-11-02', 480],
+        ['2026-11-04', 480],
+      ]),
+      minutosPorDia: new Map([['2026-11-02', 40]]),
+    })!;
+    assert.equal(r.diasCon, 2);
+    assert.equal(r.diasSin, 4);
+    assert.equal(r.kcal.con, 2500);
+    assert.equal(r.kcal.sin, 1700); // los días sin comidas no cuentan como cero
+    assert.equal(r.suenoNoche.con, 5.5);
+    assert.equal(r.suenoNoche.sin, 8);
+    // Día siguiente a los marcados: 3 y 5, sin actividad → 0.
+    assert.equal(r.actividadSiguiente.con, 0);
+    // Siguientes a 1, 3 y 5 (el 6 es el último y no tiene siguiente): 40, 0, 0.
+    assert.equal(Math.round(r.actividadSiguiente.sin! * 10) / 10, 13.3);
   });
 });

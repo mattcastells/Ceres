@@ -2425,3 +2425,95 @@ button,
     animation: none;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * La hoja de la consulta (§8 de docs/panel-proximas-features.md)
+ *
+ * Imprimir la ficha despliega todas las pestañas, una por hoja, con su nombre
+ * arriba. Afuera quedan los controles (botones, campos, el período, las
+ * pestañas), el calendario y las fotos —en papel no se abren—, el editor y
+ * los borradores, que son privados. En claro: el oscuro gasta tinta y en
+ * papel se lee peor.
+ * ═══════════════════════════════════════════════════════════════════════════ */
+@media print {
+  :root,
+  :root:not([data-theme='dark']) {
+    --bg: #ffffff;
+    --surface: #ffffff;
+    --surface-raised: #f1f1f6;
+    --text: #1b1c26;
+    --text-muted: rgba(27, 28, 38, 0.62);
+    --accent: #796cbf;
+    --accent-text: #5d5294;
+    --divider: rgba(27, 28, 38, 0.16);
+    --hairline: rgba(27, 28, 38, 0.16);
+    --chart-trend: #292b31;
+    --topbar-bg: #ffffff;
+    color-scheme: light;
+  }
+
+  body {
+    background: #ffffff;
+  }
+
+  .topbar {
+    position: static;
+    backdrop-filter: none;
+  }
+
+  .tabs,
+  .topbar-nav,
+  .topbar-back,
+  .seg,
+  button,
+  .button,
+  input,
+  select,
+  textarea,
+  .no-print,
+  .fb-ia,
+  .meal-note-add,
+  .meal-note-editor,
+  .panel[data-print='no'] {
+    display: none !important;
+  }
+
+  .panel[hidden]:not([data-print='no']) {
+    display: block !important;
+  }
+
+  .panel + .panel {
+    break-before: page;
+  }
+
+  .panel::before {
+    content: attr(data-title);
+    display: block;
+    font-size: 21px;
+    font-weight: 600;
+    margin: 0 0 var(--s4);
+  }
+
+  .card,
+  .stat,
+  .kpi,
+  .fb-item {
+    break-inside: avoid;
+    box-shadow: none;
+  }
+
+  .scroll-x {
+    overflow: visible !important;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  @page {
+    margin: 14mm 12mm;
+  }
+}

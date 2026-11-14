@@ -26,10 +26,13 @@ export const PROFESIONALES = [
 //   stopsAgo    dejó de registrar hace N días  days    días de historial
 //   protein     multiplicador de la proteína  late    cena tarde
 //   sickAgo     tuvo un día de enfermedad hace N días
+//   drinks      'weekend': toma viernes y sábado; esa noche duerme peor y al
+//               otro día se mueve menos (lo que cuenta "Con alcohol contra
+//               sin" en Hábitos)
 //   share       categorías compartidas         plan    plan propio (free = paga la Pro)
 export const PACIENTES = [
   { key: 'lucia', of: 'valentina', name: 'Lucía Fernández', sex: 'female', birth: '1992-02-20', height: 164, weight: 74, goal: 'lose', target: 1600, eats: 0.98, weekend: 1.05, adh: 0.96, kgWeek: -0.5, activity: 'moderate', act: ['walking', 'pilates'], actPerWeek: 4, share: 'all', plan: 'free' },
-  { key: 'diego', of: 'valentina', name: 'Diego Romero', sex: 'male', birth: '1985-06-11', height: 178, weight: 96, goal: 'lose', target: 2100, eats: 0.95, weekend: 1.4, adh: 0.86, kgWeek: 0.0, activity: 'light', act: ['walking'], actPerWeek: 2, share: 'all', plan: 'free' },
+  { key: 'diego', of: 'valentina', name: 'Diego Romero', sex: 'male', birth: '1985-06-11', height: 178, weight: 96, goal: 'lose', target: 2100, eats: 0.95, weekend: 1.4, adh: 0.86, kgWeek: 0.0, drinks: 'weekend', activity: 'light', act: ['walking'], actPerWeek: 2, share: 'all', plan: 'free' },
   { key: 'carla', of: 'valentina', name: 'Carla Méndez', sex: 'female', birth: '1998-09-02', height: 160, weight: 58, goal: 'maintain', target: 1900, eats: 1.0, weekend: 1.1, adh: 0.9, kgWeek: 0.0, protein: 0.6, activity: 'moderate', act: ['yoga', 'running'], actPerWeek: 3, share: 'meals_wellbeing', plan: 'premium' },
   { key: 'pablo', of: 'valentina', name: 'Pablo Giménez', sex: 'male', birth: '1974-01-30', height: 172, weight: 101, goal: 'lose', target: 2000, eats: 1.02, weekend: 1.2, adh: 0.8, kgWeek: -0.3, stopsAgo: 6, activity: 'sedentary', act: ['walking'], actPerWeek: 1, share: 'all', plan: 'free' },
   { key: 'sofia', of: 'valentina', name: 'Sofía Herrera', sex: 'female', birth: '1989-11-15', height: 168, weight: 79, goal: 'lose', target: 1500, eats: 1.0, weekend: 1.15, adh: 0.82, kgWeek: -0.35, sickAgo: 9, activity: 'light', act: ['walking', 'strength_training'], actPerWeek: 3, share: 'all', plan: 'free' },
