@@ -12,7 +12,8 @@ no se toca**, y lo que se haga en un ensayo no le llega a la cuenta real.
 | Lic. Martín Sosa | `martin@demo.ceres.app` | Pro · código `CE-MSSA27` | Segunda profesional del consultorio |
 | Vos | tu mail real | Premium | Tus 105+ días reales, copiados de una instantánea |
 | Lucía, Diego, Carla, Pablo… (10) | `<nombre>@demo.ceres.app` | Gratis → IA pagada por Valentina | Pacientes con patrones distintos (abajo) |
-| Tomás, Julieta | `tomas@`, `julieta@demo.ceres.app` | Gratis | Ven anuncios y no tienen IA; son tus pals |
+| Tomás | `tomas@demo.ceres.app` | Gratis | Ve anuncios y no tiene IA; es tu pal |
+| Julieta | `julieta@demo.ceres.app` | Premium | Toda la IA, sin anuncios y sin topes diarios en la demo; es tu pal |
 
 Contraseña de todas: la de `DEMO_PASSWORD` en `.env.demo` (por defecto
 `ceres-demo-2026`).

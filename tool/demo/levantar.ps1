@@ -173,6 +173,11 @@ $FnEnv = Join-Path $Work 'functions.env'
   "GEMINI_API_KEY=$($Cfg.GEMINI_API_KEY)"
   "ANTHROPIC_API_KEY=$($Cfg.ANTHROPIC_API_KEY)"
   'GEMINI_PROMPT_VERSION=v5'
+  # Sin topes diarios en la demo: se prueba Premium sin que una cuota corte
+  # la prueba a la mitad. Producción mantiene los suyos (20, 5 y 40).
+  'AI_DAILY_QUOTA=100000'
+  'WEEKLY_REPORT_QUOTA=100000'
+  'CARE_REPORT_QUOTA=100000'
 ) | Set-Content -Path $FnEnv -Encoding utf8
 Start-Process powershell -ArgumentList '-NoExit', '-Command', "Set-Location '$Raiz'; `$host.UI.RawUI.WindowTitle = 'Ceres demo · funciones'; supabase functions serve --workdir '$Work' --env-file '$FnEnv'"
 
@@ -248,6 +253,7 @@ Panel:       http://localhost:3100
 App (emulador): flutter run --dart-define-from-file=env/demo-emulador.json  (con `$env:CERES_DEMO='1')
   Vos:           $(if ($MiMail) { "$MiMail  /  $Password" } else { '(sin instantánea)' })
   Gratis:        tomas@demo.ceres.app  /  $Password   (ve anuncios, sin IA)
+  Premium:       julieta@demo.ceres.app  /  $Password   (toda la IA, sin anuncios ni topes)
   Paciente Pro:  lucia@demo.ceres.app  /  $Password
 Para verte en el panel: en la app, Perfil → Mi nutricionista → $($vale[0].care_code)
 Para bajar todo: ./tool/demo/bajar.ps1

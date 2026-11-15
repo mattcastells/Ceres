@@ -50,9 +50,12 @@ export const PACIENTES = [
 
 // Usuarios del plan gratis sin profesional: los que ven anuncios. Opcionalmente
 // quedan como pals de una cuenta real (`--amigo-de`).
+// Tomás es la cuenta Gratis de la demo (anuncios, sin IA) y Julieta la
+// Premium (toda la IA, sin anuncios). Los topes diarios de IA de la demo los
+// sube `levantar.ps1`, así que Premium no se corta en medio de una prueba.
 export const AMIGOS = [
   { key: 'tomas', name: 'Tomás Vega', sex: 'male', birth: '1994-03-03', height: 180, weight: 84, goal: 'lose', target: 2300, eats: 1.0, weekend: 1.2, adh: 0.8, kgWeek: -0.2, days: 14, activity: 'moderate', act: ['running'], actPerWeek: 3, plan: 'free', manualOnly: true },
-  { key: 'julieta', name: 'Julieta Sanz', sex: 'female', birth: '1995-08-21', height: 163, weight: 60, goal: 'maintain', target: 1900, eats: 1.0, weekend: 1.1, adh: 0.85, kgWeek: 0, days: 14, activity: 'moderate', act: ['pilates'], actPerWeek: 3, plan: 'free', manualOnly: true },
+  { key: 'julieta', name: 'Julieta Sanz', sex: 'female', birth: '1995-08-21', height: 163, weight: 60, goal: 'maintain', target: 1900, eats: 1.0, weekend: 1.1, adh: 0.85, kgWeek: 0, days: 14, activity: 'moderate', act: ['pilates'], actPerWeek: 3, plan: 'premium', manualOnly: true },
 ];
 
 // Lo que la nutricionista ya le escribió a algunos pacientes. Tu propia cuenta
