@@ -90,15 +90,20 @@ class ProfileScreen extends ConsumerWidget {
                             : 'Poné tu nombre',
                         style: NmTextStyles.from(NmType.h4, color: nm.text),
                       ),
-                      Text(
-                        profile.isDemo
-                            ? 'Modo demo · sin respaldo'
-                            : profile.email ?? '',
-                        style: NmTextStyles.from(
-                          NmType.caption,
-                          color: nm.textMuted,
+                      // Sin mail que mostrar no va la línea: un `Text('')`
+                      // ocupa su alto igual y empujaba el nombre hacia arriba,
+                      // descentrado respecto de la foto.
+                      if (profile.isDemo ||
+                          (profile.email?.trim().isNotEmpty ?? false))
+                        Text(
+                          profile.isDemo
+                              ? 'Modo demo · sin respaldo'
+                              : profile.email!.trim(),
+                          style: NmTextStyles.from(
+                            NmType.caption,
+                            color: nm.textMuted,
+                          ),
                         ),
-                      ),
                     ],
                   ),
                 ),
