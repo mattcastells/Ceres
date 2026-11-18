@@ -20,7 +20,6 @@ import '../../components/food/meal_photo_field.dart';
 import '../../components/system/buttons.dart';
 import '../../components/system/inputs.dart';
 import '../../components/system/overlays.dart';
-import '../../components/system/surfaces.dart';
 import '../../providers/app_providers.dart';
 import '../../providers/auth_providers.dart';
 import 'meal_draft.dart';
@@ -218,8 +217,6 @@ class _RecalculateSheetState extends ConsumerState<RecalculateSheet> {
   Widget build(BuildContext context) {
     final nm = context.nm;
     final draft = ref.watch(mealDraftProvider);
-    final repo = ref.watch(repositoryProvider);
-    final remaining = repo.quotaLimit - repo.quotaUsed;
     final photoPath = draft?.photoPath;
 
     return PopScope(
@@ -235,7 +232,9 @@ class _RecalculateSheetState extends ConsumerState<RecalculateSheet> {
           block: true,
           icon: PhosphorIcons.sparkle(),
           loading: _busy,
-          onPressed: remaining <= 0 || draft == null || draft.isEmpty
+          // Sin tope local: el límite diario lo hace cumplir el servidor y su
+          // error se muestra abajo.
+          onPressed: draft == null || draft.isEmpty
               ? null
               : _recalculate,
         ),
@@ -281,13 +280,7 @@ class _RecalculateSheetState extends ConsumerState<RecalculateSheet> {
               const SizedBox(height: NmSpace.s5),
               ErrorState(message: _error!.message, code: _error!.code.wire),
             ],
-            if (remaining <= 0) ...<Widget>[
-              const SizedBox(height: NmSpace.s4),
-              const InfoNote(
-                tone: NmNoteTone.caution,
-                text: 'Llegaste al límite de estimaciones de hoy.',
-              ),
-            ],
+
           ],
         ),
       ),

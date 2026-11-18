@@ -37,15 +37,12 @@ class _DailyBreakdownSheet extends ConsumerWidget {
 
     return NmSheet(
       title: '¿Cómo se calcula?',
-      subtitle: 'Todo el cálculo del día, a la vista',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
           FormulaRow(
-            expression:
-                'objetivo ajustado = objetivo base + calorías de ejercicio '
-                'aplicadas',
+            expression: 'Objetivo = objetivo base + ejercicio',
             values:
                 '${Fmt.integer(summary.adjustedTarget)} = '
                 '${Fmt.integer(summary.baseTarget)} + '
@@ -53,21 +50,22 @@ class _DailyBreakdownSheet extends ConsumerWidget {
           ),
           const SizedBox(height: NmSpace.s3),
           FormulaRow(
-            expression:
-                'calorías restantes = objetivo ajustado − calorías consumidas',
+            expression: 'Te quedan = objetivo − consumido',
             values:
                 '${Fmt.integer(summary.remainingKcal)} = '
                 '${Fmt.integer(summary.adjustedTarget)} − '
                 '${Fmt.integer(summary.consumedKcal)}',
           ),
           const SizedBox(height: NmSpace.s3),
+          // Con el porcentaje efectivo: con el ajuste apagado decía
+          // "0 = 300 × 0,50", una cuenta que no da.
           FormulaRow(
-            expression: 'calorías de ejercicio aplicadas = '
-                'calorías estimadas × ${Fmt.decimal2(summary.creditPercentage / 100)}',
+            expression: 'Ejercicio = actividad estimada × '
+                '${Fmt.decimal2(summary.effectiveCreditPercentage / 100)}',
             values:
                 '${Fmt.integer(summary.exerciseAppliedKcal)} = '
                 '${Fmt.integer(summary.exerciseEstimatedKcal)} × '
-                '${Fmt.decimal2(summary.creditPercentage / 100)}',
+                '${Fmt.decimal2(summary.effectiveCreditPercentage / 100)}',
           ),
           const SizedBox(height: NmSpace.s6),
           NmCard(
@@ -87,7 +85,7 @@ class _DailyBreakdownSheet extends ConsumerWidget {
                 ),
                 ValueRow(
                   label: 'Ajuste aplicado',
-                  caption: '${summary.creditPercentage} %',
+                  caption: '${summary.effectiveCreditPercentage} %',
                   value: '+${Fmt.kcal(summary.exerciseAppliedKcal)}',
                 ),
                 const NmDivider(),
@@ -104,23 +102,21 @@ class _DailyBreakdownSheet extends ConsumerWidget {
           if (profile.showNetCalories)
             ValueRow(
               label: 'Calorías netas',
-              caption: 'consumidas − aplicadas',
+              caption: 'consumido − ejercicio',
               value: Fmt.kcal(summary.netKcal),
               muted: true,
             )
           else
             InfoNote(
-              text: 'Las calorías netas (consumidas − aplicadas) suman '
-                  '${Fmt.kcal(summary.netKcal)}. Están ocultas por defecto '
-                  'porque no representan el balance del día por sí solas.',
+              text: 'Calorías netas (consumido − ejercicio): '
+                  '${Fmt.kcal(summary.netKcal)}.',
             ),
           const SizedBox(height: NmSpace.s4),
           const InfoNote(
             tone: NmNoteTone.caution,
             text: 'Las calorías de ejercicio son una estimación: los valores '
                 'MET son promedios poblacionales y no consideran composición '
-                'corporal ni eficiencia mecánica. Por eso el ajuste es '
-                'configurable y arranca en 0 %.',
+                'corporal ni eficiencia mecánica.',
           ),
           const SizedBox(height: NmSpace.s6),
           NmButton.secondary(

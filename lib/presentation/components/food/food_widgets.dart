@@ -15,7 +15,10 @@ import '../activity/badges.dart';
 import '../system/buttons.dart';
 import '../system/surfaces.dart';
 
-/// Sección de un slot en Inicio: título, total y botón "+".
+/// Un slot dentro de la tarjeta "Comidas": una fila fina con el nombre y un
+/// "+" chico, y debajo sus comidas. Va sin tarjeta propia porque la pone
+/// [MealsCard]; las cuatro juntas se leen como una sola cosa, igual que
+/// Actividad o Peso.
 class MealSection extends StatelessWidget {
   const MealSection({
     required this.slot,
@@ -42,59 +45,84 @@ class MealSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        Row(
-          children: <Widget>[
-            Icon(
-              NmIcons.mealSlot(slot),
-              size: NmIconSize.md,
-              color: nm.textMuted,
-            ),
-            const SizedBox(width: NmSpace.s2),
-            Expanded(
-              child: Text(
-                slot.label,
-                style: NmTextStyles.from(NmType.h4, color: nm.text),
+        Padding(
+          padding: const EdgeInsets.only(left: NmSpace.s4, right: NmSpace.s1),
+          child: Row(
+            children: <Widget>[
+              Icon(
+                NmIcons.mealSlot(slot),
+                size: NmIconSize.md,
+                color: nm.textMuted,
               ),
-            ),
-            Text(
-              Fmt.kcal(total),
-              style: NmTextStyles.from(NmType.bodySm, color: nm.textMuted).tnum,
-            ),
-            const SizedBox(width: NmSpace.s2),
-            NmIconButton(
-              icon: PhosphorIcons.plus(),
-              onPressed: onAdd,
-              tooltip: 'Agregar a ${slot.label.toLowerCase()}',
-              size: NmIconSize.md,
-            ),
-          ],
+              const SizedBox(width: NmSpace.s3),
+              Expanded(
+                child: Text(
+                  slot.label,
+                  style: NmTextStyles.from(
+                    NmType.body,
+                    color: nm.text,
+                  ).copyWith(fontWeight: FontWeight.w600),
+                ),
+              ),
+              // El total solo con dos comidas o más: con una sola repetía el
+              // número de la fila de abajo, y con ninguna era un "0 kcal".
+              if (meals.length > 1)
+                Text(
+                  Fmt.kcal(total),
+                  style: NmTextStyles.from(
+                    NmType.bodySm,
+                    color: nm.textMuted,
+                  ).tnum,
+                ),
+              IconButton(
+                onPressed: onAdd,
+                tooltip: 'Agregar a ${slot.label.toLowerCase()}',
+                icon: Icon(
+                  PhosphorIcons.plus(),
+                  size: NmIconSize.md,
+                  color: nm.isDark ? nm.accentText : nm.accent,
+                ),
+              ),
+            ],
+          ),
         ),
-        if (meals.isEmpty)
+        // Vacía no dice nada: el "+" ya invita a cargar.
+        for (final meal in meals)
           Padding(
-            padding: const EdgeInsets.only(
-              left: NmSpace.s6,
-              bottom: NmSpace.s2,
-            ),
-            child: Text(
-              'Sin registros',
-              style: NmTextStyles.from(NmType.caption, color: nm.textMuted),
-            ),
-          )
-        else
-          for (final meal in meals)
-            MealListItem(
+            padding: const EdgeInsets.only(left: NmSpace.s6),
+            child: MealListItem(
               meal: meal,
               onTap: () => onOpenMeal(meal),
-              onDelete: onDeleteMeal == null
-                  ? null
-                  : () => onDeleteMeal!(meal),
+              onDelete: onDeleteMeal == null ? null : () => onDeleteMeal!(meal),
               onDuplicate: onDuplicateMeal == null
                   ? null
                   : () => onDuplicateMeal!(meal),
             ),
+          ),
+        if (meals.isNotEmpty) const SizedBox(height: NmSpace.s1),
       ],
     );
   }
+}
+
+/// Las cuatro comidas del día en una tarjeta, separadas por una línea.
+class MealsCard extends StatelessWidget {
+  const MealsCard({required this.sections, super.key});
+
+  final List<Widget> sections;
+
+  @override
+  Widget build(BuildContext context) => NmCard(
+    padding: const EdgeInsets.symmetric(vertical: NmSpace.s1),
+    child: Column(
+      children: <Widget>[
+        for (final (i, section) in sections.indexed) ...<Widget>[
+          if (i > 0) const NmDivider(indent: NmSpace.s4),
+          section,
+        ],
+      ],
+    ),
+  );
 }
 
 /// Fila de una comida. Mismo patrón de swipe que `ActivityListItem`.
@@ -459,11 +487,7 @@ class FoodResultRow extends StatelessWidget {
 
 /// Tabla nutricional por 100 g y por porción (S-17).
 class NutritionTable extends StatelessWidget {
-  const NutritionTable({
-    required this.food,
-    required this.quantity,
-    super.key,
-  });
+  const NutritionTable({required this.food, required this.quantity, super.key});
 
   final Food food;
 
@@ -482,8 +506,9 @@ class NutritionTable extends StatelessWidget {
     // porción daba "por 100 g: 7.000 kcal" para un huevo de 70. Un disparate
     // con forma de dato, que es justo lo que la app no se permite.
     const unidadesDePeso = <String>{'g', 'gr', 'gramos', 'ml', 'cc'};
-    final mostrarPor100 =
-        unidadesDePeso.contains(food.servingUnit.trim().toLowerCase());
+    final mostrarPor100 = unidadesDePeso.contains(
+      food.servingUnit.trim().toLowerCase(),
+    );
 
     Widget row(String label, double perServing, String unit) => Padding(
       padding: const EdgeInsets.symmetric(vertical: NmSpace.s2),
@@ -566,8 +591,9 @@ class AiEstimateBanner extends StatelessWidget {
   Widget build(BuildContext context) => InfoNote(
     tone: NmNoteTone.caution,
     icon: PhosphorIcons.sparkle(),
-    text: 'Estimación de IA — revisá antes de guardar. La estimación de '
-        'porciones a partir de una foto tiene un error típico de ±25 %.',
+    text:
+        'Estimación de IA: revisá antes de guardar. Con una foto, las '
+        'porciones tienen un error típico de ±25 %.',
   );
 }
 
@@ -616,11 +642,8 @@ class WeightRow extends StatelessWidget {
         ),
         if (delta != 0)
           Text(
-            '${Fmt.signedDecimal1(delta)} kg',
-            style: NmTextStyles.from(
-              NmType.caption,
-              color: nm.textMuted,
-            ).tnum,
+            Fmt.signedWeight(delta, units),
+            style: NmTextStyles.from(NmType.caption, color: nm.textMuted).tnum,
           ),
         const SizedBox(width: NmSpace.s2),
         NmButton.ghost(label: 'Actualizar', onPressed: onLog),

@@ -15,6 +15,7 @@ import '../../components/food/meal_photo.dart';
 import '../../components/system/buttons.dart';
 import '../../components/system/nm_screen.dart';
 import '../../components/system/surfaces.dart';
+import '../../providers/app_providers.dart';
 import '../../providers/auth_providers.dart';
 
 /// Hasta cuántos días atrás se puede mirar el día de un pal.
@@ -32,14 +33,12 @@ const int palDayHistoryDays = 7;
 /// veía aparecer nunca —ni saliendo de la pantalla y volviendo— hasta cerrar y
 /// reabrir la app. Las comidas estaban en el servidor desde el momento en que se
 /// cargaron; lo que no se rehacía era la consulta.
-final palDayProvider =
-    FutureProvider.autoDispose.family<PalDay?, ({String userId, DateTime date})>(
-  (ref, args) async {
-    final client = ref.watch(palsClientProvider);
-    if (client == null) return null;
-    return client.dayOf(args.userId, args.date);
-  },
-);
+final palDayProvider = FutureProvider.autoDispose
+    .family<PalDay?, ({String userId, DateTime date})>((ref, args) async {
+      final client = ref.watch(palsClientProvider);
+      if (client == null) return null;
+      return client.dayOf(args.userId, args.date);
+    });
 
 class PalDayScreen extends ConsumerStatefulWidget {
   const PalDayScreen({required this.userId, this.name, super.key});
@@ -67,9 +66,7 @@ class _PalDayScreenState extends ConsumerState<PalDayScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final day = ref.watch(
-      palDayProvider((userId: widget.userId, date: _date)),
-    );
+    final day = ref.watch(palDayProvider((userId: widget.userId, date: _date)));
     final isToday = isSameDay(_date, today());
 
     return NmScreen(
@@ -177,20 +174,23 @@ class _DaySelector extends StatelessWidget {
 ///
 /// El orden es el mismo siempre. Que una categoría se corra de lugar según lo
 /// que haya cargado obliga a leer todo de nuevo cada vez.
-class _Day extends StatelessWidget {
+class _Day extends ConsumerWidget {
   const _Day({required this.day});
 
   final PalDay day;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final nm = context.nm;
+    final weightToday =
+        day.weightDate == null || isSameDay(day.weightDate!, day.date);
 
     final shared = <String>[
-      'lo que comió',
+      if (day.mealsShared) 'lo que comió',
       if (day.waterGlasses != null) 'el agua',
-      'si se movió',
+      if (day.activityShared) 'si se movió',
       if (day.sleepMinutes != null) 'el sueño',
+      if (day.weightKg != null) 'su peso',
     ];
 
     return Column(
@@ -202,13 +202,14 @@ class _Day extends StatelessWidget {
         // Deporte, dos cajas más abajo. El total de calorías se queda porque no
         // está en ningún otro lado —la categoría Comida muestra cada comida,
         // no la suma—; el de actividad se fue porque sí lo estaba.
-        NmCard(
-          child: ValueRow(
-            label: 'Comió',
-            value: Fmt.kcal(day.totalKcal),
-            emphasis: true,
+        if (day.mealsShared)
+          NmCard(
+            child: ValueRow(
+              label: 'Comió',
+              value: Fmt.kcal(day.totalKcal),
+              emphasis: true,
+            ),
           ),
-        ),
 
         // ── Comida ───────────────────────────────────────────────────────
         if (day.meals.isNotEmpty)
@@ -231,7 +232,8 @@ class _Day extends StatelessWidget {
             title: 'Agua',
             child: ValueRow(
               label: 'Tomó',
-              value: '${day.waterGlasses} '
+              value:
+                  '${day.waterGlasses} '
                   '${day.waterGlasses == 1 ? 'vaso' : 'vasos'}',
               emphasis: true,
             ),
@@ -242,51 +244,53 @@ class _Day extends StatelessWidget {
         // si lo prendió. La categoría se muestra igual: "todavía no se movió"
         // también es información del día, y si desapareciera cuando no hay
         // nada, su ausencia se leería como "no lo comparte".
-        _Category(
-          icon: PhosphorIcons.personSimpleRun(),
-          title: 'Deporte',
-          child: day.activities.isNotEmpty
-              ? Column(
-                  children: <Widget>[
-                    for (final activity in day.activities)
+        if (day.activityShared)
+          _Category(
+            icon: PhosphorIcons.personSimpleRun(),
+            title: 'Actividad',
+            child: day.activities.isNotEmpty
+                ? Column(
+                    children: <Widget>[
+                      for (final activity in day.activities)
+                        ValueRow(
+                          label: activity.name,
+                          caption: Fmt.duration(activity.minutes),
+                          value: activity.kcal == null
+                              ? '—'
+                              : Fmt.kcal(activity.kcal!),
+                        ),
+                    ],
+                  )
+                : day.activityCount == 0
+                ? const ValueRow(
+                    label: 'Se movió',
+                    value: 'Todavía no',
+                    muted: true,
+                  )
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
                       ValueRow(
-                        label: activity.name,
-                        caption: Fmt.duration(activity.minutes),
-                        value: activity.kcal == null
-                            ? '—'
-                            : Fmt.kcal(activity.kcal!),
+                        label: 'Sesiones',
+                        value:
+                            '${day.activityCount} · '
+                            '${Fmt.duration(day.activityMinutes)}',
+                        emphasis: true,
                       ),
-                  ],
-                )
-              : day.activityCount == 0
-              ? const ValueRow(
-                  label: 'Se movió',
-                  value: 'Todavía no',
-                  muted: true,
-                )
-              : Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    ValueRow(
-                      label: 'Sesiones',
-                      value: '${day.activityCount} · '
-                          '${Fmt.duration(day.activityMinutes)}',
-                      emphasis: true,
-                    ),
-                    const SizedBox(height: NmSpace.s1),
-                    // Se dice por qué no hay más: sin esto, una categoría con
-                    // un solo número se lee como que esa persona hizo una sola
-                    // cosa, no como que eligió no contar cuáles.
-                    Text(
-                      'Comparte el total, no cada actividad.',
-                      style: NmTextStyles.from(
-                        NmType.caption,
-                        color: nm.textMuted,
+                      const SizedBox(height: NmSpace.s1),
+                      // Se dice por qué no hay más: sin esto, una categoría con
+                      // un solo número se lee como que esa persona hizo una sola
+                      // cosa, no como que eligió no contar cuáles.
+                      Text(
+                        'Comparte el total, no cada actividad.',
+                        style: NmTextStyles.from(
+                          NmType.caption,
+                          color: nm.textMuted,
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-        ),
+                    ],
+                  ),
+          ),
 
         // ── Sueño ────────────────────────────────────────────────────────
         if (day.sleepMinutes != null)
@@ -310,10 +314,30 @@ class _Day extends StatelessWidget {
             ),
           ),
 
+        // ── Peso ─────────────────────────────────────────────────────────
+        // El último registrado hasta este día; si no es de ese día, se dice
+        // de cuándo es.
+        if (day.weightKg != null)
+          _Category(
+            icon: PhosphorIcons.scales(),
+            title: 'Peso',
+            child: ValueRow(
+              label: weightToday ? 'Pesó' : 'Último registro',
+              caption: weightToday ? null : shortDay(day.weightDate!),
+              value: Fmt.weight(
+                day.weightKg!,
+                // En las unidades de quien mira.
+                ref.watch(profileProvider).unitSystem,
+              ),
+              emphasis: true,
+            ),
+          ),
+
         const SizedBox(height: NmSpace.s6),
         Text(
-          'Esto es lo que decidió compartir: ${shared.join(', ')}. '
-          'Su peso y sus medidas nunca se comparten.',
+          shared.isEmpty
+              ? 'Por ahora no comparte nada.'
+              : 'Comparte ${shared.join(', ')}.',
           style: NmTextStyles.from(NmType.caption, color: nm.textMuted),
         ),
       ],

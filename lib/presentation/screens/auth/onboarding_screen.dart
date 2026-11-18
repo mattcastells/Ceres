@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -15,6 +17,7 @@ import '../../../domain/calculations/goal_presets.dart';
 import '../../../domain/calculations/tdee.dart';
 import '../../../domain/enums/enums.dart';
 import '../../../domain/models/ai_calorie_target.dart';
+import '../../../domain/models/care_grant.dart';
 import '../../../domain/repositories/repositories.dart';
 import '../../../domain/services/goal_planner.dart';
 import '../../components/system/buttons.dart';
@@ -23,6 +26,7 @@ import '../../components/system/nm_screen.dart';
 import '../../components/system/overlays.dart';
 import '../../components/system/surfaces.dart';
 import '../../providers/app_providers.dart';
+import '../../providers/auth_providers.dart';
 import '../profile/dietary_screen.dart';
 import '../profile/goal_picker_screen.dart';
 
@@ -99,9 +103,26 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   String? _heightError;
   String? _weightError;
 
+  /// Una invitación con los datos de la primera consulta (migración 60), si
+  /// la nutricionista la mandó con el formulario completo. Se ofrece arriba
+  /// del primer paso; aceptarla carga esos datos como punto de partida.
+  CareInvite? _invite;
+  bool _inviteDismissed = false;
+  bool _accepting = false;
+  String? _inviteError;
+
+  /// Quién cargó los datos con los que arrancó cada paso, una vez aceptada.
+  String? _proposedBy;
+
+  /// Con la invitación aceptada y los datos completos, en vez de los seis
+  /// pasos se muestra un resumen de una pantalla: la cuenta ya la configuró la
+  /// nutricionista. "Revisar paso por paso" lo apaga y vuelve al paso 1.
+  bool _showSummary = false;
+
   @override
   void initState() {
     super.initState();
+    unawaited(_loadInvite());
     // Se arranca con lo que ya haya. Quien vuelve porque le falta un dato no
     // tiene por qué volver a escribir los otros tres, y quien entra desde otro
     // teléfono se encuentra lo que trajeron las tablas.
@@ -127,6 +148,102 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     _weight.dispose();
     _manualTarget.dispose();
     super.dispose();
+  }
+
+  // ── La invitación con datos ─────────────────────────────────────────────
+
+  /// Se le pregunta al cliente y no a `careInvitesProvider`: ese es
+  /// `autoDispose` y leerlo sin nadie escuchando puede cerrarlo a mitad del
+  /// pedido. Si falla, el onboarding sigue igual: la invitación también está
+  /// en Perfil → Mi nutricionista.
+  Future<void> _loadInvite() async {
+    final client = ref.read(careClientProvider);
+    if (client == null) return;
+    final invites = await client.invites();
+    if (!mounted) return;
+    for (final invite in invites) {
+      final intake = invite.intake;
+      if (intake != null && !intake.isEmpty) {
+        setState(() => _invite = invite);
+        return;
+      }
+    }
+  }
+
+  /// Acepta la invitación y usa sus datos como punto de partida.
+  ///
+  /// Nada se guarda como dato propio de la persona en este momento salvo las
+  /// restricciones (el paso 4 las guarda al tocar, igual que en Perfil): el
+  /// resto queda precargado en cada paso y se escribe recién cuando ella lo
+  /// confirma con "Continuar", como si lo hubiera escrito.
+  Future<void> _acceptInvite() async {
+    final invite = _invite;
+    final intake = invite?.intake;
+    final client = ref.read(careClientProvider);
+    if (invite == null || intake == null || client == null) return;
+
+    setState(() {
+      _accepting = true;
+      _inviteError = null;
+    });
+    try {
+      await client.acceptInvite(invite.id);
+      ref
+        ..invalidate(careInvitesProvider)
+        ..invalidate(careGrantsProvider);
+
+      if (intake.dietaryFlags.isNotEmpty) {
+        final profile = ref.read(profileProvider);
+        await ref
+            .read(repositoryProvider)
+            .updateProfile(
+              profile.copyWith(
+                dietaryFlags: <DietaryFlag>{
+                  ...profile.dietaryFlags,
+                  ...intake.dietaryFlags,
+                }.toList(),
+              ),
+            );
+      }
+      if (!mounted) return;
+
+      final birth = intake.birthDate;
+      final weight = intake.weightKg;
+      setState(() {
+        if (intake.sex != null) _sex = intake.sex!;
+        if (birth != null && ageFromBirthDate(birth) >= 13) _birthDate = birth;
+        if (intake.heightCm != null) {
+          _height.text = intake.heightCm!.round().toString();
+        }
+        if (weight != null) {
+          final text = weight.toStringAsFixed(1).replaceAll('.', ',');
+          _weight.text = text.endsWith(',0')
+              ? text.substring(0, text.length - 2)
+              : text;
+        }
+        if (intake.activityLevel != null) _level = intake.activityLevel!;
+        if (intake.goalType != null) _goalType = intake.goalType;
+        // El número de la profesional entra como "escrito a mano": nadie lo
+        // calculó con la fórmula y tampoco lo propuso la IA.
+        if (intake.calorieTarget != null) {
+          _manual = true;
+          _manualTarget.text = intake.calorieTarget.toString();
+        }
+        _proposedBy = invite.professionalName.isEmpty
+            ? 'tu nutricionista'
+            : invite.professionalName;
+        _invite = null;
+        _accepting = false;
+        // Todo lo que los pasos exigen ya está: alcanza con confirmarlo.
+        _showSummary = _stepsComplete;
+      });
+    } on AppError catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _inviteError = error.message;
+        _accepting = false;
+      });
+    }
   }
 
   // ── Validación ──────────────────────────────────────────────────────────
@@ -258,6 +375,38 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     _ => _confirmedTarget != null,
   };
 
+  /// Cada paso tiene lo que necesita para continuar. Se mira con las mismas
+  /// reglas de `_canContinue`, no con unas propias: si el resumen dejara pasar
+  /// algo que un paso rechaza, se guardaría un dato que la app no acepta.
+  bool get _stepsComplete {
+    final current = _step;
+    try {
+      for (var s = 0; s < OnboardingScreen.totalSteps; s++) {
+        _step = s;
+        if (!_canContinue) return false;
+      }
+      return true;
+    } finally {
+      _step = current;
+    }
+  }
+
+  /// "Empezar" desde el resumen: guarda cada paso con el mismo código que
+  /// "Continuar" y termina como el último (que lleva a Inicio).
+  Future<void> _startWithProposal() async {
+    if (_saving || !_stepsComplete) return;
+    final repo = ref.read(repositoryProvider);
+    setState(() => _saving = true);
+    try {
+      for (var s = 0; s < OnboardingScreen.totalSteps; s++) {
+        _step = s;
+        await _saveStep(repo);
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
   // ── Guardado ────────────────────────────────────────────────────────────
 
   /// Guarda el paso que se está dejando atrás y avanza.
@@ -271,6 +420,25 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     final repo = ref.read(repositoryProvider);
     setState(() => _saving = true);
 
+    // Con `finally`: si una escritura lanza, el botón vuelve a estar
+    // disponible. Antes `_saving` quedaba en true para siempre y el paso no
+    // tenía cómo seguir — en una pantalla de la que no se sale.
+    var advance = false;
+    try {
+      await _saveStep(repo);
+      advance = _step < OnboardingScreen.totalSteps - 1;
+    } finally {
+      if (mounted) {
+        setState(() {
+          _saving = false;
+          if (advance) _step++;
+        });
+      }
+    }
+  }
+
+  /// Lo que escribe cada paso al dejarlo. El último cierra el alta.
+  Future<void> _saveStep(CeresRepositories repo) async {
     switch (_step) {
       case 0:
         await repo.updateProfile(
@@ -301,14 +469,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         break;
       default:
         await _finish(repo);
-        return;
     }
-
-    if (!mounted) return;
-    setState(() {
-      _saving = false;
-      _step++;
-    });
   }
 
   Future<void> _finish(CeresRepositories repo) async {
@@ -388,8 +549,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       builder: (context) => NmDialog(
         title: '¿Salir sin completar?',
         body:
-            'Volvés a la bienvenida. Tu cuenta y lo que tengas cargado quedan '
-            'como están, y podés entrar de nuevo cuando quieras.',
+            'Volvés a la bienvenida. Tu cuenta queda como está y podés entrar '
+            'cuando quieras.',
         actions: <Widget>[
           NmButton.ghost(
             label: 'Seguir acá',
@@ -409,9 +570,111 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     context.go(Routes.welcome);
   }
 
+  /// La cuenta que dejó lista la nutricionista, en una pantalla.
+  Widget _buildSummary(BuildContext context) {
+    final nm = context.nm;
+    final units = ref.watch(profileProvider).unitSystem;
+    final flags = ref.watch(profileProvider).dietaryFlags;
+    final target = _confirmedTarget;
+
+    Widget row(String label, String value) => Padding(
+      padding: const EdgeInsets.symmetric(vertical: NmSpace.s2),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Expanded(
+            child: Text(
+              label,
+              style: NmTextStyles.from(NmType.bodySm, color: nm.textMuted),
+            ),
+          ),
+          const SizedBox(width: NmSpace.s4),
+          Flexible(
+            child: Text(
+              value,
+              textAlign: TextAlign.right,
+              style: NmTextStyles.from(NmType.body, color: nm.text),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    return NmScreen(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          const SizedBox(height: NmSpace.s8),
+          Text(
+            '$_proposedBy configuró tu cuenta',
+            style: NmTextStyles.from(NmType.h1, color: nm.text),
+          ),
+          const SizedBox(height: NmSpace.s6),
+          NmCard(
+            child: Column(
+              children: <Widget>[
+                row('Sexo biológico', _sex.label),
+                if (_birthDate != null)
+                  row(
+                    'Edad',
+                    '${ageFromBirthDate(_birthDate!)} años',
+                  ),
+                if (_heightCm != null)
+                  row('Altura', Fmt.height(_heightCm!, units)),
+                if (_weightKg != null)
+                  row('Peso de hoy', Fmt.weight(_weightKg!, units)),
+                row('Actividad', _level.label),
+                if (_goalType != null) row('Objetivo', _goalType!.label),
+                if (flags.isNotEmpty)
+                  row('Restricciones', flags.map((f) => f.label).join(', ')),
+              ],
+            ),
+          ),
+          const SizedBox(height: NmSpace.s4),
+          if (target != null)
+            NmCard(
+              child: Column(
+                // `stretch`: la tarjeta va de borde a borde, como la de arriba.
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: <Widget>[
+                  Text(
+                    Fmt.integer(target),
+                    style: NmTextStyles.from(NmType.display, color: nm.text),
+                  ),
+                  Text(
+                    'kcal por día',
+                    style: NmTextStyles.from(NmType.bodySm, color: nm.textMuted),
+                  ),
+                ],
+              ),
+            ),
+          const SizedBox(height: NmSpace.s8),
+          NmButton(
+            label: 'Empezar',
+            loading: _saving,
+            onPressed: _saving ? null : _startWithProposal,
+          ),
+          const SizedBox(height: NmSpace.s3),
+          Center(
+            child: NmButton.ghost(
+              label: 'Revisar paso por paso',
+              onPressed: _saving
+                  ? null
+                  : () => setState(() {
+                      _showSummary = false;
+                      _step = 0;
+                    }),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final nm = context.nm;
+    if (_showSummary) return _buildSummary(context);
 
     return NmScreen(
       child: Column(
@@ -420,6 +683,16 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           const SizedBox(height: NmSpace.s8),
           StepIndicator(current: _step + 1, total: OnboardingScreen.totalSteps),
           const SizedBox(height: NmSpace.s6),
+          if (_invite != null && !_inviteDismissed && _step == 0) ...<Widget>[
+            _InviteWithData(
+              invite: _invite!,
+              busy: _accepting,
+              error: _inviteError,
+              onAccept: _acceptInvite,
+              onLater: () => setState(() => _inviteDismissed = true),
+            ),
+            const SizedBox(height: NmSpace.s6),
+          ],
           Text(
             switch (_step) {
               0 => 'Empecemos por vos',
@@ -435,23 +708,19 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           Text(
             switch (_step) {
               0 =>
-                'La edad y el sexo entran en la fórmula del metabolismo basal. '
-                    'No se comparten con nadie, ni con tus pals.',
-              1 =>
-                'Con esto y lo anterior ya podemos calcular cuánto gastás. El '
-                    'peso lo vas a poder registrar todos los días.',
-              2 =>
-                'Es el multiplicador que convierte tu metabolismo basal en el '
-                    'gasto del día. Elegí lo que hacés en una semana normal.',
+                'La edad y el sexo entran en el cálculo de tu metabolismo '
+                    'basal. No se comparten con nadie.',
+              1 => 'Con esto calculamos cuánto gastás por día.',
+              2 => 'Elegí lo que hacés en una semana normal.',
               3 =>
-                'Si no hay nada, seguí de largo. Esto no cambia tus calorías: '
-                    'cambia lo que la IA te puede proponer para comer.',
+                'Si no hay nada, seguí de largo. No cambia tus calorías, solo '
+                    'lo que la IA te propone para comer.',
               4 =>
                 'De acá salen tus calorías, tus macros y tu objetivo semanal '
                     'de actividad. Se cambia cuando quieras.',
               _ =>
-                'Esto es lo que sale de tus datos. Mirálo, elegí a qué ritmo '
-                    'querés ir, y si no te cierra escribí el tuyo.',
+                'Lo que sale de tus datos. Elegí a qué ritmo ir, o escribí '
+                    'tu número.',
             },
             style: NmTextStyles.from(NmType.bodySm, color: nm.textMuted),
           ),
@@ -604,6 +873,76 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   }
 }
 
+/// La invitación de una nutricionista que ya cargó los datos de la primera
+/// consulta. Va arriba del primer paso: aceptarla precarga todo el alta; "Más
+/// tarde" la deja en Perfil → Mi nutricionista, sin los datos.
+class _InviteWithData extends StatelessWidget {
+  const _InviteWithData({
+    required this.invite,
+    required this.busy,
+    required this.error,
+    required this.onAccept,
+    required this.onLater,
+  });
+
+  final CareInvite invite;
+  final bool busy;
+  final String? error;
+  final VoidCallback onAccept;
+  final VoidCallback onLater;
+
+  @override
+  Widget build(BuildContext context) {
+    final nm = context.nm;
+    final name = invite.professionalName.isEmpty
+        ? 'Tu nutricionista'
+        : invite.professionalName;
+
+    return NmCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            '$name cargó tus datos',
+            style: NmTextStyles.from(NmType.h4, color: nm.text),
+          ),
+          if (invite.orgName != null) ...<Widget>[
+            const SizedBox(height: NmSpace.s1),
+            Text(
+              invite.orgName!,
+              style: NmTextStyles.from(NmType.caption, color: nm.textMuted),
+            ),
+          ],
+          if (error != null) ...<Widget>[
+            const SizedBox(height: NmSpace.s2),
+            Text(
+              error!,
+              style: NmTextStyles.from(NmType.bodySm, color: nm.danger),
+            ),
+          ],
+          const SizedBox(height: NmSpace.s3),
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: NmButton(
+                  label: 'Aceptar',
+                  loading: busy,
+                  onPressed: busy ? null : onAccept,
+                ),
+              ),
+              const SizedBox(width: NmSpace.s3),
+              NmButton.ghost(
+                label: 'Más tarde',
+                onPressed: busy ? null : onLater,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _StepIdentity extends StatelessWidget {
   const _StepIdentity({
     required this.sex,
@@ -641,8 +980,7 @@ class _StepIdentity extends StatelessWidget {
         ),
         const SizedBox(height: NmSpace.s2),
         const InfoNote(
-          text: 'Se usa solo para la fórmula de metabolismo basal. Con "Otro" '
-              'se toma el promedio de las dos.',
+          text: 'Con "Otro" se toma el promedio de las dos fórmulas.',
         ),
         const SizedBox(height: NmSpace.s6),
         NmDateField(
@@ -650,6 +988,7 @@ class _StepIdentity extends StatelessWidget {
           value: birthDate,
           error: error,
           helper: age == null ? null : '$age años',
+          firstDate: earliestBirthDate(),
           lastDate: DateTime.now(),
           // No es una suposición sobre nadie: es dónde abrir el calendario para
           // que el primer gesto sea elegir y no retroceder treinta años.
@@ -934,8 +1273,8 @@ class _StepPlan extends StatelessWidget {
           const NmSectionHeader(title: 'A qué ritmo'),
           if (plan != null) ...<Widget>[
             Text(
-              'Cada opción es una parte de tu gasto diario, que hoy es de '
-              '${Fmt.kcal(plan!.tdee)}. Los kilos por semana salen de ahí.',
+              'Cada opción es una parte de tu gasto diario '
+              '(${Fmt.kcal(plan!.tdee)}).',
               style: NmTextStyles.from(NmType.caption, color: nm.textMuted),
             ),
             const SizedBox(height: NmSpace.s3),
@@ -1067,8 +1406,7 @@ class _StepPlan extends StatelessWidget {
         const SizedBox(height: NmSpace.s4),
         const InfoNote(
           text: 'Es un punto de partida, no una indicación médica. Lo cambiás '
-              'cuando quieras desde Perfil, y los días ya registrados '
-              'conservan el objetivo con el que fueron cargados.',
+              'cuando quieras desde Perfil.',
         ),
       ],
     );

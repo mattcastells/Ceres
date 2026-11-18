@@ -101,8 +101,8 @@ void main() {
     await _settle(tester);
 
     expect(_y(tester, 'COMIDA'), lessThan(_y(tester, 'AGUA')));
-    expect(_y(tester, 'AGUA'), lessThan(_y(tester, 'DEPORTE')));
-    expect(_y(tester, 'DEPORTE'), lessThan(_y(tester, 'SUEÑO')));
+    expect(_y(tester, 'AGUA'), lessThan(_y(tester, 'ACTIVIDAD')));
+    expect(_y(tester, 'ACTIVIDAD'), lessThan(_y(tester, 'SUEÑO')));
 
     // Las comidas quedan adentro de Comida, por momento del día.
     expect(_y(tester, 'COMIDA'), lessThan(_y(tester, 'Desayuno')));
@@ -120,9 +120,9 @@ void main() {
 
     expect(find.text('AGUA'), findsNothing);
     expect(find.text('SUEÑO'), findsNothing);
-    // El agregado de actividad se comparte siempre, así que Deporte está —y
+    // El agregado de actividad se comparte siempre, así que Actividad está —y
     // dice que todavía no se movió, que también es información del día.
-    expect(find.text('DEPORTE'), findsOneWidget);
+    expect(find.text('ACTIVIDAD'), findsOneWidget);
     expect(find.text('COMIDA'), findsOneWidget);
 
     // "Se movió" una sola vez, en su categoría. Arriba había otro igual, en la
@@ -130,6 +130,33 @@ void main() {
     expect(find.text('Se movió'), findsOneWidget);
     expect(find.text('Todavía no'), findsOneWidget);
 
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('sin comida ni actividad compartidas, no aparecen', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _wrap(
+        PalDay(
+          userId: _userId,
+          date: today(),
+          meals: const <PalMeal>[],
+          activityMinutes: 0,
+          activityCount: 0,
+          waterGlasses: 5,
+          mealsShared: false,
+          activityShared: false,
+        ),
+      ),
+    );
+    await _settle(tester);
+
+    expect(find.text('COMIDA'), findsNothing);
+    expect(find.text('Comió'), findsNothing);
+    expect(find.text('ACTIVIDAD'), findsNothing);
+    expect(find.text('AGUA'), findsOneWidget);
+    expect(find.text('Comparte el agua.'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 

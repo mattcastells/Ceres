@@ -29,13 +29,15 @@ class DayContextCard extends ConsumerWidget {
   const DayContextCard({
     required this.date,
     required this.onTapSick,
-    required this.onTapRest,
     super.key,
   });
 
   final DateTime date;
+
+  /// Tocar la fila de enfermedad (no el checkbox) abre la hoja para la
+  /// gravedad y la nota. El descanso no tiene nada que completar: su fila
+  /// entera es el checkbox.
   final VoidCallback onTapSick;
-  final VoidCallback onTapRest;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -54,7 +56,7 @@ class DayContextCard extends ConsumerWidget {
             // La nota es lo que hace útil la marca dos semanas después: sin
             // ella queda "estuviste enfermo" y con ella queda de qué.
             detail: enfermo == null
-                ? 'No lo marcaste'
+                ? null
                 : <String>[
                     if (enfermo.severity != null) enfermo.severity!.label,
                     if (enfermo.note?.trim().isNotEmpty ?? false)
@@ -62,16 +64,19 @@ class DayContextCard extends ConsumerWidget {
                   ].join(' · '),
             marcado: enfermo != null,
             onTap: onTapSick,
+            onToggle: (on) => repo.setMarker(
+              date: date,
+              kind: DayMarkerKind.sick,
+              on: on,
+            ),
           ),
           const NmDivider(),
           _Fila(
             icon: PhosphorIcons.couch(),
             label: 'Descanso planificado',
-            detail: descanso == null
-                ? 'No lo marcaste'
-                : 'No cuenta como día sin actividad',
+            detail: descanso == null ? null : 'No cuenta como día sin actividad',
             marcado: descanso != null,
-            onTap: onTapRest,
+            onToggle: (on) => repo.setRestDay(date, on),
           ),
         ],
       ),
@@ -85,28 +90,37 @@ class _Fila extends StatelessWidget {
     required this.label,
     required this.detail,
     required this.marcado,
-    required this.onTap,
+    required this.onToggle,
+    this.onTap,
   });
 
   final IconData icon;
   final String label;
-  final String detail;
+
+  /// Solo cuando está marcado: sin marcar, la fila es el nombre y el checkbox.
+  final String? detail;
   final bool marcado;
-  final VoidCallback onTap;
+  final ValueChanged<bool> onToggle;
+
+  /// Qué pasa al tocar la fila fuera del checkbox. Sin esto, la fila entera
+  /// marca y desmarca.
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final nm = context.nm;
     final color = marcado ? nm.caution : nm.textMuted;
+    final hayDetalle = detail != null && detail!.isNotEmpty;
 
     return Semantics(
       button: true,
       // El estado va en la etiqueta y no solo en el color: "marcado" y "no
       // marcado" tienen que llegar igual a un lector de pantalla.
-      label: '$label, ${marcado ? "marcado" : "sin marcar"}. $detail',
+      label: '$label, ${marcado ? "marcado" : "sin marcar"}'
+          '${hayDetalle ? ". $detail" : ""}',
       excludeSemantics: true,
       child: InkWell(
-        onTap: onTap,
+        onTap: onTap ?? () => onToggle(!marcado),
         borderRadius: NmRadius.brMd,
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: NmSpace.s3),
@@ -141,24 +155,22 @@ class _Fila extends StatelessWidget {
                         color: marcado ? nm.text : nm.textMuted,
                       ),
                     ),
-                    Text(
-                      detail,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: NmTextStyles.from(
-                        NmType.caption,
-                        color: nm.textMuted,
+                    if (hayDetalle)
+                      Text(
+                        detail!,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: NmTextStyles.from(
+                          NmType.caption,
+                          color: nm.textMuted,
+                        ),
                       ),
-                    ),
                   ],
                 ),
               ),
-              Icon(
-                marcado
-                    ? PhosphorIcons.checkCircle(PhosphorIconsStyle.fill)
-                    : PhosphorIcons.plusCircle(),
-                size: NmIconSize.md,
-                color: color,
+              Checkbox(
+                value: marcado,
+                onChanged: (v) => onToggle(v ?? false),
               ),
             ],
           ),

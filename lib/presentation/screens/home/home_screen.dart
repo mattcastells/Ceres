@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
+import '../../../core/config/feature_flags.dart';
 import '../../../core/router/routes.dart';
 import '../../../core/theme/nm_theme.dart';
 import '../../../core/theme/text_styles.dart';
@@ -11,6 +12,7 @@ import '../../../core/utils/dates.dart';
 import '../../../core/utils/formats.dart';
 import '../../../domain/enums/enums.dart';
 import '../../components/activity/activity_cards.dart';
+import '../../components/care/care_feedback_card.dart';
 import '../../components/charts/macro_bar.dart';
 import '../../components/feedback/day_context_card.dart';
 import '../../components/feedback/feedback.dart';
@@ -23,6 +25,8 @@ import '../../components/system/surfaces.dart';
 import '../../components/water/alcohol_card.dart';
 import '../../components/water/water_card.dart';
 import '../../providers/app_providers.dart';
+import '../../providers/auth_providers.dart';
+import '../../providers/care_providers.dart';
 import '../profile/calorie_target_sheet.dart';
 import '../weight/weight_sheet.dart';
 import 'add_sheet.dart';
@@ -77,8 +81,25 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               child: RefreshIndicator(
                 color: nm.accent,
                 backgroundColor: nm.surface,
+                // Lo mismo que hace volver a la app: traer de las tablas lo
+                // cargado desde otro dispositivo. Antes llamaba a
+                // `flushQueue`, que marcaba como sincronizado lo local y no
+                // traía nada — el gesto prometía actualizar y no actualizaba.
+                // Sin servidor (`relationalSyncProvider` null) o sin sesión no
+                // hay de dónde traer y el indicador se cierra solo.
                 onRefresh: () async {
-                  await repo.flushQueue();
+                  if (!repo.hasSession) return;
+                  // Lo de la nutricionista va en paralelo y sin esperarlo: el indicador cierra con los registros, que son
+                  // lo que la persona vino a buscar al tirar.
+                  refreshServerState(ref);
+                  await ref
+                      .read(relationalSyncProvider)
+                      ?.refresh(
+                        apply: repo.importDocument,
+                        // Lo pidió la persona: el intervalo mínimo es para
+                        // las vueltas automáticas, no para esto.
+                        minInterval: Duration.zero,
+                      );
                 },
                 child: SingleChildScrollView(
                   physics: const AlwaysScrollableScrollPhysics(),
@@ -104,7 +125,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             // igual que el de uno ya comido.
                             if (isFutureDate) ...<Widget>[
                               const InfoNote(
-                                text: 'Estás planificando un día que todavía '
+                                text:
+                                    'Estás planificando un día que todavía '
                                     'no llegó.',
                               ),
                               const SizedBox(height: NmSpace.s5),
@@ -128,9 +150,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                 profile.heightCm == null) ...<Widget>[
                               InfoNote(
                                 text:
-                                    'Este objetivo es genérico. Cargá tus '
-                                    'datos y se calcula con ellos.',
-                                action: 'Cargar',
+                                    'Este objetivo es genérico: sale de '
+                                    'tus datos cuando los cargues.',
+                                action: 'Cargar mis datos',
                                 onAction: () =>
                                     context.push(Routes.profileBody),
                               ),
@@ -143,6 +165,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               onEditTarget: () =>
                                   showCalorieTargetSheet(context),
                             ),
+                            // Lo que dejó la nutricionista, justo debajo del
+                            // día: es lo primero que conviene leer antes de
+                            // decidir qué comer. Sin nada nuevo ni vigente no
+                            // ocupa lugar. Solo con su flag.
+                            if (FeatureFlags.nutritionist)
+                              const CareFeedbackHomeCard(),
                             const SizedBox(height: NmSpace.s6),
                             NmCard(child: MacroBar(macros: summary.macros)),
                             const SizedBox(height: NmSpace.s6),
@@ -160,66 +188,64 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             const SizedBox(height: NmSpace.s8),
 
                             if (summary.isEmpty && !isFutureDate) ...<Widget>[
+                              // Sin botones propios: el "+" de cada comida y
+                              // "Agregar actividad" están justo abajo, y el
+                              // vacío ofrecía las mismas dos cosas otra vez.
                               EmptyState(
                                 icon: PhosphorIcons.forkKnife(),
                                 title: 'Todavía no registraste nada',
-                                body: 'Empezá por lo que tengas más a mano: '
-                                    'una comida o una actividad.',
-                                primaryLabel: 'Registrá tu primera comida',
-                                onPrimary: () => showAddSheet(context),
-                                secondaryLabel: 'Registrá una actividad',
-                                onSecondary: () => showAddSheet(
-                                  context,
-                                  activityFirst: true,
-                                ),
+                                body: 'Empezá por una comida o una actividad.',
                               ),
                               const SizedBox(height: NmSpace.s8),
                             ],
 
-                            // Comidas: 4 secciones por slot, sin encabezado
-                            // propio — cada slot ya se nombra solo.
-                            for (final slot in MealSlot.values)
-                              Padding(
-                                padding: const EdgeInsets.only(
-                                  bottom: NmSpace.s4,
-                                ),
-                                child: MealSection(
-                                  slot: slot,
-                                  meals: summary.mealsFor(slot),
-                                  // Los días futuros dentro de la ventana se
-                                  // pueden cargar: es la planificación.
-                                  onAdd: () => showAddToSlotSheet(
-                                    context,
+                            // Comidas: una tarjeta con los cuatro momentos del
+                            // día, como Actividad y Peso más abajo.
+                            const NmSectionHeader(title: 'Comidas'),
+                            MealsCard(
+                              sections: <Widget>[
+                                for (final slot in MealSlot.values)
+                                  MealSection(
                                     slot: slot,
-                                    date: date,
-                                  ),
-                                  onOpenMeal: (meal) =>
-                                      context.push(Routes.meal(meal.id)),
-                                  onDeleteMeal: (meal) async {
-                                    await repo.deleteMeal(meal.id);
-                                    if (!context.mounted) return;
-                                    NmSnackbar.show(
+                                    meals: summary.mealsFor(slot),
+                                    // Los días futuros dentro de la ventana se
+                                    // pueden cargar: es la planificación.
+                                    onAdd: () => showAddToSlotSheet(
                                       context,
-                                      'Comida eliminada',
-                                      actionLabel: 'Deshacer',
-                                      undo: true,
-                                      onAction: () =>
-                                          repo.restoreMeal(meal.id),
-                                    );
-                                  },
-                                  onDuplicateMeal: (meal) async {
-                                    await repo.duplicateMeal(
-                                      meal.id,
-                                      date,
-                                      meal.slot,
-                                    );
-                                    if (!context.mounted) return;
-                                    NmSnackbar.show(context, 'Comida duplicada');
-                                  },
-                                ),
-                              ),
+                                      slot: slot,
+                                      date: date,
+                                    ),
+                                    onOpenMeal: (meal) =>
+                                        context.push(Routes.meal(meal.id)),
+                                    onDeleteMeal: (meal) async {
+                                      await repo.deleteMeal(meal.id);
+                                      if (!context.mounted) return;
+                                      NmSnackbar.show(
+                                        context,
+                                        'Comida eliminada',
+                                        actionLabel: 'Deshacer',
+                                        undo: true,
+                                        onAction: () =>
+                                            repo.restoreMeal(meal.id),
+                                      );
+                                    },
+                                    onDuplicateMeal: (meal) async {
+                                      await repo.duplicateMeal(
+                                        meal.id,
+                                        date,
+                                        meal.slot,
+                                      );
+                                      if (!context.mounted) return;
+                                      NmSnackbar.show(
+                                        context,
+                                        'Comida duplicada',
+                                      );
+                                    },
+                                  ),
+                              ],
+                            ),
 
-                            const SizedBox(height: NmSpace.s6),
+                            const SizedBox(height: NmSpace.s8),
 
                             // Actividad.
                             //
@@ -245,20 +271,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                     creditPercentage:
                                         profile.effectiveCreditPercentage,
                                     isRestDay: summary.isRestDay,
-                                    onRestDay: () =>
-                                        repo.setRestDay(date, false),
-                                    onAdd: () => showAddSheet(
-                                      context,
-                                      activityFirst: true,
-                                    ),
                                   ),
-                                  if (summary.activities.isNotEmpty) ...<Widget>[
+                                  if (summary
+                                      .activities
+                                      .isNotEmpty) ...<Widget>[
                                     const SizedBox(height: NmSpace.s3),
                                     const NmDivider(),
                                   ],
-                                  for (var i = 0;
-                                      i < summary.activities.length;
-                                      i++)
+                                  for (
+                                    var i = 0;
+                                    i < summary.activities.length;
+                                    i++
+                                  )
                                     StaggeredItem(
                                       index: i,
                                       child: ActivityListItem(
@@ -319,7 +343,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                   // una caminata y una entrada de gimnasio ya
                                   // son dos.
                                   if (!summary.isRestDay) ...<Widget>[
-                                    const SizedBox(height: NmSpace.s2),
+                                    if (summary.activities.isNotEmpty)
+                                      const SizedBox(height: NmSpace.s2),
                                     Align(
                                       alignment: Alignment.centerLeft,
                                       child: NmButton.ghost(
@@ -360,7 +385,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               NmCard(
                                 child: ValueRow(
                                   label: 'Calorías netas',
-                                  caption: 'consumidas − aplicadas',
+                                  caption: 'consumido − ejercicio',
                                   value: Fmt.kcal(summary.netKcal),
                                   muted: true,
                                 ),
@@ -376,7 +401,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               date: date,
                               onTapSick: () =>
                                   showSickDaySheet(context, date: date),
-                              onTapRest: () => showRestDaySheet(context, date),
                             ),
                           ],
                         ),
@@ -473,40 +497,3 @@ class _HomeSkeleton extends StatelessWidget {
     ],
   );
 }
-
-/// `sheet.rest_day` — marcar o quitar el descanso planificado (RN-15).
-Future<void> showRestDaySheet(BuildContext context, DateTime date) =>
-    showNmSheet<void>(
-      context: context,
-      builder: (context) => Consumer(
-        builder: (context, ref, _) {
-          final repo = ref.watch(repositoryProvider);
-          final isRest = repo.isRestDay(date);
-          return NmSheet(
-            title: 'Día de descanso',
-            subtitle: friendlyDay(date),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                const InfoNote(
-                  text: 'Un día de descanso planificado no cuenta como día sin '
-                      'actividad y no cambia tu objetivo calórico.',
-                ),
-                const SizedBox(height: NmSpace.s6),
-                NmButton(
-                  label: isRest
-                      ? 'Quitar el descanso planificado'
-                      : 'Marcar como descanso planificado',
-                  block: true,
-                  onPressed: () async {
-                    await repo.setRestDay(date, !isRest);
-                    if (context.mounted) Navigator.of(context).pop();
-                  },
-                ),
-              ],
-            ),
-          );
-        },
-      ),
-    );

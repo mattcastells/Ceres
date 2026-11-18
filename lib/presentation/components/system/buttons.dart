@@ -217,7 +217,7 @@ class NmFab extends StatelessWidget {
               child: Icon(
                 Icons.add,
                 size: NmIconSize.xl,
-                color: nm.isDark ? NmNeutral.c900 : Colors.white,
+                color: nm.onAccent,
               ),
             ),
           ),

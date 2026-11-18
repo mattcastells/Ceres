@@ -3,8 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
-import '../../../core/config/feature_flags.dart';
-import '../../../core/config/supabase_config.dart';
 import '../../../core/router/routes.dart';
 import '../../../core/theme/nm_theme.dart';
 import '../../../core/theme/text_styles.dart';
@@ -25,6 +23,7 @@ import '../../providers/app_providers.dart';
 import '../photo/photo_screens.dart';
 import 'edit_portion_sheet.dart';
 import 'meal_draft.dart';
+import 'quick_add_item.dart';
 import 'recalculate_sheet.dart';
 
 /// S-15 · Nueva comida. Compone una comida a partir de ítems.
@@ -58,11 +57,6 @@ class MealFormScreen extends ConsumerStatefulWidget {
 class _MealFormScreenState extends ConsumerState<MealFormScreen> {
   bool _saving = false;
 
-  /// Sin servidor no hay Edge Function a la que preguntarle, así que el botón
-  /// se muestra deshabilitado y con el motivo, en vez de fallar al tocarlo.
-  static bool get _aiAvailable =>
-      FeatureFlags.aiPhotoAnalysis && SupabaseConfig.isConfigured;
-
   @override
   void initState() {
     super.initState();
@@ -75,8 +69,19 @@ class _MealFormScreenState extends ConsumerState<MealFormScreen> {
         if (meal != null) controller.edit(meal);
         return;
       }
-      // Si ya hay un borrador de esta misma comida, se retoma.
-      if (current == null || current.editingMealId != null) {
+      // Si ya hay un borrador de esta misma comida, se retoma. "La misma" es
+      // mismo momento del día y mismo día cuando la ruta los trae: antes se
+      // retomaba cualquier borrador nuevo, así que abrir la cena mostraba los
+      // ítems del almuerzo que habían quedado colgados. Sin parámetros —el
+      // caso de las sugerencias y de "cargar a mano", que arman el borrador y
+      // recién después navegan— se retoma el que haya.
+      final resume =
+          current != null &&
+          current.editingMealId == null &&
+          (widget.slot == null || widget.slot == current.slot) &&
+          (widget.date == null ||
+              dateOnly(widget.date!) == dateOnly(current.date));
+      if (!resume) {
         controller.start(
           slot: widget.slot ?? MealSlot.forHour(DateTime.now().hour),
           date: widget.date ?? ref.read(selectedDateProvider),
@@ -95,8 +100,12 @@ class _MealFormScreenState extends ConsumerState<MealFormScreen> {
 
     setState(() => _saving = true);
     final repo = ref.read(repositoryProvider);
+    // Al editar se conserva cuándo se creó la comida: `toMeal` sin fecha pone
+    // la de ahora, y corregir un gramo la hacía pasar por recién cargada.
+    final editingId = draft.editingMealId;
     final meal = draft.toMeal(
       syncStatus: SyncStatus.synced,
+      createdAt: editingId == null ? null : repo.mealById(editingId)?.createdAt,
     );
     await repo.saveMeal(meal);
     ref.read(mealDraftProvider.notifier).clear();
@@ -150,12 +159,16 @@ class _MealFormScreenState extends ConsumerState<MealFormScreen> {
     final nm = context.nm;
     final draft = ref.watch(mealDraftProvider);
     final controller = ref.read(mealDraftProvider.notifier);
+    // Sin servidor no hay Edge Function a la que preguntarle, así que los
+    // botones de IA se muestran deshabilitados y con el motivo, en vez de
+    // fallar al tocarlos.
+    final aiAvailable = ref.watch(mealAiAvailableProvider);
 
     if (draft == null) {
       return const Scaffold(body: Center(child: NmSpinner()));
     }
 
-    return Scaffold(
+    final Widget form = Scaffold(
       backgroundColor: nm.bg,
       appBar: NmModalHeader(
         title: widget.mealId == null ? 'Nueva comida' : 'Editar comida',
@@ -278,9 +291,8 @@ class _MealFormScreenState extends ConsumerState<MealFormScreen> {
                             compact: true,
                             icon: PhosphorIcons.magnifyingGlass(),
                             title: 'Agregá el primer alimento',
-                            body: 'Buscalo en el catálogo, escaneá su código de '
-                                'barras o sacale una foto y que la IA la '
-                                'estime.',
+                            body: 'Escribilo abajo, buscalo en el catálogo o '
+                                'sacale una foto.',
                           )
                         else
                           NmCard(
@@ -313,8 +325,26 @@ class _MealFormScreenState extends ConsumerState<MealFormScreen> {
                             ),
                           ),
                         const SizedBox(height: NmSpace.s4),
+                        // Sumar un ítem escribiéndolo, pegado a la lista: es
+                        // la fila que le sigue al último ítem. Se estima, se
+                        // suma al plato y el total de abajo cambia en el acto.
+                        //
+                        // Reemplaza a "Describir lo que comiste" en esta
+                        // pantalla. Los dos eran texto que se estima y se suma
+                        // a esta comida; la única diferencia era una pantalla
+                        // de ida y otra de revisión antes de volver acá, donde
+                        // la revisión es la misma lista. Describir sigue en el
+                        // menú Agregar, que es donde se arranca una comida
+                        // entera desde cero.
+                        //
+                        // La key es el borrador: abrir otra comida no hereda
+                        // lo que había quedado escrito en el campo.
+                        QuickAddItemField(
+                          key: ValueKey<String>('sumar-${draft.id}'),
+                        ),
+                        const SizedBox(height: NmSpace.s4),
                         NmButton.secondary(
-                          label: 'Agregar alimento',
+                          label: 'Buscar alimentos',
                           block: true,
                           icon: PhosphorIcons.plus(),
                           onPressed: () =>
@@ -322,7 +352,7 @@ class _MealFormScreenState extends ConsumerState<MealFormScreen> {
                         ),
                         const SizedBox(height: NmSpace.s2),
                         // El escáner no está acá: vive adentro del buscador, y
-                        // "Agregar alimento" abre el buscador. Tenerlo también
+                        // "Buscar alimentos" abre el buscador. Tenerlo también
                         // afuera era el mismo camino ofrecido dos veces, y dos
                         // botones que hacen lo mismo hacen dudar de si lo hacen.
                         //
@@ -334,7 +364,7 @@ class _MealFormScreenState extends ConsumerState<MealFormScreen> {
                           label: 'Sacar foto y analizarla',
                           block: true,
                           icon: PhosphorIcons.camera(),
-                          onPressed: _aiAvailable
+                          onPressed: aiAvailable
                               ? () {
                                   // El slot y el día los manda el borrador, no
                                   // la hora: se limpia el objetivo por si quedó
@@ -346,25 +376,7 @@ class _MealFormScreenState extends ConsumerState<MealFormScreen> {
                                 }
                               : null,
                         ),
-                        const SizedBox(height: NmSpace.s2),
-                        // La cuarta: contarlo en una frase. Estaba solo en el
-                        // menú Agregar, y esta es la pantalla donde se elige
-                        // con qué se arma la comida: si están el buscador, el
-                        // escáner y la foto, tiene que estar también.
-                        NmButton.secondary(
-                          label: 'Describir lo que comiste',
-                          block: true,
-                          icon: PhosphorIcons.chatText(),
-                          onPressed: _aiAvailable
-                              ? () {
-                                  ref
-                                      .read(photoTargetProvider.notifier)
-                                      .state = null;
-                                  context.push(Routes.mealDescribe);
-                                }
-                              : null,
-                        ),
-                        if (!_aiAvailable) ...<Widget>[
+                        if (!aiAvailable) ...<Widget>[
                           const SizedBox(height: NmSpace.s2),
                           Text(
                             'El análisis con IA necesita servidor configurado.',
@@ -388,7 +400,7 @@ class _MealFormScreenState extends ConsumerState<MealFormScreen> {
                             label: 'Recalcular con IA',
                             block: true,
                             icon: PhosphorIcons.sparkle(),
-                            onPressed: _aiAvailable && !draft.isEmpty
+                            onPressed: aiAvailable && !draft.isEmpty
                                 ? _recalculate
                                 : null,
                           ),
@@ -442,6 +454,17 @@ class _MealFormScreenState extends ConsumerState<MealFormScreen> {
           ],
         ),
       ),
+    );
+
+    // El atrás del sistema pasa por el mismo `_discard` que la X: antes salía
+    // sin preguntar y dejaba el borrador vivo, listo para aparecer en la
+    // próxima comida que se abriera.
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _discard();
+      },
+      child: form,
     );
   }
 }

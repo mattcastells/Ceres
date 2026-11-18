@@ -124,10 +124,12 @@ class UserProfile {
     String? email,
     DateTime? deletionRequestedAt,
     DateTime? updatedAt,
+    // `avatarPath: null` no alcanza para sacar la foto (es "no la cambies").
+    bool clearAvatar = false,
   }) => UserProfile(
     id: id,
     displayName: displayName ?? this.displayName,
-    avatarPath: avatarPath ?? this.avatarPath,
+    avatarPath: clearAvatar ? null : avatarPath ?? this.avatarPath,
     biologicalSex: biologicalSex ?? this.biologicalSex,
     birthDate: birthDate ?? this.birthDate,
     heightCm: heightCm ?? this.heightCm,
@@ -138,8 +140,7 @@ class UserProfile {
     locale: locale ?? this.locale,
     exerciseCreditPercentage:
         exerciseCreditPercentage ?? this.exerciseCreditPercentage,
-    exerciseCreditEnabled:
-        exerciseCreditEnabled ?? this.exerciseCreditEnabled,
+    exerciseCreditEnabled: exerciseCreditEnabled ?? this.exerciseCreditEnabled,
     showNetCalories: showNetCalories ?? this.showNetCalories,
     waterGoalGlasses: waterGoalGlasses ?? this.waterGoalGlasses,
     glassSizeMl: glassSizeMl ?? this.glassSizeMl,

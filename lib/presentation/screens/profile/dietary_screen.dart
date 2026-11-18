@@ -31,20 +31,21 @@ class DietaryScreen extends ConsumerWidget {
         children: <Widget>[
           const SizedBox(height: NmSpace.s4),
           Text(
-            'Sirve para que "¿Qué como?" no te proponga algo que no podés '
-            'comer. No cambia tus calorías ni tus macros.',
-            style: NmTextStyles.from(NmType.bodySm, color: context.nm.textMuted),
+            'Lo que marques acá, "¿Qué como?" no te lo va a proponer. Tus '
+            'calorías y macros no cambian.',
+            style: NmTextStyles.from(
+              NmType.bodySm,
+              color: context.nm.textMuted,
+            ),
           ),
           const SizedBox(height: NmSpace.s6),
           DietaryPicker(
             selected: profile.dietaryFlags,
             note: profile.dietaryNote,
-            onFlags: (flags) => repo.updateProfile(
-              repo.profile.copyWith(dietaryFlags: flags),
-            ),
-            onNote: (note) => repo.updateProfile(
-              repo.profile.copyWith(dietaryNote: note),
-            ),
+            onFlags: (flags) =>
+                repo.updateProfile(repo.profile.copyWith(dietaryFlags: flags)),
+            onNote: (note) =>
+                repo.updateProfile(repo.profile.copyWith(dietaryNote: note)),
           ),
         ],
       ),
@@ -100,25 +101,28 @@ class _DietaryPickerState extends State<DietaryPicker> {
 
   @override
   Widget build(BuildContext context) {
-    final nm = context.nm;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
+        // Casillas en una tarjeta por grupo, no píldoras sueltas: se pueden
+        // marcar varias y una casilla dice eso sin explicarlo.
         for (final group in DietaryGroup.values) ...<Widget>[
           NmSectionHeader(title: group.label),
-          Wrap(
-            spacing: NmSpace.s2,
-            runSpacing: NmSpace.s2,
-            children: <Widget>[
-              for (final flag in DietaryFlag.inGroup(group))
-                NmChip(
-                  label: flag.label,
-                  subtitle: flag.description.isEmpty ? null : flag.description,
-                  selected: widget.selected.contains(flag),
-                  onTap: () => _toggle(flag),
-                ),
-            ],
+          NmCard(
+            padding: const EdgeInsets.symmetric(vertical: NmSpace.s1),
+            child: Column(
+              children: <Widget>[
+                for (final (i, flag) in DietaryFlag.inGroup(group).indexed) ...[
+                  if (i > 0) const NmDivider(indent: NmSpace.s3),
+                  _FlagRow(
+                    flag: flag,
+                    checked: widget.selected.contains(flag),
+                    onTap: () => _toggle(flag),
+                  ),
+                ],
+              ],
+            ),
           ),
           const SizedBox(height: NmSpace.s6),
         ],
@@ -128,20 +132,74 @@ class _DietaryPickerState extends State<DietaryPicker> {
         // cosa no tendría dónde decirlo y la pantalla le estaría prometiendo
         // algo que no cumple.
         NmTextField(
-          label: 'Algo más que tengamos que saber',
+          label: 'Algo más para la IA',
           controller: _note,
           hint: 'alergia al kiwi, no como frito',
+          helper:
+              'Las funciones con IA, como "¿Qué como?", lo tienen en '
+              'cuenta.',
           maxLines: 2,
           maxLength: DietaryPicker.maxNoteLength,
           onChanged: widget.onNote,
         ),
-        const SizedBox(height: NmSpace.s4),
-        Text(
-          'Esto es tuyo y no se comparte con nadie: ni con tus pals, ni en el '
-          'día que ellos ven.',
-          style: NmTextStyles.from(NmType.caption, color: nm.textMuted),
-        ),
       ],
+    );
+  }
+}
+
+/// Una opción: nombre y aclaración a la izquierda, casilla a la derecha. Toda
+/// la fila responde al toque.
+class _FlagRow extends StatelessWidget {
+  const _FlagRow({
+    required this.flag,
+    required this.checked,
+    required this.onTap,
+  });
+
+  final DietaryFlag flag;
+  final bool checked;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final nm = context.nm;
+    return Semantics(
+      checked: checked,
+      label: flag.label,
+      child: ExcludeSemantics(
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: NmRadius.brMd,
+          child: Padding(
+            padding: const EdgeInsets.only(left: NmSpace.s3),
+            child: Row(
+              children: <Widget>[
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      Text(
+                        flag.label,
+                        style: NmTextStyles.from(NmType.body, color: nm.text),
+                      ),
+                      if (flag.description.isNotEmpty)
+                        Text(
+                          flag.description,
+                          style: NmTextStyles.from(
+                            NmType.caption,
+                            color: nm.textMuted,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                Checkbox(value: checked, onChanged: (_) => onTap()),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

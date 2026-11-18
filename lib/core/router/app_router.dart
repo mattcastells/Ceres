@@ -23,11 +23,14 @@ import '../../presentation/screens/pals/pals_screen.dart';
 import '../../presentation/screens/photo/photo_screens.dart';
 import '../../presentation/screens/profile/body_target_screens.dart';
 import '../../presentation/screens/profile/care_access_screen.dart';
+import '../../presentation/screens/profile/care_articles_screen.dart';
+import '../../presentation/screens/profile/care_feedback_screen.dart';
 import '../../presentation/screens/profile/dietary_screen.dart';
 import '../../presentation/screens/profile/goal_picker_screen.dart';
 import '../../presentation/screens/profile/profile_screen.dart';
 import '../../presentation/screens/progress/progress_detail_screens.dart';
 import '../../presentation/screens/progress/progress_screen.dart';
+import '../../presentation/screens/progress/weekly_report_screen.dart';
 import '../../presentation/screens/settings/cloud_backup_screen.dart';
 import '../../presentation/screens/settings/notifications_screen.dart';
 import '../../presentation/screens/settings/report_screen.dart';
@@ -35,7 +38,18 @@ import '../../presentation/screens/settings/settings_screens.dart';
 import '../../presentation/screens/settings/updates_screen.dart';
 import '../../presentation/screens/settings/water_goal_screen.dart';
 import '../../presentation/shell/app_shell.dart';
+import '../config/feature_flags.dart';
+import '../utils/dates.dart';
 import 'routes.dart';
+
+/// La fecha de un parámetro de ruta, o `null` si no viene o no se entiende.
+///
+/// Las rutas se pueden abrir desde un enlace `ceres://` escrito por cualquiera,
+/// y `DateTime.parse` sobre "ayer" o un `date=` vacío lanzaba adentro del
+/// `builder`: la app se caía por un link mal armado. Una fecha que no se
+/// entiende vale lo mismo que una que no vino.
+DateTime? _dateParam(String? raw) =>
+    raw == null ? null : DateTime.tryParse(raw);
 
 /// El router con todas las rutas de la arquitectura de información
 /// (02-information-architecture.md).
@@ -197,7 +211,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: ':date',
             builder: (context, state) => DayDetailScreen(
-              date: DateTime.parse(state.pathParameters['date']!),
+              date: _dateParam(state.pathParameters['date']) ?? today(),
             ),
           ),
         ],
@@ -222,10 +236,32 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: Routes.profileFoods,
         builder: (context, state) => const MyItemsScreen(),
       ),
-      GoRoute(
-        path: Routes.profileCare,
-        builder: (context, state) => const CareAccessScreen(),
-      ),
+      // Lo de la nutricionista y el reporte con IA, solo con su flag: sin
+      // él no hay ni un enlace que lleve ahí.
+      if (FeatureFlags.nutritionist) ...<RouteBase>[
+        GoRoute(
+          path: Routes.profileCare,
+          builder: (context, state) => const CareAccessScreen(),
+        ),
+        GoRoute(
+          path: Routes.careFeedback,
+          builder: (context, state) => const CareFeedbackScreen(),
+        ),
+        GoRoute(
+          path: Routes.careArticles,
+          builder: (context, state) => const CareArticlesScreen(),
+        ),
+        GoRoute(
+          path: '${Routes.careArticles}/:articleId',
+          builder: (context, state) =>
+              CareArticleScreen(articleId: state.pathParameters['articleId']!),
+        ),
+      ],
+      if (FeatureFlags.aiProgressReport)
+        GoRoute(
+          path: Routes.weeklyReport,
+          builder: (context, state) => const WeeklyReportScreen(),
+        ),
       GoRoute(
         path: Routes.settings,
         builder: (context, state) => const SettingsScreen(),
@@ -286,9 +322,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           slot: state.uri.queryParameters['slot'] == null
               ? null
               : MealSlot.fromWire(state.uri.queryParameters['slot']!),
-          date: state.uri.queryParameters['date'] == null
-              ? null
-              : DateTime.parse(state.uri.queryParameters['date']!),
+          date: _dateParam(state.uri.queryParameters['date']),
           // "Escanear alimento" del menú Agregar entra por acá: el escáner
           // necesita una comida abierta debajo, si no lo que se escanea no
           // tiene dónde caer.
@@ -365,9 +399,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           mode: ActivityFormMode.fromWire(state.uri.queryParameters['mode']),
           activityTypeId: state.uri.queryParameters['activityTypeId'],
           templateId: state.uri.queryParameters['templateId'],
-          date: state.uri.queryParameters['date'] == null
-              ? null
-              : DateTime.parse(state.uri.queryParameters['date']!),
+          date: _dateParam(state.uri.queryParameters['date']),
         ),
       ),
       GoRoute(

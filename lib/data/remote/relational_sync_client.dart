@@ -6,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/error/app_error.dart';
 import '../../core/utils/dates.dart';
 import '../../domain/models/day_marker.dart';
+import '../../domain/services/photo_sync_service.dart';
 import '../local/local_store.dart';
 
 /// Sube y baja los datos del usuario **como filas**, en las tablas del
@@ -137,6 +138,12 @@ class RelationalSyncClient {
             .upsert(<String, dynamic>{
               'id': userId,
               'display_name': profile.displayName,
+              // Solo la ruta del bucket: un archivo del teléfono no sirve en
+              // otro. Mientras no suba, la columna queda como estaba; sin foto,
+              // se vacía.
+              if (profile.avatarPath == null ||
+                  PhotoSyncService.isRemotePath(profile.avatarPath!))
+                'avatar_path': profile.avatarPath,
               'biological_sex': profile.biologicalSex.wire,
               'birth_date': profile.birthDate == null
                   ? null
@@ -756,8 +763,15 @@ class RelationalSyncClient {
       // aceptan los proxies. El pull entero fallaba, `refresh` devolvía false
       // en silencio y el teléfono dejaba de reconciliar — justo en las cuentas
       // con más datos, que son las que más lo necesitan.
+      //
+      // De a **cien**, como la poda del push, y no de a doscientos. Cada id
+      // viaja entre comillas codificadas (`%22…%22`): doscientos eran ~8,7 kB
+      // de URL, justo arriba de los 8 kB que acepta el Kong de una base
+      // Supabase local. Ahí el pull moría con "URI too long", en silencio, y
+      // la cuenta entraba al alta como si no tuviera nada. Producción tolera
+      // más, pero no hay razón para depender de eso.
       final itemsPorComida = <String, List<Map<String, dynamic>>>{};
-      const porTanda = 200;
+      const porTanda = 100;
       final idsDeComidas = meals.map((m) => m['id'] as String).toList();
       for (var i = 0; i < idsDeComidas.length; i += porTanda) {
         final tanda = idsDeComidas.sublist(
@@ -833,6 +847,7 @@ class RelationalSyncClient {
               if (f is String) f,
           ],
           'dietaryNote': perfil['dietary_note'] ?? '',
+          'avatarPath': perfil['avatar_path'],
           'isDemo': false,
           'createdAt': isoOf(perfil['created_at']),
           'updatedAt': isoOf(perfil['updated_at']),

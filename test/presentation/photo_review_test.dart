@@ -18,6 +18,7 @@ import 'package:ceres/domain/enums/enums.dart';
 import 'package:ceres/domain/models/ai_analysis.dart';
 import 'package:ceres/domain/models/meal.dart';
 import 'package:ceres/presentation/components/activity/badges.dart';
+import 'package:ceres/presentation/components/food/meal_photo.dart';
 import 'package:ceres/presentation/providers/app_providers.dart';
 import 'package:ceres/presentation/screens/meal/meal_draft.dart';
 import 'package:ceres/presentation/screens/photo/photo_screens.dart';
@@ -217,5 +218,33 @@ void main() {
     // ítems de un análisis que se descartó.
     expect(container.read(mealDraftProvider), isNull);
     expect(container.read(analysisProvider), isNull);
+  });
+
+  // El bug: con servidor, analizar sube la foto y `photoPathProvider` pasa a
+  // la ruta del bucket. La revisión la dibujaba con `Image.file`, que con
+  // `uid/xxx.jpg` no encuentra nada: la foto quedaba en blanco justo cuando
+  // hay que compararla con lo que estimó la IA.
+  testWidgets('una foto ya subida se muestra con MealPhoto, no como archivo', (
+    tester,
+  ) async {
+    late ProviderContainer container;
+    await tester.runAsync(() async {
+      container = await _boot();
+    });
+    addTearDown(container.dispose);
+    container.read(photoPathProvider.notifier).state =
+        '0b6c2a52-uid/4f1e9d3a-foto.jpg';
+
+    await tester.pumpWidget(_wrap(container));
+    await _settle(tester);
+
+    expect(find.byType(MealPhoto), findsOneWidget);
+    expect(
+      find.byWidgetPredicate((w) => w is Image && w.image is FileImage),
+      findsNothing,
+    );
+    // Sin servidor en el test no hay URL firmada: lo dice en vez de quedar en
+    // blanco.
+    expect(find.textContaining('La foto está guardada'), findsOneWidget);
   });
 }

@@ -60,7 +60,15 @@ class NmCard extends StatelessWidget {
   }
 }
 
-enum NmTagVariant { accent, accent2, neutral, outline, caution, success, danger }
+enum NmTagVariant {
+  accent,
+  accent2,
+  neutral,
+  outline,
+  caution,
+  success,
+  danger,
+}
 
 /// Etiqueta compacta. Nunca depende solo del color: siempre lleva texto.
 class NmTag extends StatelessWidget {
@@ -81,11 +89,11 @@ class NmTag extends StatelessWidget {
     final (Color bg, Color fg) = switch (variant) {
       NmTagVariant.accent => (nm.accentFill, nm.accentOnFill),
       NmTagVariant.accent2 => (
-        nm.isDark ? NmAccent2.c800 : NmAccent2.c100,
-        nm.isDark ? NmAccent2.c200 : NmAccent2.c700,
+        nm.isDark ? nm.accent2Ramp.c800 : nm.accent2Ramp.c100,
+        nm.isDark ? nm.accent2Ramp.c200 : nm.accent2Ramp.c700,
       ),
       NmTagVariant.neutral => (
-        nm.isDark ? NmNeutral.c800 : NmNeutral.c200,
+        nm.isDark ? nm.neutralRamp.c800 : nm.neutralRamp.c200,
         nm.text,
       ),
       NmTagVariant.outline => (Colors.transparent, nm.textMuted),
@@ -311,13 +319,8 @@ class InfoNote extends StatelessWidget {
         : color.withValues(alpha: nm.isDark ? 0.10 : 0.08);
 
     return Container(
-      padding: EdgeInsets.all(
-        tone == NmNoteTone.neutral ? 0 : NmSpace.s3,
-      ),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: NmRadius.brMd,
-      ),
+      padding: EdgeInsets.all(tone == NmNoteTone.neutral ? 0 : NmSpace.s3),
+      decoration: BoxDecoration(color: bg, borderRadius: NmRadius.brMd),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
@@ -368,6 +371,7 @@ class ValueRow extends StatelessWidget {
     required this.label,
     required this.value,
     this.caption,
+    this.hint,
     this.emphasis = false,
     this.valueColor,
     this.muted = false,
@@ -379,6 +383,10 @@ class ValueRow extends StatelessWidget {
   final String label;
   final String value;
   final String? caption;
+
+  /// Detalle que no hace falta leer siempre: va en un tooltip detrás de un
+  /// ícono chico al lado de la etiqueta, en vez de texto gris en la fila.
+  final String? hint;
   final bool emphasis;
   final Color? valueColor;
   final bool muted;
@@ -420,6 +428,19 @@ class ValueRow extends StatelessWidget {
               textBaseline: TextBaseline.alphabetic,
               children: <Widget>[
                 Flexible(child: Text(label, style: labelStyle)),
+                if (hint != null) ...<Widget>[
+                  const SizedBox(width: NmSpace.s1),
+                  Tooltip(
+                    message: hint,
+                    triggerMode: TooltipTriggerMode.tap,
+                    showDuration: const Duration(seconds: 4),
+                    child: Icon(
+                      PhosphorIcons.info(),
+                      size: NmIconSize.sm,
+                      color: nm.textMuted,
+                    ),
+                  ),
+                ],
                 if (caption != null) ...<Widget>[
                   const SizedBox(width: NmSpace.s2),
                   Flexible(
@@ -456,11 +477,7 @@ class ValueRow extends StatelessWidget {
       child: ExcludeSemantics(
         child: onEdit == null
             ? row
-            : InkWell(
-                onTap: onEdit,
-                borderRadius: NmRadius.brSm,
-                child: row,
-              ),
+            : InkWell(onTap: onEdit, borderRadius: NmRadius.brSm, child: row),
       ),
     );
   }
@@ -468,11 +485,7 @@ class ValueRow extends StatelessWidget {
 
 /// Fórmula del desglose diario, expuesta como texto plano legible (S-07).
 class FormulaRow extends StatelessWidget {
-  const FormulaRow({
-    required this.expression,
-    required this.values,
-    super.key,
-  });
+  const FormulaRow({required this.expression, required this.values, super.key});
 
   final String expression;
   final String values;
@@ -565,9 +578,7 @@ class NmChip extends StatelessWidget {
               decoration: BoxDecoration(
                 color: selected ? nm.accentFill : nm.surfaceRaised,
                 borderRadius: BorderRadius.circular(NmRadius.full),
-                border: Border.all(
-                  color: selected ? nm.accent : nm.divider,
-                ),
+                border: Border.all(color: selected ? nm.accent : nm.divider),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,

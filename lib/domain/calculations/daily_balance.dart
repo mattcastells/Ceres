@@ -1,5 +1,3 @@
-import 'exercise_credit.dart';
-
 /// Balance calórico del día (§13). ★
 ///
 /// El objetivo base **nunca** se modifica por el ejercicio (RN-01): el ajuste
@@ -43,50 +41,3 @@ class DailyBalance {
   /// La fila "Ajuste aplicado" se oculta con crédito 0 % o desactivado (D-02).
   bool get showsAdjustmentRow => creditEnabled && creditPercentage > 0;
 }
-
-/// Construye el balance aplicando el crédito vigente.
-DailyBalance computeDailyBalance({
-  required int baseTarget,
-  required int consumedKcal,
-  required int exerciseEstimatedKcal,
-  required int creditPercentage,
-  required bool creditEnabled,
-  int? preAppliedKcal,
-}) {
-  // Las actividades ya guardan sus `applied_calories` con el porcentaje
-  // congelado (D-05); si vienen sumadas, se respetan.
-  final applied =
-      preAppliedKcal ??
-      calculateAppliedExerciseCalories(
-        estimatedCalories: exerciseEstimatedKcal,
-        creditPercentage: creditPercentage,
-        creditEnabled: creditEnabled,
-      );
-
-  return DailyBalance(
-    baseTarget: baseTarget,
-    consumedKcal: consumedKcal,
-    exerciseEstimatedKcal: exerciseEstimatedKcal,
-    exerciseAppliedKcal: creditEnabled ? applied : 0,
-    creditPercentage: creditPercentage,
-    creditEnabled: creditEnabled,
-  );
-}
-
-/// `objetivoAjustado = base + aplicadas` (expuesto suelto para los tests).
-int calculateAdjustedCalorieTarget({
-  required int baseTarget,
-  required int appliedExerciseCalories,
-}) => baseTarget + appliedExerciseCalories;
-
-/// `restantes = objetivoAjustado − consumidas`.
-int calculateRemainingCalories({
-  required int adjustedTarget,
-  required int consumedKcal,
-}) => adjustedTarget - consumedKcal;
-
-/// `netas = consumidas − aplicadas` (RN-11).
-int calculateNetCalories({
-  required int consumedKcal,
-  required int appliedExerciseCalories,
-}) => consumedKcal - appliedExerciseCalories;

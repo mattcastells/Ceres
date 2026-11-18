@@ -51,6 +51,9 @@ class _AddToSlotSheet extends ConsumerWidget {
       context.push(location);
     }
 
+    final manualLocation =
+        '${Routes.mealNew}?slot=${slot.wire}&date=${isoDate(date)}';
+
     Future<void> repeat(Meal meal) async {
       // El messenger se toma **antes** del `pop`. Después, el `context` del
       // sheet ya está desmontado y `context.mounted` da false según cómo caiga
@@ -61,7 +64,9 @@ class _AddToSlotSheet extends ConsumerWidget {
       await repo.duplicateMeal(meal.id, date, slot);
       messenger
         ..hideCurrentSnackBar()
-        ..showSnackBar(SnackBar(content: Text('${meal.title} agregada')));
+        ..showSnackBar(
+          SnackBar(content: Text('Agregado a ${slot.label.toLowerCase()}')),
+        );
     }
 
     return NmSheet(
@@ -84,9 +89,7 @@ class _AddToSlotSheet extends ConsumerWidget {
             icon: PhosphorIcons.forkKnife(),
             label: 'Buscar alimentos',
             subtitle: 'Del catálogo, de los tuyos o por código de barras',
-            onTap: () => go(
-              '${Routes.mealNew}?slot=${slot.wire}&date=${isoDate(date)}',
-            ),
+            onTap: () => go(manualLocation),
           ),
           ActionRow(
             icon: PhosphorIcons.chatText(),
@@ -104,9 +107,9 @@ class _AddToSlotSheet extends ConsumerWidget {
           ),
           ActionRow(
             icon: PhosphorIcons.camera(),
-            label: 'Sacar foto y analizarla con IA',
-            subtitle: 'La IA estima los ítems y vos los revisás antes de '
-                'guardar',
+            // El mismo nombre que en la pantalla de la comida.
+            label: 'Sacar foto y analizarla',
+            subtitle: 'La IA estima los ítems y vos los revisás',
             // Sin servidor no hay Edge Function a la que preguntarle, así que
             // se muestra deshabilitado en vez de fallar al tocarlo.
             enabled: FeatureFlags.aiPhotoAnalysis && SupabaseConfig.isConfigured,
@@ -155,8 +158,8 @@ class _AddToSlotSheet extends ConsumerWidget {
                 // Decía "acá arriba" y la lista se mudó abajo. El cartel
                 // ocupa exactamente el lugar donde van a aparecer, así que
                 // ahora alcanza con "acá".
-                'Cuando repitas una comida va a aparecer acá para cargarla '
-                'de una. También podés marcarla con la estrella.',
+                'Las comidas que repitas o marques con la estrella van a '
+                'aparecer acá.',
                 style: NmTextStyles.from(NmType.caption, color: nm.textMuted),
               ),
             ),

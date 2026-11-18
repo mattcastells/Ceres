@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/theme/palettes.dart';
 import '../../core/utils/dates.dart';
+import '../../data/local/theme_palette_store.dart';
 import '../../domain/enums/enums.dart';
 import '../../domain/models/activity.dart';
 import '../../domain/models/goal.dart';
@@ -29,9 +31,7 @@ class AppRevision extends Notifier<int> {
   void bump() => state = state + 1;
 }
 
-final appRevisionProvider = NotifierProvider<AppRevision, int>(
-  AppRevision.new,
-);
+final appRevisionProvider = NotifierProvider<AppRevision, int>(AppRevision.new);
 
 /// Día visible en Inicio.
 ///
@@ -69,7 +69,10 @@ class SelectedDate extends Notifier<DateTime> {
 
   void shift(int days) {
     _elegidoAt = DateTime.now();
-    state = state.add(Duration(days: days));
+    // Por calendario y no sumando 24 h: el día del cambio de hora dura 23 o
+    // 25, y `add` dejaba la fecha con una hora colgada —las 23:00 del día
+    // anterior— que después no era igual a ningún `dateOnly`.
+    state = DateTime(state.year, state.month, state.day + days);
   }
 
   bool get isToday => isSameDay(state, DateTime.now());
@@ -93,6 +96,27 @@ final selectedDateProvider = NotifierProvider<SelectedDate, DateTime>(
   SelectedDate.new,
 );
 
+/// El día de hoy, como estado: cambia cuando pasa la medianoche y la app
+/// vuelve a primer plano.
+///
+/// Historial y Progreso calculaban su ventana con `today()` al construirse y
+/// la conservaban mientras no cambiara otra cosa: abiertos de noche y vistos a
+/// la mañana, terminaban en ayer. Mirando esto se recalculan solos cuando el
+/// día cambia, y solo entonces.
+class CurrentDay extends Notifier<DateTime> {
+  @override
+  DateTime build() => today();
+
+  void refresh() {
+    final now = today();
+    if (now != state) state = now;
+  }
+}
+
+final currentDayProvider = NotifierProvider<CurrentDay, DateTime>(
+  CurrentDay.new,
+);
+
 /// Rango del tab Progreso.
 enum ProgressRange {
   d7('7 d', 7),
@@ -103,6 +127,30 @@ enum ProgressRange {
   const ProgressRange(this.label, this.days);
   final String label;
   final int days;
+
+  /// El título del reporte con IA de este período.
+  String get reportTitle => switch (this) {
+    d7 => 'Tu semana',
+    d30 => 'Tu mes',
+    d90 => 'Tu trimestre',
+    y1 => 'Tu año',
+  };
+
+  /// "la semana", "el mes"…, para armar frases.
+  String get noun => switch (this) {
+    d7 => 'la semana',
+    d30 => 'el mes',
+    d90 => 'el trimestre',
+    y1 => 'el año',
+  };
+
+  /// "esta semana", "este mes"…
+  String get thisOne => switch (this) {
+    d7 => 'esta semana',
+    d30 => 'este mes',
+    d90 => 'este trimestre',
+    y1 => 'este año',
+  };
 }
 
 final progressRangeProvider = StateProvider<ProgressRange>(
@@ -116,17 +164,18 @@ final profileProvider = Provider<UserProfile>((ref) {
   return ref.watch(repositoryProvider).profile;
 });
 
-final hasSessionProvider = Provider<bool>((ref) {
-  ref.watch(appRevisionProvider);
-  return ref.watch(repositoryProvider).hasSession;
-});
-
 final currentGoalProvider = Provider<Goal?>((ref) {
   ref.watch(appRevisionProvider);
   return ref.watch(repositoryProvider).currentGoalOrNull;
 });
 
+/// El modo que se pide a `MaterialApp`. Sakura y Neo Tokyo fijan el suyo; con
+/// Ceres manda lo elegido en Apariencia.
 final themeModeProvider = Provider<ThemeMode>((ref) {
+  final fixed = ref.watch(themePaletteProvider).fixedBrightness;
+  if (fixed != null) {
+    return fixed == Brightness.dark ? ThemeMode.dark : ThemeMode.light;
+  }
   final mode = ref.watch(profileProvider).themeMode;
   return switch (mode) {
     ThemeModeSetting.light => ThemeMode.light,
@@ -134,6 +183,32 @@ final themeModeProvider = Provider<ThemeMode>((ref) {
     ThemeModeSetting.system => ThemeMode.system,
   };
 });
+
+/// Dónde se guarda el tema. `bootstrap` lo lee antes de arrancar, para que la
+/// app no abra un instante con Ceres y después cambie.
+final themePaletteStoreProvider = Provider<ThemePaletteStore>(
+  (ref) => ThemePaletteStore(),
+);
+
+/// El valor con el que arranca [themePaletteProvider]; lo fija `bootstrap`.
+final initialThemePaletteProvider = Provider<AppPalette>(
+  (ref) => AppPalette.ceres,
+);
+
+class ThemePaletteController extends Notifier<AppPalette> {
+  @override
+  AppPalette build() => ref.read(initialThemePaletteProvider);
+
+  Future<void> set(AppPalette palette) async {
+    state = palette;
+    await ref.read(themePaletteStoreProvider).save(palette);
+  }
+}
+
+final themePaletteProvider =
+    NotifierProvider<ThemePaletteController, AppPalette>(
+      ThemePaletteController.new,
+    );
 
 final unitSystemProvider = Provider<UnitSystem>(
   (ref) => ref.watch(profileProvider).unitSystem,
@@ -154,19 +229,25 @@ final todaySummaryProvider = Provider<DailySummary>((ref) {
 
 final historyProvider = Provider.family<List<HistoryDay>, int>((ref, days) {
   ref.watch(appRevisionProvider);
-  final to = today();
+  final to = ref.watch(currentDayProvider);
   return ref
       .watch(repositoryProvider)
-      .history(from: to.subtract(Duration(days: days - 1)), to: to);
+      .history(
+        from: to.subtract(Duration(days: days - 1)),
+        to: to,
+      );
 });
 
 final progressProvider = Provider<ProgressSummary>((ref) {
   ref.watch(appRevisionProvider);
   final range = ref.watch(progressRangeProvider);
-  final to = today();
+  final to = ref.watch(currentDayProvider);
   return ref
       .watch(repositoryProvider)
-      .progress(from: to.subtract(Duration(days: range.days - 1)), to: to);
+      .progress(
+        from: to.subtract(Duration(days: range.days - 1)),
+        to: to,
+      );
 });
 
 final activityTypesProvider = Provider<List<ActivityType>>((ref) {
@@ -204,19 +285,13 @@ final restoreOutcomeProvider = Provider<RestoreOutcome>(
 );
 
 // `offlineProvider` y `pendingCountProvider` se sacaron: ninguna pantalla los
-// leía. Envolvían `isOffline` —que es siempre false desde que se quitó el
-// interruptor de desarrollo— y el conteo de pendientes, que tampoco se muestra
-// en ningún lado. Un provider sin consumidores es una promesa de que algo se
-// está mirando; los datos siguen en el repositorio para cuando haga falta.
+// leía. Envolvían `isOffline` —que era siempre false desde que se quitó el
+// interruptor de desarrollo— y el conteo de pendientes. Después se fueron
+// también del repositorio: no había detección de red que los alimentara.
 
 final integrationProvider = Provider((ref) {
   ref.watch(appRevisionProvider);
   return ref.watch(repositoryProvider).integration;
-});
-
-final pendingReviewsProvider = Provider<List<DuplicateCandidate>>((ref) {
-  ref.watch(appRevisionProvider);
-  return ref.watch(repositoryProvider).pendingReviews;
 });
 
 final daysWithRecordsProvider = Provider<Set<String>>((ref) {

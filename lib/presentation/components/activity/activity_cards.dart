@@ -316,9 +316,7 @@ class ActivitySummaryCard extends StatelessWidget {
     required this.estimatedCalories,
     required this.appliedCalories,
     required this.creditPercentage,
-    required this.onAdd,
     this.isRestDay = false,
-    this.onRestDay,
     super.key,
   });
 
@@ -326,9 +324,12 @@ class ActivitySummaryCard extends StatelessWidget {
   final int estimatedCalories;
   final int appliedCalories;
   final int creditPercentage;
-  final VoidCallback onAdd;
+
+  /// Solo lo dice: el descanso se marca y se desmarca en "Cómo estuvo el día".
+  /// Acá había un "Quitar" que hacía lo mismo que el checkbox de abajo, en la
+  /// misma pantalla. Lo mismo con el "Agregar" chico de la derecha: quien usa
+  /// esta tarjeta ya tiene su "Agregar actividad" debajo de la lista.
   final bool isRestDay;
-  final VoidCallback? onRestDay;
 
   @override
   Widget build(BuildContext context) {
@@ -345,29 +346,17 @@ class ActivitySummaryCard extends StatelessWidget {
               style: NmTextStyles.from(NmType.bodySm, color: nm.textMuted),
             ),
           ),
-          if (onRestDay != null)
-            NmButton.ghost(label: 'Quitar', onPressed: onRestDay),
         ],
       );
     }
 
-    if (totals.sessions == 0) {
-      return Row(
-        children: <Widget>[
-          Expanded(
-            child: Text(
-              'Todavía no registraste actividad hoy.',
-              style: NmTextStyles.from(NmType.bodySm, color: nm.textMuted),
-            ),
-          ),
-          NmButton.ghost(label: 'Agregar', onPressed: onAdd),
-        ],
-      );
-    }
+    // Sin actividad no dice nada: la tarjeta queda con su "Agregar actividad"
+    // y el total aparece cuando se carga la primera.
+    if (totals.sessions == 0) return const SizedBox.shrink();
 
     return Semantics(
       label:
-          'Actividad de hoy: ${totals.minutes} minutos, aproximadamente '
+          'Actividad del día: ${totals.minutes} minutos, aproximadamente '
           '${Fmt.integer(estimatedCalories)} calorías estimadas, '
           '${totals.sessions} ${totals.sessions == 1 ? 'sesión' : 'sesiones'}',
       child: ExcludeSemantics(
@@ -482,10 +471,7 @@ class StatCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: NmSpace.s2),
-          Text(
-            value,
-            style: NmTextStyles.from(NmType.h3, color: nm.text).tnum,
-          ),
+          Text(value, style: NmTextStyles.from(NmType.h3, color: nm.text).tnum),
           if (caption != null) ...<Widget>[
             const SizedBox(height: NmSpace.s1),
             Text(
@@ -508,24 +494,22 @@ class ConsistencyNote extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final nm = context.nm;
-    return NmCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Text(
-            'CONSISTENCIA',
-            style: NmTextStyles.from(NmType.overline, color: nm.textMuted),
-          ),
-          const SizedBox(height: NmSpace.s3),
-          for (final line in lines)
-            Padding(
-              padding: const EdgeInsets.only(bottom: NmSpace.s2),
-              child: Text(
-                line,
-                style: NmTextStyles.from(NmType.bodySm, color: nm.text),
+    return SizedBox(
+      width: double.infinity,
+      child: NmCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            for (final line in lines)
+              Padding(
+                padding: const EdgeInsets.only(bottom: NmSpace.s2),
+                child: Text(
+                  line,
+                  style: NmTextStyles.from(NmType.bodySm, color: nm.text),
+                ),
               ),
-            ),
-        ],
+          ],
+        ),
       ),
     );
   }

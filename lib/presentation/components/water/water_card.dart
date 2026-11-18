@@ -6,6 +6,7 @@ import '../../../core/theme/motion.dart';
 import '../../../core/theme/nm_theme.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
+import '../../../core/utils/formats.dart';
 import '../../../domain/models/water.dart';
 import '../../providers/app_providers.dart';
 import '../system/surfaces.dart';
@@ -103,8 +104,10 @@ class WaterCard extends ConsumerWidget {
     );
   }
 
+  // Con `Fmt` y no `toStringAsFixed`: ese escribía "1.5 L" con el punto del
+  // inglés, en una pantalla donde todo el resto va con coma.
   static String _formatMl(int ml) =>
-      ml >= 1000 ? '${(ml / 1000).toStringAsFixed(1)} L' : '$ml ml';
+      ml >= 1000 ? '${Fmt.decimal1(ml / 1000)} L' : '$ml ml';
 }
 
 class _Glass extends StatelessWidget {

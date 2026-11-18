@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
+import '../../../core/config/feature_flags.dart';
 import '../../../core/error/app_error.dart';
 import '../../../core/router/routes.dart';
 import '../../../core/theme/nm_theme.dart';
@@ -18,9 +19,11 @@ import '../../components/system/buttons.dart';
 import '../../components/system/inputs.dart';
 import '../../components/system/nm_screen.dart';
 import '../../components/system/overlays.dart';
+import '../../components/system/profile_avatar.dart';
 import '../../components/system/surfaces.dart';
 import '../../providers/app_providers.dart';
 import '../../providers/auth_providers.dart';
+import '../../providers/care_providers.dart';
 import '../../providers/update_providers.dart';
 import 'calorie_target_sheet.dart';
 
@@ -33,10 +36,17 @@ class ProfileScreen extends ConsumerWidget {
     final nm = context.nm;
     final profile = ref.watch(profileProvider);
     final goal = ref.watch(currentGoalProvider);
-    final palRequests = ref.watch(incomingPalRequestsProvider);
     final weightKg = ref.watch(currentWeightProvider);
     final activityGoals = ref.watch(activityGoalsProvider);
     final repo = ref.watch(repositoryProvider);
+    // Lo de la nutricionista solo se consulta con su flag prendido.
+    const care = FeatureFlags.nutritionist;
+    final unreadFeedback = care
+        ? ref.watch(careFeedbackProvider).valueOrNull?.unreadCount ?? 0
+        : 0;
+    final pendingInvites = care
+        ? ref.watch(careInvitesProvider).valueOrNull?.length ?? 0
+        : 0;
 
     final preset = goal == null ? null : GoalPreset.of(goal.goalType);
     final minutes = activityGoals
@@ -56,24 +66,18 @@ class ProfileScreen extends ConsumerWidget {
             onTap: () => showDisplayNameSheet(context),
             child: Row(
               children: <Widget>[
-                Container(
-                  height: 52,
-                  width: 52,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: nm.accentFill,
-                    borderRadius: BorderRadius.circular(NmRadius.full),
-                  ),
-                  child: Text(
-                    (profile.displayName?.trim().isNotEmpty ?? false)
-                        ? profile.displayName!.trim().characters.first
-                              .toUpperCase()
-                        : 'N',
-                    style: NmTextStyles.from(
-                      NmType.h3,
-                      color: nm.accentOnFill,
-                    ),
-                  ),
+                // Tocar la foto la cambia; tocar el resto de la tarjeta, el
+                // nombre.
+                ProfileAvatar(
+                  path: profile.avatarPath,
+                  initial: (profile.displayName?.trim().isNotEmpty ?? false)
+                      ? profile.displayName!
+                            .trim()
+                            .characters
+                            .first
+                            .toUpperCase()
+                      : 'C',
+                  onTap: () => showProfilePhotoSheet(context, ref),
                 ),
                 const SizedBox(width: NmSpace.s4),
                 Expanded(
@@ -87,15 +91,20 @@ class ProfileScreen extends ConsumerWidget {
                             : 'Poné tu nombre',
                         style: NmTextStyles.from(NmType.h4, color: nm.text),
                       ),
-                      Text(
-                        profile.isDemo
-                            ? 'Modo demo · sin respaldo'
-                            : profile.email ?? '',
-                        style: NmTextStyles.from(
-                          NmType.caption,
-                          color: nm.textMuted,
+                      // Sin mail que mostrar no va la línea: un `Text('')`
+                      // ocupa su alto igual y empujaba el nombre hacia arriba,
+                      // descentrado respecto de la foto.
+                      if (profile.isDemo ||
+                          (profile.email?.trim().isNotEmpty ?? false))
+                        Text(
+                          profile.isDemo
+                              ? 'Modo demo · sin respaldo'
+                              : profile.email!.trim(),
+                          style: NmTextStyles.from(
+                            NmType.caption,
+                            color: nm.textMuted,
+                          ),
                         ),
-                      ),
                     ],
                   ),
                 ),
@@ -181,13 +190,17 @@ class ProfileScreen extends ConsumerWidget {
             padding: const EdgeInsets.symmetric(vertical: NmSpace.s2),
             child: Column(
               children: <Widget>[
-                NmListRow(
-                  title: 'Objetivo',
-                  subtitle: 'Bajar, mantener, subir o ganar músculo',
-                  leading: Icon(PhosphorIcons.flag()),
-                  onTap: () => context.push(Routes.profileGoal),
-                ),
-                const NmDivider(indent: NmSpace.s6),
+                // Con objetivo, la tarjeta de arriba ya lleva acá con su
+                // lápiz: la fila era la misma puerta dos veces en la pantalla.
+                if (goal == null || preset == null) ...<Widget>[
+                  NmListRow(
+                    title: 'Objetivo',
+                    subtitle: 'Bajar, mantener, subir o ganar músculo',
+                    leading: Icon(PhosphorIcons.flag()),
+                    onTap: () => context.push(Routes.profileGoal),
+                  ),
+                  const NmDivider(indent: NmSpace.s6),
+                ],
                 NmListRow(
                   title: 'Perfil corporal',
                   subtitle: 'Sexo, nacimiento, altura, nivel de actividad',
@@ -213,40 +226,42 @@ class ProfileScreen extends ConsumerWidget {
                 const NmDivider(indent: NmSpace.s6),
                 NmListRow(
                   title: 'Medidas corporales',
-                  subtitle: 'Perímetros, pliegues y bioimpedancia',
+                  subtitle: 'Perímetros, pliegues y balanza',
                   leading: Icon(PhosphorIcons.ruler()),
                   onTap: () => context.push(Routes.progressMeasurements),
                 ),
                 const NmDivider(indent: NmSpace.s6),
                 NmListRow(
                   title: 'Mis alimentos y plantillas',
-                  subtitle: 'Alimentos propios, actividades, favoritos',
+                  subtitle: 'Alimentos propios, plantillas y favoritos',
                   leading: Icon(PhosphorIcons.bowlFood()),
                   onTap: () => context.push(Routes.profileFoods),
                 ),
                 const NmDivider(indent: NmSpace.s6),
-                NmListRow(
-                  title: 'Mi nutricionista',
-                  subtitle: 'Darle acceso a tu seguimiento, y cortarlo',
-                  leading: Icon(PhosphorIcons.stethoscope()),
-                  onTap: () => context.push(Routes.profileCare),
-                ),
-                const NmDivider(indent: NmSpace.s6),
-                NmListRow(
-                  title: 'Qué ven mis pals',
-                  subtitle: palRequests > 0
-                      ? '$palRequests ${palRequests == 1 ? 'solicitud' : 'solicitudes'} sin responder'
-                      : 'Fotos, agua, sueño y detalle de ejercicio',
-                  leading: Icon(PhosphorIcons.users()),
-                  trailing: palRequests == 0
-                      ? null
-                      : NmTag(
-                          label: '$palRequests',
-                          variant: NmTagVariant.accent,
-                        ),
-                  onTap: () => context.push(Routes.palSharing),
-                ),
-                const NmDivider(indent: NmSpace.s6),
+                if (care) ...<Widget>[
+                  NmListRow(
+                    title: 'Mi nutricionista',
+                    // Una invitación de una nutricionista va primero: es lo
+                    // único de esta fila que espera una respuesta tuya.
+                    subtitle: pendingInvites > 0
+                        ? pendingInvites == 1
+                              ? 'Una nutricionista te invitó'
+                              : '$pendingInvites invitaciones de nutricionistas'
+                        : unreadFeedback > 0
+                        ? '$unreadFeedback '
+                              '${unreadFeedback == 1 ? 'devolución nueva' : 'devoluciones nuevas'}'
+                        : 'Acceso a tu seguimiento y sus devoluciones',
+                    leading: Icon(PhosphorIcons.stethoscope()),
+                    trailing: unreadFeedback + pendingInvites == 0
+                        ? null
+                        : NmTag(
+                            label: '${unreadFeedback + pendingInvites}',
+                            variant: NmTagVariant.accent,
+                          ),
+                    onTap: () => context.push(Routes.profileCare),
+                  ),
+                  const NmDivider(indent: NmSpace.s6),
+                ],
                 NmListRow(
                   title: 'Configuración',
                   leading: Icon(PhosphorIcons.gear()),
@@ -288,7 +303,7 @@ class ProfileScreen extends ConsumerWidget {
           Center(
             child: Column(
               children: <Widget>[
-                const BrandMark(size: 28, monochrome: true),
+                const BrandMark(size: 28),
                 const SizedBox(height: NmSpace.s2),
                 Text(
                   ref

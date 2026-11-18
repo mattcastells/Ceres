@@ -10,6 +10,7 @@ import 'core/utils/dates.dart';
 import 'data/local/home_widget_publisher.dart';
 import 'presentation/providers/app_providers.dart';
 import 'presentation/providers/auth_providers.dart';
+import 'presentation/providers/care_providers.dart';
 
 /// La app: tema, router y localización.
 ///
@@ -103,8 +104,13 @@ class _CeresAppState extends ConsumerState<CeresApp>
       // dejarla abierta de noche y volver a la mañana dejaba Inicio en "Ayer" y
       // el desayuno se cargaba en el día anterior.
       ref.read(selectedDateProvider.notifier).refreshOnResume();
+      ref.read(currentDayProvider.notifier).refresh();
       _publishToWidget();
       unawaited(_pullFromTables());
+      // Lo que escribió la nutricionista también puede haber cambiado afuera:
+      // una devolución nueva publicada desde el panel mientras el teléfono
+      // estaba en el bolsillo. Con su flag apagado no hay nada que refrescar.
+      if (ref.read(repositoryProvider).hasSession) refreshServerState(ref);
     }
   }
 
@@ -138,14 +144,15 @@ class _CeresAppState extends ConsumerState<CeresApp>
   Widget build(BuildContext context) {
     final router = ref.watch(routerProvider);
     final themeMode = ref.watch(themeModeProvider);
+    final palette = ref.watch(themePaletteProvider);
 
     return MaterialApp.router(
       title: 'Ceres',
       debugShowCheckedModeBanner: false,
       routerConfig: router,
       themeMode: themeMode,
-      theme: NmAppTheme.light(),
-      darkTheme: NmAppTheme.dark(),
+      theme: NmAppTheme.of(palette, dark: false),
+      darkTheme: NmAppTheme.of(palette, dark: true),
       locale: const Locale('es', 'AR'),
       supportedLocales: const <Locale>[Locale('es', 'AR'), Locale('es')],
       localizationsDelegates: const <LocalizationsDelegate<dynamic>>[

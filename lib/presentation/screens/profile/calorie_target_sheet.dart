@@ -282,8 +282,8 @@ class _CalorieTargetSheetState extends ConsumerState<_CalorieTargetSheet> {
             )
           else if (calculated == null)
             InfoNote(
-              text: 'Con tu altura, tu nacimiento y un peso registrado, el '
-                  'objetivo se puede calcular en vez de escribirlo.',
+              text: 'Con altura, nacimiento y un peso registrado, se puede '
+                  'calcular.',
               action: 'Cargar mis datos',
               onAction: () {
                 Navigator.of(context).pop();
@@ -293,8 +293,7 @@ class _CalorieTargetSheetState extends ConsumerState<_CalorieTargetSheet> {
 
           const SizedBox(height: NmSpace.s4),
           Text(
-            'Cambiarlo rige desde hoy. Los días anteriores conservan el '
-            'objetivo con el que fueron registrados.',
+            'Rige desde hoy; los días anteriores no cambian.',
             style: NmTextStyles.from(NmType.caption, color: nm.textMuted),
           ),
         ],

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../../core/error/app_error.dart';
 import '../../../core/router/routes.dart';
 import '../../../core/theme/nm_theme.dart';
 import '../../../core/theme/text_styles.dart';
@@ -63,24 +64,45 @@ class _BodyProfileScreenState extends ConsumerState<BodyProfileScreen> {
         ? null
         : ageFromBirthDate(profile.birthDate!);
 
+    // El aviso de "tu objetivo pasaría de X a Y" solo tiene sentido si el
+    // objetivo guardado salió de la fórmula: uno escrito a mano o aceptado de
+    // la IA no se mueve porque cambie el peso. Y se calcula con la **misma**
+    // función que el objetivo guardado —por fracción del gasto, como
+    // `TargetScreen`—; con `calorieTarget` por kilos daba otro número y el
+    // aviso aparecía aunque no hubiera nada que actualizar.
     int? suggested;
-    if (profile.birthDate != null && profile.heightCm != null && weightKg != null) {
-      final bmrValue = bmrMifflinStJeor(
-        weightKg: weightKg,
-        heightCm: profile.heightCm!,
-        ageYears: age!,
-        sex: profile.biologicalSex,
-      );
-      final tdeeValue = tdee(
-        bmr: bmrValue,
-        activityLevel: profile.activityLevel,
-      );
-      suggested = calorieTarget(
-        tdee: tdeeValue,
-        goalType: goal?.goalType ?? GoalType.maintain,
-        rateKgPerWeek: goal?.rateKgPerWeek ?? 0,
-        sex: profile.biologicalSex,
-      ).target;
+    if (goal != null &&
+        goal.targetMethod == TargetMethod.calculated &&
+        profile.birthDate != null &&
+        profile.heightCm != null &&
+        weightKg != null) {
+      try {
+        final bmrValue = bmrMifflinStJeor(
+          weightKg: weightKg,
+          heightCm: profile.heightCm!,
+          ageYears: age!,
+          sex: profile.biologicalSex,
+        );
+        final tdeeValue = tdee(
+          bmr: bmrValue,
+          activityLevel: profile.activityLevel,
+        );
+        final pace = GoalPace.nearestForRate(
+          rateKgPerWeek: goal.rateKgPerWeek,
+          goalType: goal.goalType,
+          tdee: tdeeValue,
+        );
+        suggested = calorieTargetForPace(
+          tdee: tdeeValue,
+          goalType: goal.goalType,
+          fractionOfTdee: pace.fractionFor(goal.goalType),
+          sex: profile.biologicalSex,
+        ).target.target;
+      } on CalculationError {
+        // Un dato fuera de rango (una edad de más de 100, un peso cargado
+        // mal) no puede tirar la pantalla en `build`: sin sugerencia y listo.
+        suggested = null;
+      }
     }
 
     return NmScreen(
@@ -113,6 +135,7 @@ class _BodyProfileScreenState extends ConsumerState<BodyProfileScreen> {
             label: 'Fecha de nacimiento',
             value: profile.birthDate,
             helper: age == null ? null : '$age años',
+            firstDate: earliestBirthDate(),
             lastDate: DateTime.now(),
             onChanged: (v) {
               if (ageFromBirthDate(v) < 13) {
@@ -160,7 +183,7 @@ class _BodyProfileScreenState extends ConsumerState<BodyProfileScreen> {
                       const SizedBox(height: NmSpace.s1),
                       Text(
                         weightKg == null
-                            ? 'Sin registro'
+                            ? 'Sin registrar'
                             : Fmt.weight(weightKg, units),
                         style: NmTextStyles.from(
                           NmType.h3,
@@ -218,19 +241,10 @@ class _BodyProfileScreenState extends ConsumerState<BodyProfileScreen> {
                         '${Fmt.decimal1(bmi(weightKg: weightKg, heightCm: profile.heightCm!))}',
                   ),
                   const SizedBox(height: NmSpace.s3),
-                  Text(
-                    'Se actualiza solo cada vez que registrás un peso nuevo.',
-                    style: NmTextStyles.from(
-                      NmType.caption,
-                      color: nm.textMuted,
-                    ),
-                  ),
-                  const SizedBox(height: NmSpace.s3),
                   const InfoNote(
-                    text: 'Es una referencia poblacional y nada más: no '
-                        'distingue músculo de grasa ni dice nada sobre tu '
-                        'salud. Para composición corporal miran los pliegues '
-                        'y la bioimpedancia.',
+                    text:
+                        'Es una referencia poblacional: no distingue músculo '
+                        'de grasa.',
                   ),
                   const SizedBox(height: NmSpace.s3),
                   NmButton.ghost(
@@ -246,7 +260,8 @@ class _BodyProfileScreenState extends ConsumerState<BodyProfileScreen> {
             const SizedBox(height: NmSpace.s6),
             InfoNote(
               tone: NmNoteTone.info,
-              text: 'Tu objetivo sugerido pasaría de '
+              text:
+                  'Tu objetivo sugerido pasaría de '
                   '${Fmt.integer(goal.baseCalorieTarget)} a '
                   '${Fmt.integer(suggested)} kcal.',
               action: 'Actualizar objetivo',
@@ -392,12 +407,16 @@ class _TargetScreenState extends ConsumerState<TargetScreen> {
                 children: <Widget>[
                   ValueRow(
                     label: 'Metabolismo basal',
-                    caption: 'Mifflin-St Jeor',
+                    hint:
+                        'Fórmula de Mifflin-St Jeor, con tu sexo, edad, '
+                        'altura y peso.',
                     value: Fmt.kcal(bmrValue),
                   ),
                   ValueRow(
                     label: '× factor de actividad',
-                    caption: profile.activityLevel.label,
+                    hint:
+                        'Nivel de actividad: '
+                        '${profile.activityLevel.label.toLowerCase()}.',
                     value: Fmt.decimal2(profile.activityLevel.factor),
                   ),
                   ValueRow(label: 'Gasto diario', value: Fmt.kcal(tdeeValue!)),
@@ -406,8 +425,9 @@ class _TargetScreenState extends ConsumerState<TargetScreen> {
                       label: goalType == GoalType.lose
                           ? '− déficit'
                           : '+ superávit',
-                      caption: '${pace.shareLabelFor(goalType)} · '
-                          '≈ ${Fmt.decimal2(effectiveRate)} kg/semana',
+                      hint:
+                          '${pace.shareLabelFor(goalType)}: '
+                          '≈ ${Fmt.decimal2(effectiveRate)} kg por semana.',
                       value: Fmt.kcal(
                         CalorieTargetRules.dailyAdjustment(
                           effectiveRate,
@@ -427,7 +447,8 @@ class _TargetScreenState extends ConsumerState<TargetScreen> {
               const SizedBox(height: NmSpace.s3),
               InfoNote(
                 tone: NmNoteTone.caution,
-                text: 'Ajustamos tu objetivo al mínimo saludable de '
+                text:
+                    'Ajustamos tu objetivo al mínimo saludable de '
                     '${CalorieTargetRules.minimumFor(profile.biologicalSex)} '
                     'kcal.',
               ),
@@ -439,24 +460,17 @@ class _TargetScreenState extends ConsumerState<TargetScreen> {
             action: 'Ver los cuatro',
             onAction: () => context.push(Routes.profileGoal),
           ),
-          Wrap(
-            spacing: NmSpace.s2,
-            runSpacing: NmSpace.s2,
-            children: <Widget>[
-              for (final type in GoalType.values)
-                NmChip(
-                  label: type.label,
-                  selected: type == goalType,
-                  semanticsInRadioGroup: true,
-                  onTap: () => setState(() {
-                    _goalType = type;
-                    // Cada objetivo arranca en su ritmo de referencia;
-                    // conservar el del objetivo anterior daba combinaciones
-                    // raras, como ganar músculo al ritmo más exigente.
-                    _pace = GoalPreset.of(type).defaultPace;
-                  }),
-                ),
-            ],
+          // Dos filas de dos, con un círculo de selección: es una sola
+          // opción entre cuatro.
+          _GoalTypeGrid(
+            value: goalType,
+            onChanged: (type) => setState(() {
+              _goalType = type;
+              // Cada objetivo arranca en su ritmo de referencia; conservar el
+              // del objetivo anterior daba combinaciones raras, como ganar
+              // músculo al ritmo más exigente.
+              _pace = GoalPreset.of(type).defaultPace;
+            }),
           ),
           if (goalType != GoalType.maintain) ...<Widget>[
             const SizedBox(height: NmSpace.s6),
@@ -495,8 +509,6 @@ class _TargetScreenState extends ConsumerState<TargetScreen> {
                         ),
                 ),
               ),
-            const SizedBox(height: NmSpace.s2),
-            const InfoNote(text: 'El tope es 1 kg por semana.'),
           ],
           const SizedBox(height: NmSpace.s6),
           NmSwitchRow(
@@ -524,17 +536,20 @@ class _TargetScreenState extends ConsumerState<TargetScreen> {
               children: <Widget>[
                 ValueRow(
                   label: 'Proteínas',
-                  caption: '${(macros.proteinG * 4 * 100 / previewTarget).round()} %',
+                  caption:
+                      '${(macros.proteinG * 4 * 100 / previewTarget).round()} %',
                   value: Fmt.grams(macros.proteinG),
                 ),
                 ValueRow(
                   label: 'Carbohidratos',
-                  caption: '${(macros.carbsG * 4 * 100 / previewTarget).round()} %',
+                  caption:
+                      '${(macros.carbsG * 4 * 100 / previewTarget).round()} %',
                   value: Fmt.grams(macros.carbsG),
                 ),
                 ValueRow(
                   label: 'Grasas',
-                  caption: '${(macros.fatG * 9 * 100 / previewTarget).round()} %',
+                  caption:
+                      '${(macros.fatG * 9 * 100 / previewTarget).round()} %',
                   value: Fmt.grams(macros.fatG),
                 ),
               ],
@@ -542,9 +557,7 @@ class _TargetScreenState extends ConsumerState<TargetScreen> {
           ),
           const SizedBox(height: NmSpace.s6),
           const InfoNote(
-            text: 'Al guardar, el objetivo nuevo rige desde hoy. Los días '
-                'anteriores conservan el objetivo con el que fueron '
-                'registrados.',
+            text: 'Rige desde hoy; los días anteriores no cambian.',
           ),
           // Sin datos corporales no hay fórmula posible: el objetivo solo puede
           // ser manual, y conviene decir dónde se cargan en vez de dejar el
@@ -552,8 +565,7 @@ class _TargetScreenState extends ConsumerState<TargetScreen> {
           if (!profile.hasBodyData) ...<Widget>[
             const SizedBox(height: NmSpace.s4),
             InfoNote(
-              text: 'Sin altura, nacimiento y sexo no se puede calcular. '
-                  'Cargalos y el objetivo sale de tus datos.',
+              text: 'Sin altura, nacimiento y sexo no se puede calcular.',
               action: 'Cargar mis datos',
               onAction: () => context.push(Routes.profileBody),
             ),
@@ -586,13 +598,13 @@ class _TargetScreenState extends ConsumerState<TargetScreen> {
                         context: context,
                         builder: (context) => NmDialog(
                           title: 'Es un objetivo muy bajo',
-                          body: 'Por debajo de $minimum kcal cuesta cubrir los '
+                          body:
+                              'Por debajo de $minimum kcal cuesta cubrir los '
                               'nutrientes básicos.',
                           actions: <Widget>[
                             NmButton.ghost(
                               label: 'Volver',
-                              onPressed: () =>
-                                  Navigator.of(context).pop(false),
+                              onPressed: () => Navigator.of(context).pop(false),
                             ),
                             NmButton(
                               label: 'Guardar igual',
@@ -626,10 +638,7 @@ class _TargetScreenState extends ConsumerState<TargetScreen> {
                     );
                     if (!context.mounted) return;
                     setState(() => _saving = false);
-                    NmSnackbar.show(
-                      context,
-                      'Objetivo actualizado desde hoy',
-                    );
+                    NmSnackbar.show(context, 'Objetivo actualizado desde hoy');
                   },
           ),
         ],
@@ -637,8 +646,7 @@ class _TargetScreenState extends ConsumerState<TargetScreen> {
     );
   }
 
-  String _formatDate(DateTime date) =>
-      '${date.day}/${date.month}/${date.year}';
+  String _formatDate(DateTime date) => '${date.day}/${date.month}/${date.year}';
 
   /// Los kilos por semana que le tocan a [pace] con este gasto.
   double _rateOf(GoalPace pace, GoalType goalType, int tdeeValue) =>
@@ -685,7 +693,7 @@ class _MyItemsScreenState extends ConsumerState<MyItemsScreen> {
     final weightKg = ref.watch(currentWeightProvider);
 
     return NmScreen(
-      title: 'Mis cosas',
+      title: 'Mis alimentos y plantillas',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
@@ -719,8 +727,8 @@ class _MyItemsScreenState extends ConsumerState<MyItemsScreen> {
                     items: const <_MyItem>[],
                     emptyTitle: 'Sin plantillas',
                     emptyBody:
-                        'Guardá una actividad como plantilla para repetirla '
-                        'en dos toques.',
+                        'Guardá una actividad como plantilla para '
+                        'repetirla.',
                     icon: PhosphorIcons.barbell(),
                   )
                 : Column(
@@ -841,6 +849,66 @@ class _EmptyOrList extends StatelessWidget {
             ),
         ],
       ),
+    );
+  }
+}
+
+/// Tipo de objetivo en una grilla de 2 × 2, con un círculo por opción.
+class _GoalTypeGrid extends StatelessWidget {
+  const _GoalTypeGrid({required this.value, required this.onChanged});
+
+  final GoalType value;
+  final ValueChanged<GoalType> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final nm = context.nm;
+    const options = GoalType.values;
+    return Column(
+      children: <Widget>[
+        for (var i = 0; i < options.length; i += 2)
+          Row(
+            children: <Widget>[
+              for (final option in options.skip(i).take(2))
+                Expanded(
+                  child: Semantics(
+                    inMutuallyExclusiveGroup: true,
+                    checked: option == value,
+                    label: option.label,
+                    child: ExcludeSemantics(
+                      child: InkWell(
+                        onTap: () => onChanged(option),
+                        borderRadius: NmRadius.brSm,
+                        child: Row(
+                          children: <Widget>[
+                            Radio<GoalType>(
+                              value: option,
+                              // ignore: deprecated_member_use
+                              groupValue: value,
+                              // ignore: deprecated_member_use
+                              onChanged: (v) {
+                                if (v != null) onChanged(v);
+                              },
+                            ),
+                            Expanded(
+                              child: Text(
+                                option.label,
+                                style: NmTextStyles.from(
+                                  NmType.bodySm,
+                                  color: nm.text,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              if (options.length - i == 1) const Spacer(),
+            ],
+          ),
+      ],
     );
   }
 }

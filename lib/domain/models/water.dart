@@ -34,7 +34,6 @@ class WaterLog {
     syncStatus: SyncStatus.pending,
   );
 
-  int millilitres(int glassSizeMl) => glasses * glassSizeMl;
 
   Map<String, dynamic> toJson() => <String, dynamic>{
     'id': id,

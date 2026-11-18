@@ -205,7 +205,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
           const SizedBox(height: NmSpace.s4),
           Center(
             child: NmButton.ghost(
-              label: 'No tengo cuenta — crear una',
+              label: 'Crear cuenta',
               onPressed: () => context.pushReplacement(Routes.signUp),
             ),
           ),

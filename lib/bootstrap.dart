@@ -9,6 +9,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'app.dart';
+import 'core/config/feature_flags.dart';
 import 'core/config/supabase_config.dart';
 import 'core/utils/dates.dart';
 import 'data/local/android_reminder_scheduler.dart';
@@ -16,8 +17,13 @@ import 'data/local/health_connect_gateway.dart';
 import 'data/local/home_widget_publisher.dart';
 import 'data/local/local_auth_gateway.dart';
 import 'data/local/local_store.dart';
+import 'data/local/pal_alert_store.dart';
+import 'data/local/theme_palette_store.dart';
 import 'data/remote/calorie_target_client.dart';
+import 'data/remote/care_articles_client.dart';
 import 'data/remote/care_client.dart';
+import 'data/remote/care_feedback_client.dart';
+import 'data/remote/care_report_client.dart';
 import 'data/remote/cloud_backup_client.dart';
 import 'data/remote/gemini_analysis_client.dart';
 import 'data/remote/meal_suggestions_client.dart';
@@ -27,14 +33,17 @@ import 'data/remote/relational_sync_client.dart';
 import 'data/remote/supabase_auth_gateway.dart';
 import 'data/remote/usda_food_client.dart';
 import 'data/repositories/local_repository.dart';
+import 'domain/models/activity.dart';
 import 'domain/models/pal.dart';
 import 'domain/repositories/auth_gateway.dart';
 import 'domain/services/cloud_backup_service.dart';
+import 'domain/services/pal_alerts.dart';
 import 'domain/services/pal_publisher.dart';
 import 'domain/services/photo_sync_service.dart';
 import 'domain/services/relational_sync_service.dart';
 import 'presentation/providers/app_providers.dart';
 import 'presentation/providers/auth_providers.dart';
+import 'presentation/providers/care_providers.dart';
 import 'presentation/providers/reminder_providers.dart';
 
 /// Arranque: base local, formatos de fecha, sesión y contenedor de providers.
@@ -108,10 +117,8 @@ Future<void> bootstrap() async {
       : null;
 
   // Lo que ven los pals. Se arma acá y no en el repositorio para que quede a
-  // la vista qué se publica: momento, nombre y calorías por comida, más
-  // minutos y sesiones — siempre— y fotos/agua/sueño/detalle de actividad
-  // solo si `prefs` los tiene prendidos. Nada de peso, medidas ni ítems de
-  // cada comida, prenda lo que prenda la persona.
+  // la vista qué se publica: cada categoría solo si `prefs` la tiene prendida.
+  // Nunca medidas ni los ítems de cada comida.
   PalPublisher? palPublisher;
 
   // El repositorio avisa a la UI por el contador de revisión; se enlaza
@@ -185,8 +192,10 @@ Future<void> bootstrap() async {
       : null;
 
   // Sin servidor no hay a quién darle acceso: los datos no salieron del
-  // teléfono, así que la pantalla lo dice y no ofrece nada.
-  final CareClient? careClient = SupabaseConfig.isConfigured
+  // teléfono, así que la pantalla lo dice y no ofrece nada. Con el flag de la
+  // nutricionista apagado tampoco: nada de lo suyo se consulta.
+  const care = FeatureFlags.nutritionist;
+  final CareClient? careClient = SupabaseConfig.isConfigured && care
       ? CareClient.fromInstance()
       : null;
 
@@ -195,24 +204,32 @@ Future<void> bootstrap() async {
       client: palsClient,
       auth: auth,
       buildDay: (date, prefs) {
-        final activities = repository.activitiesOn(date);
+        final activities = prefs.activity
+            ? repository.activitiesOn(date)
+            : const <Activity>[];
         final sleep = prefs.sleep ? repository.sleepOn(date) : null;
+        // El último peso hasta ese día: con pesajes semanales, "el peso del
+        // martes" casi nunca existe. `weightLogs` viene del más nuevo al más
+        // viejo.
+        final weight = prefs.weight
+            ? repository.weightLogs
+                  .where((w) => !w.localDate.isAfter(date))
+                  .firstOrNull
+            : null;
         return PalDay(
           userId: auth.currentAccount?.id ?? '',
           date: date,
           meals: <PalMeal>[
-            for (final meal in repository.mealsOn(date))
-              PalMeal(
-                slot: meal.slot,
-                // El título de la comida, que resume lo que tiene adentro sin
-                // publicar la lista de ítems. Antes era `items.first.name` —el
-                // primer ingrediente que se hubiera cargado—, así que una
-                // milanesa con puré y ensalada le llegaba al pal como "Puré de
-                // papa" si el puré había entrado primero.
-                name: meal.title,
-                kcal: meal.totalKcal,
-                photoPath: prefs.photos ? meal.photoPath : null,
-              ),
+            if (prefs.meals)
+              for (final meal in repository.mealsOn(date))
+                PalMeal(
+                  slot: meal.slot,
+                  // El título de la comida, que resume lo que tiene adentro
+                  // sin publicar la lista de ítems.
+                  name: meal.title,
+                  kcal: meal.totalKcal,
+                  photoPath: prefs.photos ? meal.photoPath : null,
+                ),
           ],
           activityMinutes: activities.fold(0, (acc, a) => acc + a.durationMinutes),
           activityCount: activities.length,
@@ -229,6 +246,8 @@ Future<void> bootstrap() async {
           waterGlasses: prefs.water ? repository.glassesOn(date) : null,
           sleepMinutes: sleep?.minutes,
           sleepQuality: sleep?.quality,
+          weightKg: weight?.weightKg,
+          weightDate: weight?.localDate,
         );
       },
     );
@@ -243,8 +262,49 @@ Future<void> bootstrap() async {
     palPublisher.markDirty();
   }
 
+  // Avisos de pals: "Tomás cargó el almuerzo", si vos todavía no. Necesita
+  // servidor (para escuchar) y notificaciones (para avisar).
+  if (palsClient != null && reminderScheduler != null) {
+    final alertStore = PalAlertStore();
+    PalAlertService(
+      client: palsClient,
+      auth: auth,
+      sink: reminderScheduler,
+      prefs: alertStore.load,
+      loggedSlotToday: (slot) =>
+          repository.mealsOn(today()).any((m) => m.slot == slot),
+      movedToday: () => repository.activitiesOn(today()).isNotEmpty,
+    ).attach();
+  }
+
+  // Devoluciones, artículos e informes: existen solo con servidor y con su
+  // flag. Sin eso ninguna pantalla nueva tiene nada que mostrar.
+  final CareFeedbackClient? careFeedbackClient =
+      SupabaseConfig.isConfigured && care
+      ? CareFeedbackClient.fromInstance()
+      : null;
+  final CareReportClient? careReportClient =
+      SupabaseConfig.isConfigured && FeatureFlags.aiProgressReport
+      ? CareReportClient.fromInstance()
+      : null;
+  final CareArticlesClient? careArticlesClient =
+      SupabaseConfig.isConfigured && care
+      ? CareArticlesClient.fromInstance()
+      : null;
+
+  // El tema elegido, antes del primer cuadro: si no, la app abre con Ceres y
+  // cambia a Sakura un instante después.
+  final palette = await ThemePaletteStore().load();
+
   final container = ProviderContainer(
     overrides: <Override>[
+      initialThemePaletteProvider.overrideWithValue(palette),
+      if (careFeedbackClient != null)
+        careFeedbackClientProvider.overrideWithValue(careFeedbackClient),
+      if (careReportClient != null)
+        careReportClientProvider.overrideWithValue(careReportClient),
+      if (careArticlesClient != null)
+        careArticlesClientProvider.overrideWithValue(careArticlesClient),
       repositoryProvider.overrideWithValue(repository),
       authGatewayProvider.overrideWithValue(auth),
       if (backup != null) cloudBackupProvider.overrideWithValue(backup),
@@ -252,12 +312,24 @@ Future<void> bootstrap() async {
         relationalSyncProvider.overrideWithValue(relationalSync),
       if (photos != null) photoSyncProvider.overrideWithValue(photos),
       if (palsClient != null) palsClientProvider.overrideWithValue(palsClient),
+      if (palPublisher != null)
+        palPublisherProvider.overrideWithValue(palPublisher),
       if (careClient != null) careClientProvider.overrideWithValue(careClient),
       if (reminderScheduler != null)
         reminderSchedulerProvider.overrideWithValue(reminderScheduler),
     ],
   );
   notify = () => container.read(appRevisionProvider.notifier).bump();
+
+  // Entrar con otra cuenta no puede heredar lo que publicó la nutricionista
+  // de la anterior.
+  if (careFeedbackClient != null || careArticlesClient != null) {
+    auth.changes.listen((_) {
+      container
+        ..invalidate(careFeedbackProvider)
+        ..invalidate(careArticlesProvider);
+    });
+  }
 
   runApp(
     UncontrolledProviderScope(

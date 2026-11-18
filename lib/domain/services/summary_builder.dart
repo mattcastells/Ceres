@@ -20,9 +20,7 @@ import '../models/summaries.dart';
 /// aritmética sale de `domain/calculations/`.
 abstract final class SummaryBuilder {
   static List<Meal> mealsOn(List<Meal> meals, DateTime date) =>
-      meals
-          .where((m) => !m.isDeleted && isSameDay(m.localDate, date))
-          .toList()
+      meals.where((m) => !m.isDeleted && isSameDay(m.localDate, date)).toList()
         ..sort((a, b) => a.eatenAt.compareTo(b.eatenAt));
 
   static List<Activity> activitiesOn(
@@ -54,10 +52,7 @@ abstract final class SummaryBuilder {
         .toList();
 
     final consumed = meals.fold(0, (acc, m) => acc + m.totalKcal);
-    final estimated = activities.fold(
-      0,
-      (acc, a) => acc + a.estimatedCalories,
-    );
+    final estimated = activities.fold(0, (acc, a) => acc + a.estimatedCalories);
     // Cada actividad conserva su porcentaje congelado (D-05): se suman las
     // aplicadas ya persistidas, no se recalcula el día entero.
     final applied = creditEnabled
@@ -105,10 +100,7 @@ abstract final class SummaryBuilder {
     );
   }
 
-  static WeightSnapshot? _weightSnapshot(
-    List<WeightLog> logs,
-    DateTime date,
-  ) {
+  static WeightSnapshot? _weightSnapshot(List<WeightLog> logs, DateTime date) {
     final sorted = <WeightLog>[...logs.where((w) => !w.isDeleted)]
       ..sort((a, b) => a.localDate.compareTo(b.localDate));
     final upToDate = sorted
@@ -116,9 +108,7 @@ abstract final class SummaryBuilder {
         .toList();
     if (upToDate.isEmpty) return null;
     final latest = upToDate.last;
-    final previous = upToDate.length > 1
-        ? upToDate[upToDate.length - 2]
-        : null;
+    final previous = upToDate.length > 1 ? upToDate[upToDate.length - 2] : null;
     return WeightSnapshot(
       weightKg: latest.weightKg,
       deltaKg: previous == null
@@ -176,9 +166,7 @@ abstract final class SummaryBuilder {
             (acc, a) => acc + a.durationMinutes,
           ),
           activityCount: activities.length,
-          steps: steps.isEmpty
-              ? null
-              : steps.fold<int>(0, (acc, s) => acc + s),
+          steps: steps.isEmpty ? null : steps.fold<int>(0, (acc, s) => acc + s),
           isRestDay: isRestDay(cursor),
           hasRecords: meals.isNotEmpty || activities.isNotEmpty,
           isSickDay: isSickDay?.call(cursor) ?? false,
@@ -242,9 +230,10 @@ abstract final class SummaryBuilder {
     final seriesPoints = weightInRange
         .map((w) => SeriesPoint(w.localDate, w.weightKg))
         .toList();
-    final movingAvg = movingAverage(seriesPoints, 7)
-        .map((p) => ChartPoint(p.date, p.value))
-        .toList();
+    final movingAvg = movingAverage(
+      seriesPoints,
+      7,
+    ).map((p) => ChartPoint(p.date, p.value)).toList();
 
     final calorieDays = <CaloriesDay>[];
     final activityByDay = <ActivityDayPoint>[];
@@ -385,17 +374,15 @@ abstract final class SummaryBuilder {
           ? 0
           : roundHalfUp(
               calorieDays.fold(0, (acc, d) => acc + d.consumed) /
-                  math.max(
-                    1,
-                    calorieDays.where((d) => d.consumed > 0).length,
-                  ),
+                  math.max(1, calorieDays.where((d) => d.consumed > 0).length),
             ),
       adherencePct: adherencePct(adherenceDays),
       activityByDay: activityByDay,
-      activityByCategory: byCategory.entries
-          .map((e) => CategorySlice(category: e.key, minutes: e.value))
-          .toList()
-        ..sort((a, b) => b.minutes.compareTo(a.minutes)),
+      activityByCategory:
+          byCategory.entries
+              .map((e) => CategorySlice(category: e.key, minutes: e.value))
+              .toList()
+            ..sort((a, b) => b.minutes.compareTo(a.minutes)),
       activityTotals: ActivityPeriodTotals(
         minutes: totalMinutes,
         sessions: rangeActivities.length,
@@ -462,19 +449,16 @@ abstract final class SummaryBuilder {
         (acc, a) => acc + a.durationMinutes,
       ),
       ActivityGoalType.sessions => inPeriod.length,
-      ActivityGoalType.steps => inPeriod
-          .map((a) => a.steps ?? 0)
-          .fold(0, (acc, s) => acc + s),
-      ActivityGoalType.distance => inPeriod
-          .map((a) => a.distanceMeters ?? 0)
-          .fold(0, (acc, d) => acc + d),
-      ActivityGoalType.strengthSessions => inPeriod
-          .where((a) => a.activityType?.category == ActivityCategory.strength)
-          .length,
-      ActivityGoalType.activeDays => inPeriod
-          .map((a) => isoDate(a.localDate))
-          .toSet()
-          .length,
+      ActivityGoalType.steps =>
+        inPeriod.map((a) => a.steps ?? 0).fold(0, (acc, s) => acc + s),
+      ActivityGoalType.distance =>
+        inPeriod.map((a) => a.distanceMeters ?? 0).fold(0, (acc, d) => acc + d),
+      ActivityGoalType.strengthSessions =>
+        inPeriod
+            .where((a) => a.activityType?.category == ActivityCategory.strength)
+            .length,
+      ActivityGoalType.activeDays =>
+        inPeriod.map((a) => isoDate(a.localDate)).toSet().length,
     };
   }
 
@@ -482,34 +466,32 @@ abstract final class SummaryBuilder {
   static List<String> consistencyNotes(ProgressSummary p) {
     final notes = <String>[];
     final totals = p.activityTotals;
-    final windowDays = math.min(p.days, 7);
 
     if (totals.sessions == 0) {
       notes.add('Todavía no registraste actividad en este período.');
       return notes;
     }
 
+    // Los días activos son del período entero, así que el "de los últimos"
+    // también. Antes decía "13 de los últimos 7 días": contaba 30 y nombraba 7.
     final restSuffix = totals.restDays > 0
         ? ' (${totals.restDays} de descanso planificado)'
         : '';
     notes.add(
-      'Registraste actividad durante ${totals.activeDays} de los últimos '
-      '$windowDays días$restSuffix.',
+      'Te moviste ${totals.activeDays} de los últimos ${p.days} '
+      'días$restSuffix.',
     );
 
     final thisWeek = p.activityByDay
         .where((d) => !d.date.isBefore(startOfIsoWeek(p.to)))
         .fold(0, (acc, d) => acc + d.minutes);
-    notes.add('Esta semana acumulaste $thisWeek minutos de actividad.');
-
     final delta = p.previousWeekDeltaMinutes;
-    if (delta > 0) {
-      notes.add('Son $delta minutos más que la semana anterior.');
-    } else if (delta < 0) {
-      notes.add('Son ${delta.abs()} minutos menos que la semana anterior.');
-    } else {
-      notes.add('Los mismos minutos que la semana anterior.');
-    }
+    final comparison = delta > 0
+        ? '$delta más que la anterior'
+        : delta < 0
+        ? '${delta.abs()} menos que la anterior'
+        : 'igual que la anterior';
+    notes.add('Esta semana llevás $thisWeek min, $comparison.');
     return notes;
   }
 }

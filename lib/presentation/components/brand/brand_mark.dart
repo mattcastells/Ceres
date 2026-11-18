@@ -40,9 +40,9 @@ class BrandMark extends StatelessWidget {
           ringTrack: monochrome
               ? Colors.transparent
               : nm.text.withValues(alpha: 0.10),
-          ringColor: color ?? (monochrome ? nm.text : NmAccent.c500),
-          barLight: color ?? (monochrome ? nm.text : NmAccent.c300),
-          barStrong: color ?? (monochrome ? nm.text : NmAccent.c500),
+          ringColor: color ?? (monochrome ? nm.text : nm.accentRamp.c500),
+          barLight: color ?? (monochrome ? nm.text : nm.accentRamp.c300),
+          barStrong: color ?? (monochrome ? nm.text : nm.accentRamp.c500),
         ),
       ),
     );

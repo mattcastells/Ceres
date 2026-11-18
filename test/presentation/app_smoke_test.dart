@@ -166,8 +166,8 @@ void main() {
 
     await tester.tap(find.text('Progreso'));
     await _settle(tester);
-    expect(find.text('Promedio diario'), findsOneWidget);
-    expect(find.text('Adherencia'), findsOneWidget);
+    expect(find.textContaining('Promedio: '), findsOneWidget);
+    expect(find.text('Generar reporte'), findsNothing); // sin servidor
 
     // Historial ya no es una tab: se entra desde acá, más abajo en Progreso.
     final historyRow = find.text('Historial');
@@ -175,7 +175,9 @@ void main() {
     await tester.pump();
     await tester.tap(historyRow);
     await _settle(tester);
-    expect(find.textContaining('días coinciden'), findsOneWidget);
+    expect(find.byTooltip('Filtros'), findsOneWidget);
+    // Sin filtros no hay "N días coinciden": no hay nada con qué coincidir.
+    expect(find.textContaining('días coinciden'), findsNothing);
     await tester.tap(find.byType(BackButton));
     await _settle(tester);
 
@@ -183,7 +185,7 @@ void main() {
     await tester.tap(find.text('Pals'));
     await _settle(tester);
     expect(
-      find.textContaining('Esta compilación no tiene servidor'),
+      find.textContaining('Esta versión no tiene servidor'),
       findsOneWidget,
     );
 

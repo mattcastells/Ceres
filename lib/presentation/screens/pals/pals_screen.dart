@@ -119,16 +119,14 @@ class _PalsScreenState extends ConsumerState<PalsScreen> {
     ref.invalidate(palsProvider);
   }
 
-  Future<void> _accept(Pal pal) => _responder(
-    () async => ref.read(palsClientProvider)?.accept(pal.id),
-  );
+  Future<void> _accept(Pal pal) =>
+      _responder(() async => ref.read(palsClientProvider)?.accept(pal.id));
 
   Future<void> _remove(Pal pal) async {
     final confirmed = await showNmDialog<bool>(
       context: context,
       builder: (context) => NmDialog(
         title: '¿Quitar a ${pal.label}?',
-        body: 'Deja de ver tu día y vos el suyo.',
         actions: <Widget>[
           NmButton.ghost(
             label: 'Cancelar',
@@ -156,7 +154,7 @@ class _PalsScreenState extends ConsumerState<PalsScreen> {
         child: Padding(
           padding: EdgeInsets.only(top: NmSpace.s6),
           child: InfoNote(
-            text: 'Esta compilación no tiene servidor: Pals necesita cuenta.',
+            text: 'Esta versión no tiene servidor: Pals necesita cuenta.',
             tone: NmNoteTone.caution,
           ),
         ),
@@ -169,11 +167,6 @@ class _PalsScreenState extends ConsumerState<PalsScreen> {
     return NmScreen(
       title: 'Pals',
       actions: <Widget>[
-        NmIconButton(
-          icon: PhosphorIcons.gear(),
-          tooltip: 'Qué ven mis pals',
-          onPressed: () => context.push(Routes.palSharing),
-        ),
         NmIconButton(
           icon: PhosphorIcons.arrowsClockwise(),
           tooltip: 'Actualizar',
@@ -210,12 +203,6 @@ class _PalsScreenState extends ConsumerState<PalsScreen> {
               ],
             ),
           ),
-          const SizedBox(height: NmSpace.s2),
-          Text(
-            'Pasáselo a quien quieras agregar.',
-            style: NmTextStyles.from(NmType.caption, color: nm.textMuted),
-          ),
-
           const SizedBox(height: NmSpace.s6),
           const NmSectionHeader(title: 'Agregar un pal'),
           NmTextField(
@@ -242,19 +229,18 @@ class _PalsScreenState extends ConsumerState<PalsScreen> {
                   : 'No pudimos cargar tus pals.',
               onRetry: () => ref.invalidate(palsProvider),
             ),
-            data: (list) => _PalList(
-              pals: list,
-              onAccept: _accept,
-              onRemove: _remove,
-            ),
+            data: (list) =>
+                _PalList(pals: list, onAccept: _accept, onRemove: _remove),
           ),
 
           const SizedBox(height: NmSpace.s6),
-          Text(
-            'Un pal siempre ve qué comiste y si te moviste. Fotos, agua, '
-            'sueño y el detalle de tu ejercicio los elegís vos, acá arriba. '
-            'Tu peso y tus medidas nunca se comparten.',
-            style: NmTextStyles.from(NmType.bodySm, color: nm.textMuted),
+          // Qué ven tus pals y de qué te avisa la app. Antes vivía en Perfil
+          // y en un engranaje de la barra: acá, a la vista.
+          NmButton.secondary(
+            label: 'Configurar Pals',
+            block: true,
+            icon: PhosphorIcons.slidersHorizontal(),
+            onPressed: () => context.push(Routes.palSharing),
           ),
         ],
       ),
@@ -281,9 +267,7 @@ class _PalList extends StatelessWidget {
     final sent = pals
         .where((p) => p.status == PalStatus.pending && !p.isIncoming)
         .toList();
-    final accepted = pals
-        .where((p) => p.status == PalStatus.accepted)
-        .toList();
+    final accepted = pals.where((p) => p.status == PalStatus.accepted).toList();
 
     if (pals.isEmpty) {
       return EmptyState(

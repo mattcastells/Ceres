@@ -3,14 +3,12 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../../core/theme/motion.dart';
 import '../../core/theme/nm_theme.dart';
 import '../../core/theme/text_styles.dart';
 import '../../core/theme/tokens.dart';
 import '../components/system/buttons.dart';
-import '../providers/app_providers.dart';
 import '../providers/auth_providers.dart';
 import '../screens/home/add_sheet.dart';
 import '../screens/settings/update_prompt.dart';
@@ -263,55 +261,6 @@ class _TabIcon extends StatelessWidget {
             ),
           ),
       ],
-    );
-  }
-}
-
-/// Banner de registros pendientes de revisión por duplicado (RN-07).
-///
-/// **Todavía no se monta en ningún lado**, y el comentario anterior decía que
-/// era "visible sobre cualquier tab", que es lo que va a ser y no lo que es.
-///
-/// Espera a la importación de sesiones de ejercicio desde Health Connect, que
-/// es lo único que puede duplicar de verdad y sigue afuera a propósito. Hasta
-/// entonces nada marca un registro como `needsReview`, así que
-/// `pendingReviewsProvider` está siempre vacío y esto no dibujaría nada aunque
-/// se colgara del shell. (`duplicateScore` sí se usa hoy, pero para avisar en
-/// el formulario de actividad, no por acá.)
-class PendingReviewBanner extends ConsumerWidget {
-  const PendingReviewBanner({required this.onReview, super.key});
-
-  final VoidCallback onReview;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final nm = context.nm;
-    final pending = ref.watch(pendingReviewsProvider);
-    if (pending.isEmpty) return const SizedBox.shrink();
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(
-        horizontal: NmSpace.s4,
-        vertical: NmSpace.s3,
-      ),
-      color: nm.caution.withValues(alpha: nm.isDark ? 0.16 : 0.12),
-      child: Row(
-        children: <Widget>[
-          Icon(PhosphorIcons.warning(), size: NmIconSize.md, color: nm.caution),
-          const SizedBox(width: NmSpace.s2),
-          Expanded(
-            child: Text(
-              pending.length == 1
-                  ? '1 actividad importada necesita tu confirmación'
-                  : '${pending.length} actividades importadas necesitan tu '
-                        'confirmación',
-              style: NmTextStyles.from(NmType.caption, color: nm.caution),
-            ),
-          ),
-          NmButton.ghost(label: 'Revisar', onPressed: onReview),
-        ],
-      ),
     );
   }
 }

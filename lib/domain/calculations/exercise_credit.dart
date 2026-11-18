@@ -38,9 +38,4 @@ abstract final class ExerciseCreditOptions {
 
   static const int defaultPercentage = 0;
 
-  static String labelFor(int percentage) => switch (percentage) {
-    0 => 'No sumar (recomendado)',
-    100 => 'Sumar el 100 %',
-    _ => 'Sumar el $percentage %',
-  };
 }

@@ -217,18 +217,3 @@ double fractionOfTdeeForRate({
   return fraction.clamp(0.0, CalorieTargetRules.maxFractionOfTdee);
 }
 
-/// Fecha estimada de llegada al peso objetivo con el ritmo elegido.
-/// Devuelve `null` si el ritmo es 0 o el objetivo ya se alcanzó.
-DateTime? estimatedArrivalDate({
-  required double currentWeightKg,
-  required double targetWeightKg,
-  required double rateKgPerWeek,
-  DateTime? from,
-}) {
-  if (rateKgPerWeek <= 0) return null;
-  final delta = (currentWeightKg - targetWeightKg).abs();
-  if (delta < 0.1) return null;
-  final weeks = delta / rateKgPerWeek;
-  final start = from ?? DateTime.now();
-  return start.add(Duration(days: (weeks * 7).ceil()));
-}

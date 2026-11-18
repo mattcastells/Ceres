@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/error/app_error.dart';
@@ -18,11 +19,8 @@ enum PalRequestResult {
 
   final String wire;
 
-  static PalRequestResult fromWire(String? w) =>
-      PalRequestResult.values.firstWhere(
-        (r) => r.wire == w,
-        orElse: () => PalRequestResult.notFound,
-      );
+  static PalRequestResult fromWire(String? w) => PalRequestResult.values
+      .firstWhere((r) => r.wire == w, orElse: () => PalRequestResult.notFound);
 }
 
 /// Vínculos con otras personas y sus días compartidos.
@@ -81,10 +79,7 @@ class PalsClient {
   Future<PalRequestResult> request(String code) async {
     try {
       final result = await _db
-          .rpc<String>(
-            'request_pal',
-            params: <String, dynamic>{'p_code': code},
-          )
+          .rpc<String>('request_pal', params: <String, dynamic>{'p_code': code})
           .timeout(timeout);
       return PalRequestResult.fromWire(result);
     } on PostgrestException catch (error) {
@@ -193,6 +188,59 @@ class PalsClient {
     }
   }
 
+  /// El día de todos los pals en una fecha. RLS solo deja ver los de pals
+  /// aceptados (y el propio, que se descarta acá).
+  Future<List<PalDay>> palDaysOn(DateTime date) async {
+    try {
+      final rows = await _db
+          .from('shared_days')
+          .select()
+          .eq('local_date', isoDate(date))
+          .neq('user_id', _me)
+          .timeout(timeout);
+      return <PalDay>[for (final row in rows) PalDay.fromRow(row)];
+    } on Exception {
+      throw _offline;
+    }
+  }
+
+  /// Escucha en vivo lo que publican los pals (Realtime, migración 54).
+  ///
+  /// Realtime aplica RLS con la sesión de quien escucha: llegan solo los días
+  /// de sus pals, igual que en una consulta. Devuelve con qué cortar.
+  ///
+  /// [onSubscribed] corre cada vez que el canal queda escuchando, también al
+  /// reconectar: `supabase_flutter` corta Realtime cuando la app pasa a
+  /// segundo plano y lo que pasó mientras tanto no llega por el canal.
+  Future<void> Function() listenPalDays(
+    void Function(PalDay day) onDay, {
+    void Function()? onSubscribed,
+  }) {
+    final me = _me;
+    final channel = _db.channel('pal-days-$me')
+      ..onPostgresChanges(
+        event: PostgresChangeEvent.all,
+        schema: 'public',
+        table: 'shared_days',
+        callback: (payload) {
+          final row = payload.newRecord;
+          if (row.isEmpty || row['user_id'] == me) return;
+          try {
+            onDay(PalDay.fromRow(row));
+          } on Object {
+            // Una fila que no se entiende no puede tirar la escucha entera.
+          }
+        },
+      )
+      ..subscribe((status, error) {
+        if (kDebugMode) debugPrint('pal-days realtime: $status ${error ?? ''}');
+        if (status == RealtimeSubscribeStatus.subscribed) onSubscribed?.call();
+      });
+    return () async {
+      await _db.removeChannel(channel);
+    };
+  }
+
   /// Publica varios días propios de una. Sobrescribe la fila de cada fecha.
   ///
   /// En **un** pedido y no uno por día: la ventana que puede mirar un pal son
@@ -203,32 +251,34 @@ class PalsClient {
     if (days.isEmpty) return;
     final now = DateTime.now().toUtc().toIso8601String();
     try {
-      await _db.from('shared_days').upsert(<Map<String, dynamic>>[
-        for (final day in days)
-          <String, dynamic>{
-            'user_id': _me,
-            ...day.toRow(),
-            'updated_at': now,
-          },
-      ]).timeout(timeout);
+      await _db
+          .from('shared_days')
+          .upsert(<Map<String, dynamic>>[
+            for (final day in days)
+              <String, dynamic>{
+                'user_id': _me,
+                ...day.toRow(),
+                'updated_at': now,
+              },
+          ])
+          .timeout(timeout);
     } on Exception {
       throw _offline;
     }
   }
 
-  /// Qué categorías, además de comida y actividad, comparte esta cuenta.
+  /// Qué comparte esta cuenta con sus pals.
   Future<PalSharingPrefs> mySharingPrefs() async {
     try {
       final row = await _db
           .from('profiles')
-          .select(
-            'pal_share_photos, pal_share_water, pal_share_sleep, '
-            'pal_share_activity_detail',
-          )
+          .select(PalSharingPrefs.columns.join(', '))
           .eq('id', _me)
           .maybeSingle()
           .timeout(timeout);
-      return row == null ? const PalSharingPrefs() : PalSharingPrefs.fromRow(row);
+      return row == null
+          ? const PalSharingPrefs()
+          : PalSharingPrefs.fromRow(row);
     } on Exception {
       throw _offline;
     }
@@ -238,12 +288,7 @@ class PalsClient {
     try {
       await _db
           .from('profiles')
-          .update(<String, dynamic>{
-            'pal_share_photos': prefs.photos,
-            'pal_share_water': prefs.water,
-            'pal_share_sleep': prefs.sleep,
-            'pal_share_activity_detail': prefs.activityDetail,
-          })
+          .update(prefs.toRow())
           .eq('id', _me)
           .timeout(timeout);
     } on Exception {

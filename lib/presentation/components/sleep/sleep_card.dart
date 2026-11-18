@@ -26,7 +26,7 @@ class SleepCard extends ConsumerWidget {
       child: NmListRow(
         title: 'Sueño',
         subtitle: sleep == null
-            ? 'Sin registrar'
+            ? null
             : '${sleep.label} · ${sleep.quality.label}',
         leading: Icon(PhosphorIcons.moon(), size: 20, color: nm.info),
         trailing: Text(

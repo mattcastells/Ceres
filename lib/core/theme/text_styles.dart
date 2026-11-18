@@ -60,5 +60,4 @@ extension NmTextStyleX on TextStyle {
   TextStyle get tnum =>
       copyWith(fontFeatures: const <FontFeature>[FontFeature.tabularFigures()]);
 
-  TextStyle colored(Color c) => copyWith(color: c);
 }

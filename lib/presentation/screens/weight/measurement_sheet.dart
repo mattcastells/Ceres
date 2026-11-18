@@ -150,9 +150,8 @@ class _MeasurementSheetState extends ConsumerState<_MeasurementSheet> {
             ),
             const SizedBox(height: NmSpace.s3),
             Text(
-              'Ceres no convierte los pliegues a porcentaje de grasa: cada '
-              'ecuación pide un juego de pliegues distinto y da un número '
-              'distinto. La suma sirve para compararte con vos mismo.',
+              'La suma sirve para compararte con vos mismo. Ceres no la '
+              'convierte a porcentaje de grasa.',
               style: NmTextStyles.from(NmType.caption, color: nm.textMuted),
             ),
             const SizedBox(height: NmSpace.s4),

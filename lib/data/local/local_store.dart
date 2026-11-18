@@ -108,22 +108,8 @@ class LocalStore {
     status: IntegrationStatus.notConnected,
   );
 
-  /// ⚠️ Siempre `false`: no hay detección real de conectividad (ver el
-  /// doc de `LocalRepository.isOffline`, que es la puerta de entrada real).
-  /// El interruptor de desarrollo que antes lo ponía en `true` se sacó de la
-  /// interfaz por ser una herramienta peligrosa en manos de quien usa la app.
-  bool offline = false;
-
   /// Filtros de Historial recordados en preferencias (S-21).
   Map<String, dynamic> historyFilters = <String, dynamic>{};
-
-  int get pendingCount =>
-      meals.where((m) => m.syncStatus == SyncStatus.pending).length +
-      activities.where((a) => a.syncStatus == SyncStatus.pending).length +
-      weightLogs.where((w) => w.syncStatus == SyncStatus.pending).length;
-
-  SyncStatus get writeStatus =>
-      offline ? SyncStatus.pending : SyncStatus.synced;
 
   List<Food> get allFoods => <Food>[
     ...userFoods,
@@ -507,7 +493,8 @@ class LocalStore {
       // El estado de una integración no conectada no vale perder nada.
     }
 
-    offline = j['offline'] as bool? ?? false;
+    // `offline` ya no se lee: era el interruptor de "simular sin conexión", que
+    // no existe más. Un documento viejo que lo traiga simplemente lo ignora.
     historyFilters =
         (j['historyFilters'] as Map<String, dynamic>?) ?? <String, dynamic>{};
     hydrateActivities();
@@ -541,7 +528,6 @@ class LocalStore {
     'dayMarkers': dayMarkers.map((e) => e.toJson()).toList(),
     'alcoholLogs': alcoholLogs.map((e) => e.toJson()).toList(),
     'integration': integration.toJson(),
-    'offline': offline,
     'historyFilters': historyFilters,
   };
 

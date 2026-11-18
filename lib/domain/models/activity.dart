@@ -185,24 +185,6 @@ class Activity {
     _ => DataOrigin.manual,
   };
 
-  /// Etiqueta legible del método, obligatoria junto al valor (RN-03).
-  String methodLabel({String? sourceLabel}) => switch (estimationMethod) {
-    EstimationMethod.met =>
-      metValue == null
-          ? 'Estimado por MET'
-          : 'Estimado con MET ${metValue!.toStringAsFixed(1).replaceAll('.', ',')}'
-                '${weightKgUsed == null ? '' : ' · ${weightKgUsed!.toStringAsFixed(0)} kg'}'
-                ' · $durationMinutes min',
-    EstimationMethod.provider =>
-      'Informado por ${sourceLabel ?? externalSource ?? 'el dispositivo'}',
-    EstimationMethod.userOverride =>
-      originalCalories == null
-          ? 'Corregido por vos'
-          : 'Corregido por vos (cálculo original: $originalCalories kcal)',
-    EstimationMethod.metRecalculated => 'Recalculado por MET',
-    EstimationMethod.pace => 'Estimado por ritmo',
-  };
-
   Activity copyWith({
     String? activityTypeId,
     ActivityType? activityType,

@@ -91,4 +91,25 @@ abstract final class FeatureFlags {
     'NM_FOOD_CATALOG',
     defaultValue: true,
   );
+
+  /// Todo lo de la nutricionista: Mi nutricionista, devoluciones, objetivo
+  /// recomendado, artículos y recetas, y los datos que precarga en el alta.
+  ///
+  /// Apagado por defecto: las tablas y funciones que usa (`care_feedback`,
+  /// `care_articles`, las invitaciones, el vínculo todo o nada) no están en la
+  /// base de producción. Apagado, la app ni siquiera arma esos clientes, así
+  /// que nunca les pregunta nada.
+  static const bool nutritionist = bool.fromEnvironment(
+    'NM_NUTRITIONIST',
+    defaultValue: false,
+  );
+
+  /// El reporte con IA de Progreso (semana, mes, trimestre, año).
+  ///
+  /// Apagado por defecto: lee `care_reports` y llama a la Edge Function
+  /// `care-report`, que no existen en producción.
+  static const bool aiProgressReport = bool.fromEnvironment(
+    'NM_AI_PROGRESS_REPORT',
+    defaultValue: false,
+  );
 }

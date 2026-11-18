@@ -66,22 +66,6 @@ class AiAnalysisItem {
   );
 }
 
-/// Nivel de confianza con su etiqueta textual — el badge nunca depende solo
-/// del color (S-20, accesibilidad).
-enum ConfidenceLevel {
-  high('Confianza alta'),
-  medium('Confianza media'),
-  low('Confianza baja');
-
-  const ConfidenceLevel(this.label);
-  final String label;
-
-  static ConfidenceLevel of(double confidence) {
-    if (confidence >= 0.75) return high;
-    if (confidence >= 0.5) return medium;
-    return low;
-  }
-}
 
 /// Resultado del análisis de una foto (F-05).
 class AiAnalysis {

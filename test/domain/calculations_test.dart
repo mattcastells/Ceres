@@ -330,32 +330,31 @@ void main() {
       );
     });
 
+    // T-10 a T-12 se prueban sobre `DailyBalance`, que es lo que usa la app:
+    // las fórmulas sueltas que había para esto solo las llamaban los tests.
+    const brief = DailyBalance(
+      baseTarget: 2100,
+      consumedKcal: 1640,
+      exerciseEstimatedKcal: 240,
+      exerciseAppliedKcal: 120,
+      creditPercentage: 50,
+      creditEnabled: true,
+    );
+
     test('T-10 · objetivo ajustado 2100 + 120 → 2220', () {
-      expect(
-        calculateAdjustedCalorieTarget(
-          baseTarget: 2100,
-          appliedExerciseCalories: 120,
-        ),
-        2220,
-      );
+      expect(brief.adjustedTarget, 2220);
     });
 
     test('T-11 · restantes 2220 − 1640 → 580', () {
-      expect(
-        calculateRemainingCalories(adjustedTarget: 2220, consumedKcal: 1640),
-        580,
-      );
+      expect(brief.remainingKcal, 580);
     });
 
     test('T-12 · netas 1640 − 120 → 1520', () {
-      expect(
-        calculateNetCalories(consumedKcal: 1640, appliedExerciseCalories: 120),
-        1520,
-      );
+      expect(brief.netKcal, 1520);
     });
 
     test('el ejemplo del brief completo, con crédito 50 % y 100 %', () {
-      final at50 = computeDailyBalance(
+      final at50 = _balance(
         baseTarget: 2100,
         consumedKcal: 1640,
         exerciseEstimatedKcal: 240,
@@ -368,7 +367,7 @@ void main() {
       expect(at50.netKcal, 1520);
       expect(at50.showsAdjustmentRow, isTrue);
 
-      final at100 = computeDailyBalance(
+      final at100 = _balance(
         baseTarget: 2100,
         consumedKcal: 1640,
         exerciseEstimatedKcal: 240,
@@ -380,7 +379,7 @@ void main() {
     });
 
     test('con crédito 0 % la fila de ajuste no se muestra (D-02)', () {
-      final b = computeDailyBalance(
+      final b = _balance(
         baseTarget: 2100,
         consumedKcal: 1640,
         exerciseEstimatedKcal: 240,
@@ -393,7 +392,7 @@ void main() {
     });
 
     test('las restantes pueden ser negativas: "Te pasaste por N kcal"', () {
-      final b = computeDailyBalance(
+      final b = _balance(
         baseTarget: 2000,
         consumedKcal: 2120,
         exerciseEstimatedKcal: 0,
@@ -725,3 +724,25 @@ void main() {
     });
   });
 }
+
+/// El balance del día como lo arma la app: cada actividad trae sus calorías
+/// aplicadas con el porcentaje congelado (`calculateAppliedExerciseCalories`)
+/// y `DailyBalance` las suma al objetivo base.
+DailyBalance _balance({
+  required int baseTarget,
+  required int consumedKcal,
+  required int exerciseEstimatedKcal,
+  required int creditPercentage,
+  required bool creditEnabled,
+}) => DailyBalance(
+  baseTarget: baseTarget,
+  consumedKcal: consumedKcal,
+  exerciseEstimatedKcal: exerciseEstimatedKcal,
+  exerciseAppliedKcal: calculateAppliedExerciseCalories(
+    estimatedCalories: exerciseEstimatedKcal,
+    creditPercentage: creditPercentage,
+    creditEnabled: creditEnabled,
+  ),
+  creditPercentage: creditPercentage,
+  creditEnabled: creditEnabled,
+);

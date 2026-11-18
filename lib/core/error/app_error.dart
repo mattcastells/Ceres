@@ -34,6 +34,9 @@ enum ApiErrorCode {
   /// Quedan tan pocas calorías que no hay plato que sugerir sin inventarlo.
   budgetTooLow('ERR_BUDGET_TOO_LOW'),
 
+  /// No hay registros con los que armar un informe (422).
+  noData('ERR_NO_DATA'),
+
   permissionDenied('ERR_PERMISSION_DENIED'),
   providerUnavailable('ERR_PROVIDER_UNAVAILABLE'),
   syncFailed('ERR_SYNC_FAILED'),

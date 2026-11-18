@@ -12,7 +12,6 @@ import '../../../domain/enums/enums.dart';
 import '../../../domain/models/activity.dart';
 import '../../../domain/models/summaries.dart';
 import '../../../domain/repositories/repositories.dart';
-import '../../../domain/services/summary_builder.dart';
 import '../../components/activity/activity_cards.dart';
 import '../../components/charts/charts.dart';
 import '../../components/feedback/feedback.dart';
@@ -58,84 +57,86 @@ class WeightChartScreen extends ConsumerWidget {
             children: <Widget>[
               StatCard(
                 label: 'Variación',
-                value:
-                    '${Fmt.signedDecimal1(progress.weightDeltaKg)} '
-                    '${Fmt.weightUnit(units)}',
+                value: Fmt.signedWeight(progress.weightDeltaKg, units),
               ),
               StatCard(
                 label: 'Tendencia semanal',
                 value: progress.trendKgPerWeek == null
                     ? '—'
-                    : '${Fmt.signedDecimal1(progress.trendKgPerWeek!)} kg',
+                    : Fmt.signedWeight(progress.trendKgPerWeek!, units),
                 caption: progress.trendKgPerWeek == null
                     ? 'Necesitamos unos días más de registro'
                     : null,
               ),
             ],
           ),
-          const SizedBox(height: NmSpace.s8),
-          const NmSectionHeader(title: 'Registros'),
-          NmCard(
-            padding: const EdgeInsets.symmetric(vertical: NmSpace.s1),
-            child: Column(
-              children: <Widget>[
-                for (final log in logs.take(20))
-                  Dismissible(
-                    key: ValueKey<String>(log.id),
-                    direction: DismissDirection.endToStart,
-                    background: Container(
-                      alignment: Alignment.centerRight,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: NmSpace.s6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: nm.danger.withValues(alpha: 0.14),
-                        borderRadius: NmRadius.brMd,
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: <Widget>[
-                          Icon(
-                            PhosphorIcons.trash(),
-                            size: NmIconSize.md,
-                            color: nm.danger,
-                          ),
-                          const SizedBox(width: NmSpace.s2),
-                          Text(
-                            'Eliminar',
-                            style: NmTextStyles.from(
-                              NmType.caption,
+          // Sin pesos no hay lista: el encabezado y una tarjeta vacía debajo
+          // del gráfico parecían algo que no terminó de cargar.
+          if (logs.isNotEmpty) ...<Widget>[
+            const SizedBox(height: NmSpace.s8),
+            const NmSectionHeader(title: 'Registros'),
+            NmCard(
+              padding: const EdgeInsets.symmetric(vertical: NmSpace.s1),
+              child: Column(
+                children: <Widget>[
+                  for (final log in logs.take(20))
+                    Dismissible(
+                      key: ValueKey<String>(log.id),
+                      direction: DismissDirection.endToStart,
+                      background: Container(
+                        alignment: Alignment.centerRight,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: NmSpace.s6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: nm.danger.withValues(alpha: 0.14),
+                          borderRadius: NmRadius.brMd,
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: <Widget>[
+                            Icon(
+                              PhosphorIcons.trash(),
+                              size: NmIconSize.md,
                               color: nm.danger,
                             ),
-                          ),
-                        ],
+                            const SizedBox(width: NmSpace.s2),
+                            Text(
+                              'Eliminar',
+                              style: NmTextStyles.from(
+                                NmType.caption,
+                                color: nm.danger,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      confirmDismiss: (_) async {
+                        final id = log.id;
+                        await repo.deleteWeight(id);
+                        if (context.mounted) {
+                          NmSnackbar.show(
+                            context,
+                            'Registro eliminado',
+                            actionLabel: 'Deshacer',
+                            undo: true,
+                            onAction: () => repo.restoreWeight(id),
+                          );
+                        }
+                        return false;
+                      },
+                      child: _WeightLogRow(
+                        day: friendlyDay(log.localDate),
+                        value: Fmt.weightValue(log.weightKg, units),
+                        unit: Fmt.weightUnit(units),
+                        onEdit: () =>
+                            showWeightSheet(context, date: log.localDate),
                       ),
                     ),
-                    confirmDismiss: (_) async {
-                      final id = log.id;
-                      await repo.deleteWeight(id);
-                      if (context.mounted) {
-                        NmSnackbar.show(
-                          context,
-                          'Registro eliminado',
-                          actionLabel: 'Deshacer',
-                          undo: true,
-                          onAction: () => repo.restoreWeight(id),
-                        );
-                      }
-                      return false;
-                    },
-                    child: _WeightLogRow(
-                      day: friendlyDay(log.localDate),
-                      value: Fmt.weightValue(log.weightKg, units),
-                      unit: Fmt.weightUnit(units),
-                      onEdit: () =>
-                          showWeightSheet(context, date: log.localDate),
-                    ),
-                  ),
-              ],
+                ],
+              ),
             ),
-          ),
+          ],
           const SizedBox(height: NmSpace.s6),
           NmButton(
             label: 'Registrar peso',
@@ -203,7 +204,10 @@ class _WeightLogRow extends StatelessWidget {
                   child: Text(
                     value,
                     textAlign: TextAlign.right,
-                    style: NmTextStyles.from(NmType.bodySm, color: nm.text).tnum,
+                    style: NmTextStyles.from(
+                      NmType.bodySm,
+                      color: nm.text,
+                    ).tnum,
                   ),
                 ),
                 const SizedBox(width: NmSpace.s2),
@@ -250,6 +254,7 @@ class CaloriesChartScreen extends ConsumerWidget {
             child: CaloriesChart(
               id: 'calories-full',
               height: 240,
+              showData: true,
               days: progress.calorieDays,
             ),
           ),
@@ -292,9 +297,8 @@ class ActivityProgressScreen extends ConsumerWidget {
         title: 'Actividad',
         child: EmptyState(
           icon: PhosphorIcons.personSimpleRun(),
-          title: 'Todavía no registraste actividad en este período',
-          body: 'Cuando registres una, vas a ver acá los minutos, las '
-              'sesiones y la distribución por categoría.',
+          title: 'Sin actividad en este período',
+          body: 'Acá vas a ver los minutos, las sesiones y las categorías.',
         ),
       );
     }
@@ -309,6 +313,7 @@ class ActivityProgressScreen extends ConsumerWidget {
             child: ActivityHistoryChart(
               id: 'activity-full',
               height: 220,
+              showData: true,
               points: progress.activityByDay,
             ),
           ),
@@ -377,8 +382,6 @@ class ActivityProgressScreen extends ConsumerWidget {
               ],
             ),
           ),
-          const SizedBox(height: NmSpace.s6),
-          ConsistencyNote(lines: SummaryBuilder.consistencyNotes(progress)),
         ],
       ),
     );
@@ -401,16 +404,16 @@ class ActivityGoalsScreen extends ConsumerWidget {
         children: <Widget>[
           const SizedBox(height: NmSpace.s4),
           const InfoNote(
-            text: 'Los objetivos de actividad nunca reducen tu objetivo '
-                'calórico ni bloquean nada. Podés usar Ceres sin '
-                'configurar ninguno.',
+            text: 'Son opcionales y no cambian tu objetivo calórico.',
           ),
           const SizedBox(height: NmSpace.s6),
           if (progress.goals.isEmpty)
             EmptyState(
               icon: PhosphorIcons.target(),
               title: 'Sin objetivos configurados',
-              body: 'Los objetivos de actividad son opcionales.',
+              body:
+                  'Minutos, sesiones, pasos o días activos, por día o por '
+                  'semana.',
               primaryLabel: 'Crear un objetivo',
               onPrimary: () => _showGoalSheet(context, ref, null),
             )
@@ -472,15 +475,17 @@ class ActivityGoalsScreen extends ConsumerWidget {
                 onPressed: () async {
                   final parsed = int.tryParse(value.text);
                   if (parsed == null || parsed <= 0) return;
-                  await ref.read(repositoryProvider).saveActivityGoal(
-                    ActivityGoal(
-                      id: existing?.goal.id ?? _uuid.v4(),
-                      goalType: type,
-                      targetValue: parsed,
-                      period: period,
-                      startDate: existing?.goal.startDate ?? today(),
-                    ),
-                  );
+                  await ref
+                      .read(repositoryProvider)
+                      .saveActivityGoal(
+                        ActivityGoal(
+                          id: existing?.goal.id ?? _uuid.v4(),
+                          goalType: type,
+                          targetValue: parsed,
+                          period: period,
+                          startDate: existing?.goal.startDate ?? today(),
+                        ),
+                      );
                   if (context.mounted) Navigator.of(context).pop();
                 },
               ),
@@ -491,18 +496,11 @@ class ActivityGoalsScreen extends ConsumerWidget {
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
               const NmSectionHeader(title: 'Tipo'),
-              Wrap(
-                spacing: NmSpace.s2,
-                runSpacing: NmSpace.s2,
-                children: <Widget>[
-                  for (final option in ActivityGoalType.values)
-                    NmChip(
-                      label: option.label,
-                      selected: option == type,
-                      semanticsInRadioGroup: true,
-                      onTap: () => setLocal(() => type = option),
-                    ),
-                ],
+              // Dos columnas con casilla: seis píldoras sueltas en tres filas
+              // de largos distintos no se leían como una sola elección.
+              _TypeGrid(
+                value: type,
+                onChanged: (option) => setLocal(() => type = option),
               ),
               const SizedBox(height: NmSpace.s6),
               NmNumberField(label: 'Valor objetivo', controller: value),
@@ -582,13 +580,31 @@ class _MeasurementsScreenState extends ConsumerState<MeasurementsScreen> {
     );
   }
 
-  /// La última medida cargada de esa métrica, cualquiera sea su fecha.
-  String _lastLabel(CeresRepositories repo, MeasurementMetric metric) {
-    final entries = repo.measurements(metric);
-    if (entries.isEmpty) return 'Sin registros';
-    final last = entries.last;
+  /// La medida anterior a la fecha del formulario, para comparar mientras se
+  /// carga la nueva. Sin ninguna anterior no dice nada: el campo vacío ya
+  /// cuenta que no hay datos.
+  String? _previousLabel(CeresRepositories repo, MeasurementMetric metric) {
+    final before = repo
+        .measurements(metric)
+        .where((m) => m.localDate.isBefore(_date))
+        .toList();
+    if (before.isEmpty) return null;
+    final last = before.last;
     final value = '${Fmt.decimal1(last.value)} ${metric.unitLabel}'.trim();
-    return 'Última: $value · ${friendlyDay(last.localDate)}';
+    return 'Anterior: $value · ${friendlyDay(last.localDate)}';
+  }
+
+  /// Cargar una fecha del historial en el formulario, para corregirla.
+  void _edit(DateTime date) {
+    setState(() {
+      _date = date;
+      _draft.loadFrom(ref.read(repositoryProvider), date);
+    });
+    Scrollable.maybeOf(context)?.position.animateTo(
+      0,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeOut,
+    );
   }
 
   @override
@@ -633,16 +649,15 @@ class _MeasurementsScreenState extends ConsumerState<MeasurementsScreen> {
                 label: metric.label,
                 controller: _draft.controller(metric),
                 decimals: 1,
-                suffix: metric.unitLabel.isEmpty
-                    ? 'índice'
-                    : metric.unitLabel,
-                helper: _lastLabel(repo, metric),
+                suffix: metric.unitLabel.isEmpty ? 'índice' : metric.unitLabel,
+                helper: _previousLabel(repo, metric),
                 error: _draft.errors[metric],
                 onChanged: (_) => setState(() => _draft.errors.remove(metric)),
               ),
             ),
 
-          if (_group == MeasurementGroup.skinfolds && foldCount >= 2) ...<Widget>[
+          if (_group == MeasurementGroup.skinfolds &&
+              foldCount >= 2) ...<Widget>[
             NmCard(
               raised: true,
               child: ValueRow(
@@ -666,15 +681,17 @@ class _MeasurementsScreenState extends ConsumerState<MeasurementsScreen> {
           ),
           const SizedBox(height: NmSpace.s5),
           NmButton(
-            label: 'Guardar medidas',
+            label: 'Guardar',
             block: true,
             loading: _saving,
             onPressed: _save,
           ),
 
+          ..._history(repo, metrics),
+
           if (withHistory.isNotEmpty) ...<Widget>[
             const SizedBox(height: NmSpace.s8),
-            const NmSectionHeader(title: 'Series'),
+            const NmSectionHeader(title: 'Gráficos'),
             NmCard(
               padding: const EdgeInsets.symmetric(vertical: NmSpace.s1),
               child: Column(
@@ -682,8 +699,7 @@ class _MeasurementsScreenState extends ConsumerState<MeasurementsScreen> {
                   for (final metric in withHistory)
                     NmListRow(
                       title: metric.longLabel,
-                      subtitle:
-                          '${repo.measurements(metric).length} registros',
+                      subtitle: '${repo.measurements(metric).length} registros',
                       trailing: Icon(
                         PhosphorIcons.caretRight(),
                         size: NmIconSize.md,
@@ -698,6 +714,95 @@ class _MeasurementsScreenState extends ConsumerState<MeasurementsScreen> {
         ],
       ),
     );
+  }
+
+  /// Historial del grupo: una fila por fecha con lo que se midió ese día y
+  /// cuánto cambió cada medida respecto de la vez anterior. Tocar una fila la
+  /// carga arriba para corregirla.
+  List<Widget> _history(
+    CeresRepositories repo,
+    List<MeasurementMetric> metrics,
+  ) {
+    final nm = context.nm;
+    final byDate = <DateTime, List<(MeasurementMetric, double, double?)>>{};
+    for (final metric in metrics) {
+      final entries = repo.measurements(metric);
+      for (var i = 0; i < entries.length; i++) {
+        final e = entries[i];
+        final previous = i == 0 ? null : entries[i - 1].value;
+        (byDate[e.localDate] ??= <(MeasurementMetric, double, double?)>[]).add((
+          metric,
+          e.value,
+          previous == null ? null : e.value - previous,
+        ));
+      }
+    }
+    if (byDate.isEmpty) return const <Widget>[];
+    final dates = byDate.keys.toList()..sort((a, b) => b.compareTo(a));
+
+    return <Widget>[
+      const SizedBox(height: NmSpace.s8),
+      const NmSectionHeader(title: 'Historial'),
+      NmCard(
+        padding: const EdgeInsets.symmetric(vertical: NmSpace.s1),
+        child: Column(
+          children: <Widget>[
+            for (final (i, date) in dates.take(12).indexed) ...<Widget>[
+              if (i > 0) const NmDivider(indent: NmSpace.s4),
+              InkWell(
+                onTap: () => _edit(date),
+                borderRadius: NmRadius.brSm,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: NmSpace.s4,
+                    vertical: NmSpace.s3,
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            Text(
+                              friendlyDay(date),
+                              style: NmTextStyles.from(
+                                NmType.bodySm,
+                                color: nm.text,
+                              ).copyWith(fontWeight: FontWeight.w600),
+                            ),
+                            const SizedBox(height: NmSpace.s1),
+                            for (final (metric, value, delta) in byDate[date]!)
+                              Text(
+                                '${metric.label}: '
+                                            '${Fmt.decimal1(value)} ${metric.unitLabel}'
+                                        .trim() +
+                                    (delta == null || delta == 0
+                                        ? ''
+                                        : ' (${delta > 0 ? '+' : '−'}'
+                                              '${Fmt.decimal1(delta.abs())})'),
+                                style: NmTextStyles.from(
+                                  NmType.caption,
+                                  color: nm.textMuted,
+                                ).tnum,
+                              ),
+                          ],
+                        ),
+                      ),
+                      Icon(
+                        PhosphorIcons.pencilSimple(),
+                        size: NmIconSize.sm,
+                        color: nm.isDark ? nm.accentText : nm.accent,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    ];
   }
 
   /// La serie de una métrica: el gráfico y los últimos doce registros.
@@ -732,9 +837,10 @@ class _MeasurementsScreenState extends ConsumerState<MeasurementsScreen> {
                   for (final entry in entries.reversed.take(12))
                     ValueRow(
                       label: friendlyDay(entry.localDate),
-                      value: '${Fmt.decimal1(entry.value)} '
-                              '${metric.unitLabel}'
-                          .trim(),
+                      value:
+                          '${Fmt.decimal1(entry.value)} '
+                                  '${metric.unitLabel}'
+                              .trim(),
                     ),
                 ],
               ),
@@ -742,6 +848,62 @@ class _MeasurementsScreenState extends ConsumerState<MeasurementsScreen> {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Tipo de objetivo: una grilla de dos columnas, una casilla por opción. Es una
+/// sola elección, así que marcar una desmarca la anterior.
+class _TypeGrid extends StatelessWidget {
+  const _TypeGrid({required this.value, required this.onChanged});
+
+  final ActivityGoalType value;
+  final ValueChanged<ActivityGoalType> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final nm = context.nm;
+    const options = ActivityGoalType.values;
+    return Column(
+      children: <Widget>[
+        for (var i = 0; i < options.length; i += 2)
+          Row(
+            children: <Widget>[
+              for (final option in options.skip(i).take(2))
+                Expanded(
+                  child: Semantics(
+                    inMutuallyExclusiveGroup: true,
+                    checked: option == value,
+                    label: option.label,
+                    child: ExcludeSemantics(
+                      child: InkWell(
+                        onTap: () => onChanged(option),
+                        borderRadius: NmRadius.brSm,
+                        child: Row(
+                          children: <Widget>[
+                            Checkbox(
+                              value: option == value,
+                              onChanged: (_) => onChanged(option),
+                            ),
+                            Expanded(
+                              child: Text(
+                                option.label,
+                                style: NmTextStyles.from(
+                                  NmType.bodySm,
+                                  color: nm.text,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              if (options.length - i == 1) const Spacer(),
+            ],
+          ),
+      ],
     );
   }
 }

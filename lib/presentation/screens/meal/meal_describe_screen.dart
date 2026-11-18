@@ -108,8 +108,6 @@ class _MealDescribeScreenState extends ConsumerState<MealDescribeScreen> {
   @override
   Widget build(BuildContext context) {
     final nm = context.nm;
-    final repo = ref.watch(repositoryProvider);
-    final remaining = repo.quotaLimit - repo.quotaUsed;
 
     return NmScreen(
       title: 'Describir la comida',
@@ -118,8 +116,8 @@ class _MealDescribeScreenState extends ConsumerState<MealDescribeScreen> {
         children: <Widget>[
           const SizedBox(height: NmSpace.s4),
           Text(
-            'Escribilo como se lo contarías a alguien. La IA lo convierte en '
-            'ítems con sus cantidades y vos los revisás antes de guardar.',
+            'Escribilo como se lo contarías a alguien. Revisás los ítems '
+            'antes de guardar.',
             style: NmTextStyles.from(NmType.bodySm, color: nm.textMuted),
           ),
           const SizedBox(height: NmSpace.s6),
@@ -165,15 +163,13 @@ class _MealDescribeScreenState extends ConsumerState<MealDescribeScreen> {
             block: true,
             icon: PhosphorIcons.sparkle(),
             loading: _busy,
-            onPressed: remaining <= 0 ? null : _estimate,
+            // La cuota la cuenta el servidor: si se llegó al límite, el error
+            // que devuelve se muestra arriba con su mensaje.
+            onPressed: _estimate,
           ),
           const SizedBox(height: NmSpace.s3),
           Text(
-            remaining <= 0
-                ? 'Llegaste al límite de estimaciones de hoy. Podés cargar la '
-                      'comida a mano.'
-                : 'Te quedan $remaining estimaciones hoy. Es una estimación, '
-                      'no una medición: revisá los números antes de guardar.',
+            'Es una estimación, no una medición.',
             style: NmTextStyles.from(NmType.caption, color: nm.textMuted),
           ),
         ],

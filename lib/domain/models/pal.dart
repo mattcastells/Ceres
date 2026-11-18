@@ -103,11 +103,9 @@ class PalActivity {
 
 /// El día de alguien, con lo único que se publica.
 ///
-/// [activities], [waterGlasses], [sleepMinutes] y [sleepQuality] solo tienen
-/// contenido si el dueño prendió esa categoría; si no, quedan vacíos/`null`
-/// igual que hoy. El agregado de actividad ([activityMinutes]/[activityCount])
-/// es la excepción: se publica siempre, como ya pasaba antes de esta
-/// ampliación.
+/// Cada categoría tiene contenido solo si el dueño la prendió; si no, queda
+/// vacía o en `null`. La app lo arma así y la base lo vuelve a limpiar al
+/// guardarlo (migración 54), así que un cliente viejo tampoco publica de más.
 class PalDay {
   const PalDay({
     required this.userId,
@@ -119,6 +117,10 @@ class PalDay {
     this.waterGlasses,
     this.sleepMinutes,
     this.sleepQuality,
+    this.weightKg,
+    this.weightDate,
+    this.mealsShared = true,
+    this.activityShared = true,
   });
 
   final String userId;
@@ -131,12 +133,22 @@ class PalDay {
   final int? sleepMinutes;
   final SleepQuality? sleepQuality;
 
+  /// El último peso registrado hasta este día, y de qué día es.
+  final double? weightKg;
+  final DateTime? weightDate;
+
+  /// Si esa persona comparte la comida y la actividad. Los pone la base
+  /// (migración 54): distinguen "no comió nada" de "no lo comparte".
+  final bool mealsShared;
+  final bool activityShared;
+
   bool get isEmpty =>
       meals.isEmpty &&
       activityCount == 0 &&
       activities.isEmpty &&
       waterGlasses == null &&
-      sleepMinutes == null;
+      sleepMinutes == null &&
+      weightKg == null;
 
   int get totalKcal => meals.fold(0, (acc, m) => acc + m.kcal);
 
@@ -185,6 +197,8 @@ class PalDay {
         ? null
         : _clamp(sleepMinutes!, maxSleepMinutes),
     'sleep_quality': sleepQuality?.wire,
+    'weight_kg': weightKg,
+    'weight_date': weightDate == null ? null : isoDate(weightDate!),
   };
 
   static PalDay fromRow(Map<String, dynamic> row) => PalDay(
@@ -203,41 +217,86 @@ class PalDay {
     sleepQuality: row['sleep_quality'] == null
         ? null
         : SleepQuality.fromWire(row['sleep_quality'] as String),
+    weightKg: (row['weight_kg'] as num?)?.toDouble(),
+    weightDate: row['weight_date'] == null
+        ? null
+        : DateTime.parse(row['weight_date'] as String),
+    mealsShared: row['meals_shared'] as bool? ?? true,
+    activityShared: row['activity_shared'] as bool? ?? true,
   );
 }
 
-/// Qué categorías, además de comida y actividad, comparte esta cuenta con
-/// sus pals. Las cuatro arrancan apagadas: es una decisión de quien comparte,
-/// no un default que exponga de más.
+/// Qué comparte esta cuenta con sus pals. Una columna `pal_share_*` de
+/// `profiles` por interruptor.
+///
+/// Comida y actividad arrancan prendidas porque es lo que toda cuenta venía
+/// compartiendo antes de que se pudieran apagar; el resto arranca apagado.
+/// Fotos depende de comida y el detalle de actividad, de actividad: sin la
+/// categoría no hay nada que mostrar con más detalle.
 class PalSharingPrefs {
   const PalSharingPrefs({
+    this.meals = true,
     this.photos = false,
+    this.activity = true,
+    this.activityDetail = false,
     this.water = false,
     this.sleep = false,
-    this.activityDetail = false,
+    this.weight = false,
   });
 
+  final bool meals;
   final bool photos;
+  final bool activity;
+  final bool activityDetail;
   final bool water;
   final bool sleep;
-  final bool activityDetail;
+  final bool weight;
 
   PalSharingPrefs copyWith({
+    bool? meals,
     bool? photos,
+    bool? activity,
+    bool? activityDetail,
     bool? water,
     bool? sleep,
-    bool? activityDetail,
+    bool? weight,
   }) => PalSharingPrefs(
+    meals: meals ?? this.meals,
     photos: photos ?? this.photos,
+    activity: activity ?? this.activity,
+    activityDetail: activityDetail ?? this.activityDetail,
     water: water ?? this.water,
     sleep: sleep ?? this.sleep,
-    activityDetail: activityDetail ?? this.activityDetail,
+    weight: weight ?? this.weight,
   );
 
+  static const List<String> columns = <String>[
+    'pal_share_meals',
+    'pal_share_photos',
+    'pal_share_activity',
+    'pal_share_activity_detail',
+    'pal_share_water',
+    'pal_share_sleep',
+    'pal_share_weight',
+  ];
+
   static PalSharingPrefs fromRow(Map<String, dynamic> row) => PalSharingPrefs(
+    meals: row['pal_share_meals'] as bool? ?? true,
     photos: row['pal_share_photos'] as bool? ?? false,
+    activity: row['pal_share_activity'] as bool? ?? true,
+    activityDetail: row['pal_share_activity_detail'] as bool? ?? false,
     water: row['pal_share_water'] as bool? ?? false,
     sleep: row['pal_share_sleep'] as bool? ?? false,
-    activityDetail: row['pal_share_activity_detail'] as bool? ?? false,
+    weight: row['pal_share_weight'] as bool? ?? false,
   );
+
+  Map<String, dynamic> toRow() => <String, dynamic>{
+    'pal_share_meals': meals,
+    'pal_share_photos': photos,
+    'pal_share_activity': activity,
+    'pal_share_activity_detail': activityDetail,
+    'pal_share_water': water,
+    'pal_share_sleep': sleep,
+    'pal_share_weight': weight,
+  };
 }

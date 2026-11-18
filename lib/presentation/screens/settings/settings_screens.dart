@@ -12,6 +12,7 @@ import '../../../core/config/feature_flags.dart';
 import '../../../core/error/app_error.dart';
 import '../../../core/router/routes.dart';
 import '../../../core/theme/nm_theme.dart';
+import '../../../core/theme/palettes.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/utils/dates.dart';
@@ -28,7 +29,6 @@ import '../../components/system/surfaces.dart';
 import '../../providers/app_providers.dart';
 import '../../providers/auth_providers.dart';
 import '../../providers/update_providers.dart';
-import '../activity/duplicate_dialog.dart';
 
 /// Configuración (raíz).
 class SettingsScreen extends ConsumerWidget {
@@ -52,7 +52,7 @@ class SettingsScreen extends ConsumerWidget {
                 NmListRow(
                   title: 'Crédito de ejercicio',
                   subtitle: profile.effectiveCreditPercentage == 0
-                      ? 'El ejercicio no suma a tu presupuesto'
+                      ? 'El ejercicio no suma a tu objetivo'
                       : 'Suma el ${profile.effectiveCreditPercentage} %',
                   leading: Icon(PhosphorIcons.personSimpleRun()),
                   onTap: () => context.push(Routes.exerciseCredit),
@@ -104,7 +104,7 @@ class SettingsScreen extends ConsumerWidget {
                   title: 'Respaldo en la nube',
                   subtitle: ref.watch(isCloudEnabledProvider)
                       ? 'Se guarda solo cada vez que registrás algo'
-                      : 'Esta compilación no tiene servidor',
+                      : 'Esta versión no tiene servidor',
                   leading: Icon(PhosphorIcons.cloudArrowUp()),
                   onTap: () => context.push(Routes.cloudBackup),
                 ),
@@ -131,7 +131,7 @@ class SettingsScreen extends ConsumerWidget {
               children: <Widget>[
                 NmSwitchRow(
                   title: 'Mostrar calorías netas',
-                  subtitle: 'Consumidas menos aplicadas, en Inicio',
+                  subtitle: 'Consumido − ejercicio, en Inicio',
                   value: profile.showNetCalories,
                   onChanged: repo.setShowNetCalories,
                 ),
@@ -178,7 +178,7 @@ class _ExerciseCreditScreenState extends ConsumerState<ExerciseCreditScreen> {
         children: <Widget>[
           const SizedBox(height: NmSpace.s4),
           Text(
-            'Sumar las calorías del ejercicio a mi presupuesto diario',
+            'Sumar las calorías del ejercicio a mi objetivo diario',
             style: NmTextStyles.from(NmType.h3, color: context.nm.text),
           ),
           const SizedBox(height: NmSpace.s6),
@@ -186,27 +186,19 @@ class _ExerciseCreditScreenState extends ConsumerState<ExerciseCreditScreen> {
             value: profile.exerciseCreditPercentage,
             enabled: profile.exerciseCreditEnabled,
             previewEstimatedCalories: summary.exerciseEstimatedKcal,
+            // Siempre prendido con lo elegido: el 0 % ya es "no sumar". Antes
+            // se pasaba el `enabled` del perfil, que con el ajuste apagado
+            // seguía en false y el porcentaje elegido no se aplicaba.
             onChanged: (value) {
               setState(() => _changed = true);
-              repo.setExerciseCredit(
-                percentage: value,
-                enabled: profile.exerciseCreditEnabled,
-              );
-            },
-            onToggleEnabled: (enabled) {
-              setState(() => _changed = true);
-              repo.setExerciseCredit(
-                percentage: profile.exerciseCreditPercentage,
-                enabled: enabled,
-              );
+              repo.setExerciseCredit(percentage: value, enabled: true);
             },
           ),
           if (_changed) ...<Widget>[
             const SizedBox(height: NmSpace.s6),
             const InfoNote(
               tone: NmNoteTone.info,
-              text: 'Aplicamos el cambio desde hoy. Los días anteriores '
-                  'quedan como estaban.',
+              text: 'Rige desde hoy; los días anteriores no cambian.',
             ),
           ],
         ],
@@ -224,6 +216,7 @@ class AppearanceScreen extends ConsumerWidget {
     final profile = ref.watch(profileProvider);
     final summary = ref.watch(todaySummaryProvider);
     final repo = ref.watch(repositoryProvider);
+    final palette = ref.watch(themePaletteProvider);
 
     return NmScreen(
       title: 'Apariencia',
@@ -231,16 +224,37 @@ class AppearanceScreen extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           const SizedBox(height: NmSpace.s4),
-          for (final mode in ThemeModeSetting.values)
-            Padding(
-              padding: const EdgeInsets.only(bottom: NmSpace.s2),
-              child: NmRadioRow<ThemeModeSetting>(
-                title: mode.label,
-                value: mode,
-                groupValue: profile.themeMode,
-                onChanged: repo.setThemeMode,
+          const NmSectionHeader(title: 'Tema'),
+          Row(
+            children: <Widget>[
+              for (final p in AppPalette.values) ...<Widget>[
+                if (p != AppPalette.values.first)
+                  const SizedBox(width: NmSpace.s4),
+                Expanded(
+                  child: _PaletteTile(
+                    palette: p,
+                    selected: p == palette,
+                    onTap: () =>
+                        ref.read(themePaletteProvider.notifier).set(p),
+                  ),
+                ),
+              ],
+            ],
+          ),
+          if (palette.fixedBrightness == null) ...<Widget>[
+            const SizedBox(height: NmSpace.s8),
+            const NmSectionHeader(title: 'Modo'),
+            for (final mode in ThemeModeSetting.values)
+              Padding(
+                padding: const EdgeInsets.only(bottom: NmSpace.s2),
+                child: NmRadioRow<ThemeModeSetting>(
+                  title: mode.label,
+                  value: mode,
+                  groupValue: profile.themeMode,
+                  onChanged: repo.setThemeMode,
+                ),
               ),
-            ),
+          ],
           const SizedBox(height: NmSpace.s6),
           const NmSectionHeader(title: 'Previsualización'),
           NmCard(
@@ -266,12 +280,6 @@ class AppearanceScreen extends ConsumerWidget {
               ],
             ),
           ),
-          const SizedBox(height: NmSpace.s4),
-          const InfoNote(
-            text: 'El tema oscuro es el canónico del sistema de diseño; el '
-                'claro se deriva invirtiendo la rampa neutral y bajando el '
-                'acento un paso para conservar el contraste.',
-          ),
         ],
       ),
     );
@@ -279,6 +287,127 @@ class AppearanceScreen extends ConsumerWidget {
 }
 
 /// Unidades.
+/// Un tema para elegir: una muestra con sus propios colores —el fondo, el
+/// anillo y tres tonos de datos— y el nombre abajo.
+class _PaletteTile extends StatelessWidget {
+  const _PaletteTile({
+    required this.palette,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final AppPalette palette;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final nm = context.nm;
+    // Ceres se muestra en su versión canónica, la oscura.
+    final d = palette.data(dark: true);
+    final c = d.colors;
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: 'Tema ${palette.label}',
+      child: GestureDetector(
+        onTap: onTap,
+        child: Column(
+          children: <Widget>[
+            AnimatedContainer(
+              duration: NmMotion.fast,
+              height: 112,
+              padding: const EdgeInsets.all(NmSpace.s4),
+              decoration: BoxDecoration(
+                color: c.bg,
+                borderRadius: NmRadius.brLg,
+                border: Border.all(
+                  color: selected ? nm.accent : nm.divider,
+                  width: selected ? 2.5 : 1,
+                ),
+              ),
+              child: Row(
+                children: <Widget>[
+                  SizedBox(
+                    width: 44,
+                    height: 44,
+                    child: CustomPaint(
+                      painter: _MiniRingPainter(
+                        track: d.isDark ? d.neutral.c800 : d.neutral.c200,
+                        arc: c.accent,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: NmSpace.s3),
+                  Expanded(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        for (final (color, ancho) in <(Color, double)>[
+                          (d.charts.intake, 1.0),
+                          (d.charts.running, 0.7),
+                          (d.accent2.c400, 0.45),
+                        ])
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 3),
+                            child: FractionallySizedBox(
+                              widthFactor: ancho,
+                              child: Container(
+                                height: 6,
+                                decoration: BoxDecoration(
+                                  color: color,
+                                  borderRadius: NmRadius.brFull,
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: NmSpace.s2),
+            Text(
+              palette.label,
+              style: NmTextStyles.from(
+                NmType.bodySm,
+                color: selected ? nm.text : nm.textMuted,
+              ).copyWith(fontWeight: selected ? FontWeight.w600 : null),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MiniRingPainter extends CustomPainter {
+  _MiniRingPainter({required this.track, required this.arc});
+
+  final Color track;
+  final Color arc;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    const stroke = 6.0;
+    final rect = Offset.zero & size;
+    final r = rect.deflate(stroke / 2);
+    final base = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = stroke
+      ..strokeCap = StrokeCap.round;
+    canvas
+      ..drawArc(r, 0, 6.2832, false, base..color = track)
+      ..drawArc(r, -1.5708, 4.4, false, base..color = arc);
+  }
+
+  @override
+  bool shouldRepaint(_MiniRingPainter old) =>
+      old.track != track || old.arc != arc;
+}
+
 class UnitsScreen extends ConsumerWidget {
   const UnitsScreen({super.key});
 
@@ -305,8 +434,7 @@ class UnitsScreen extends ConsumerWidget {
             ),
           const SizedBox(height: NmSpace.s4),
           const InfoNote(
-            text: 'La conversión es solo de presentación: por dentro todo se '
-                'guarda en kilos, centímetros y metros.',
+            text: 'Por dentro todo se guarda en kilos, centímetros y metros.',
           ),
         ],
       ),
@@ -331,7 +459,6 @@ class _IntegrationsScreenState extends ConsumerState<IntegrationsScreen> {
     final nm = context.nm;
     final repo = ref.watch(repositoryProvider);
     final integration = ref.watch(integrationProvider);
-    final pending = ref.watch(pendingReviewsProvider);
 
     if (!repo.isPlatformSupported || !FeatureFlags.healthConnectSync) {
       return NmScreen(
@@ -343,14 +470,12 @@ class _IntegrationsScreenState extends ConsumerState<IntegrationsScreen> {
             InfoNote(
               tone: NmNoteTone.caution,
               text: repo.isPlatformSupported
-                  ? 'Esta compilación tiene la importación apagada '
-                        '(`NM_HEALTH_SYNC=false`).'
+                  ? 'Esta versión tiene la importación apagada.'
                   : 'Health Connect está disponible solo en Android.',
             ),
             const SizedBox(height: NmSpace.s6),
             const InfoNote(
-              text: 'Ceres funciona completo con registro manual: ninguna '
-                  'pantalla obligatoria depende de una integración externa.',
+              text: 'Podés usar Ceres completo cargando todo a mano.',
             ),
           ],
         ),
@@ -503,48 +628,10 @@ class _IntegrationsScreenState extends ConsumerState<IntegrationsScreen> {
               ],
             ),
           ),
-          if (pending.isNotEmpty) ...<Widget>[
-            const SizedBox(height: NmSpace.s6),
-            const NmSectionHeader(title: 'Necesitan tu confirmación'),
-            for (final candidate in pending)
-              Padding(
-                padding: const EdgeInsets.only(bottom: NmSpace.s2),
-                child: NmCard(
-                  onTap: () => showDuplicateDialog(context, ref, candidate),
-                  child: Row(
-                    children: <Widget>[
-                      Icon(
-                        PhosphorIcons.warning(),
-                        size: NmIconSize.md,
-                        color: nm.caution,
-                      ),
-                      const SizedBox(width: NmSpace.s3),
-                      Expanded(
-                        child: Text(
-                          '${candidate.incoming.displayName} · '
-                          '${timeOfDay(candidate.incoming.startedAt)} '
-                          'se parece a un registro tuyo',
-                          style: NmTextStyles.from(
-                            NmType.bodySm,
-                            color: nm.text,
-                          ),
-                        ),
-                      ),
-                      NmButton.ghost(
-                        label: 'Revisar',
-                        onPressed: () =>
-                            showDuplicateDialog(context, ref, candidate),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-          ],
           const SizedBox(height: NmSpace.s6),
           const InfoNote(
-            text: 'Usamos las calorías activas del proveedor, no el total: el '
-                'total incluye el metabolismo basal, que ya está dentro de tu '
-                'objetivo.',
+            text: 'Se importan solo las calorías activas: el metabolismo basal '
+                'ya está en tu objetivo.',
           ),
           const SizedBox(height: NmSpace.s4),
           if (integration.importedCount > 0)
@@ -627,7 +714,7 @@ class PrivacyScreen extends ConsumerWidget {
             text: cloudEnabled
                 ? 'Tus datos se guardan en Supabase a medida que registrás '
                       'algo; las fotos se analizan con Gemini.'
-                : 'Esta compilación no tiene servidor: todo vive solo en tu '
+                : 'Esta versión no tiene servidor: todo vive solo en tu '
                       'teléfono y no sale de acá.',
           ),
           const SizedBox(height: NmSpace.s3),
@@ -635,20 +722,17 @@ class PrivacyScreen extends ConsumerWidget {
           // arriba, y por eso se explica acá: cada permiso que pedimos tiene
           // que poder justificarse en esta pantalla.
           const InfoNote(
-            text: 'El micrófono se usa solo mientras dictás una comida, y lo '
-                'transcribe tu propio teléfono: no guardamos el audio ni lo '
-                'mandamos a ningún lado.',
+            text: 'El micrófono se usa solo mientras dictás, y la transcripción '
+                'la hace tu teléfono: el audio no se guarda ni se envía.',
           ),
           const SizedBox(height: NmSpace.s6),
           const NmSectionHeader(title: 'Respaldo'),
           InfoNote(
             tone: cloudEnabled ? NmNoteTone.info : NmNoteTone.caution,
             text: cloudEnabled
-                ? 'Ya tenés respaldo automático en la nube (Configuración → '
-                      'Respaldo en la nube). Este archivo es una copia '
-                      'portátil adicional, para llevarte los datos a mano.'
-                : 'Sin servidor, este archivo es tu único respaldo: si '
-                      'perdés el teléfono, perdés el historial. Guardalo '
+                ? 'Ya tenés respaldo automático en la nube. Este archivo es una '
+                      'copia extra para guardar vos.'
+                : 'Sin servidor, este archivo es tu único respaldo. Guardalo '
                       'cada tanto en Drive o mandátelo por correo.',
           ),
           const SizedBox(height: NmSpace.s4),
@@ -930,9 +1014,8 @@ class AboutScreen extends ConsumerWidget {
           const Center(child: BrandWordmark(markSize: 40)),
           const SizedBox(height: NmSpace.s6),
           Text(
-            'Ceres muestra el cálculo completo del día en vez de un único '
-            'número mágico, y nunca presenta una estimación como si fuera una '
-            'medición.',
+            'Ceres muestra el cálculo completo del día y marca qué es una '
+            'estimación.',
             style: NmTextStyles.from(NmType.bodySm, color: nm.textMuted),
           ),
           const SizedBox(height: NmSpace.s6),

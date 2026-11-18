@@ -61,16 +61,14 @@ class _SleepSheetState extends ConsumerState<_SleepSheet> {
     final mins = _minutes % 60;
 
     return NmSheet(
-      title: existing == null ? 'Cuánto dormiste' : 'Editar el sueño',
+      // Título y día como las otras hojas del "+" (peso, medidas, alcohol):
+      // el día iba suelto en el cuerpo y el título no era el de su entrada.
+      title: existing == null ? 'Registrar sueño' : 'Editar el sueño',
+      subtitle: friendlyDay(widget.date),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          Text(
-            friendlyDay(widget.date),
-            style: NmTextStyles.from(NmType.caption, color: nm.textMuted),
-          ),
-          const SizedBox(height: NmSpace.s4),
 
           Center(
             child: Text(
@@ -119,7 +117,7 @@ class _SleepSheetState extends ConsumerState<_SleepSheet> {
           if (existing != null) ...<Widget>[
             const SizedBox(height: NmSpace.s2),
             NmButton.ghost(
-              label: 'Borrar el registro',
+              label: 'Eliminar el registro',
               onPressed: () async {
                 await ref.read(repositoryProvider).deleteSleep(existing.id);
                 if (context.mounted) Navigator.of(context).pop();

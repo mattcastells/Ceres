@@ -1,12 +1,15 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/config/supabase_config.dart';
+import '../../data/local/pal_alert_store.dart';
 import '../../data/remote/care_client.dart';
 import '../../data/remote/pals_client.dart';
 import '../../domain/models/care_grant.dart';
 import '../../domain/models/pal.dart';
 import '../../domain/repositories/auth_gateway.dart';
 import '../../domain/services/cloud_backup_service.dart';
+import '../../domain/services/pal_alerts.dart';
+import '../../domain/services/pal_publisher.dart';
 import '../../domain/services/photo_sync_service.dart';
 import '../../domain/services/relational_sync_service.dart';
 
@@ -15,25 +18,6 @@ import '../../domain/services/relational_sync_service.dart';
 final authGatewayProvider = Provider<AuthGateway>(
   (ref) => throw UnimplementedError('authGatewayProvider sin inicializar'),
 );
-
-/// Cuenta con la que está abierta la sesión, o `null`.
-///
-/// Escucha el stream del gateway, así que se actualiza también cuando la
-/// sesión caduca sola o cuando se cierra desde otro lado.
-final authAccountProvider = StreamProvider<AuthAccount?>((ref) {
-  final gateway = ref.watch(authGatewayProvider);
-  return gateway.changes;
-});
-
-/// Cuenta actual de forma síncrona, para decidir a dónde va el splash sin
-/// esperar un frame.
-final currentAccountProvider = Provider<AuthAccount?>((ref) {
-  final gateway = ref.watch(authGatewayProvider);
-  return ref.watch(authAccountProvider).maybeWhen(
-    data: (account) => account,
-    orElse: () => gateway.currentAccount,
-  );
-});
 
 /// `true` cuando la sesión es real contra el servidor. En `false` la app anda
 /// igual, pero los datos no salen del teléfono.
@@ -108,6 +92,15 @@ final careGrantsProvider = FutureProvider.autoDispose<List<CareGrant>>((
   return client.list();
 });
 
+/// Las invitaciones de nutricionistas que esperan respuesta (migración 56).
+final careInvitesProvider = FutureProvider.autoDispose<List<CareInvite>>((
+  ref,
+) async {
+  final client = ref.watch(careClientProvider);
+  if (client == null) return const <CareInvite>[];
+  return client.invites();
+});
+
 /// Los vínculos, recargables tras aceptar o quitar uno.
 ///
 /// `autoDispose` a propósito: sin eso la lista se consultaba **una sola vez por
@@ -147,8 +140,7 @@ final myPalCodeProvider = FutureProvider.autoDispose<String?>((ref) async {
   return client?.myCode();
 });
 
-/// Qué categorías, además de comida y actividad, comparte esta cuenta con sus
-/// pals. `autoDispose` para que volver a entrar a la pantalla de privacidad
+/// Qué comparte esta cuenta con sus pals. `autoDispose` para que volver a entrar a la pantalla de privacidad
 /// después de guardar traiga el valor real, no uno en caché de la visita
 /// anterior.
 final myPalSharingPrefsProvider = FutureProvider.autoDispose<PalSharingPrefs>((
@@ -158,3 +150,26 @@ final myPalSharingPrefsProvider = FutureProvider.autoDispose<PalSharingPrefs>((
   if (client == null) return const PalSharingPrefs();
   return client.mySharingPrefs();
 });
+
+/// Quien publica el día propio para los pals. Se sobrescribe en `bootstrap.dart`
+/// con servidor; hace falta acá para volver a publicar en cuanto cambia una
+/// preferencia, y no recién con la próxima comida.
+final palPublisherProvider = Provider<PalPublisher?>((ref) => null);
+
+final palAlertStoreProvider = Provider<PalAlertStore>((ref) => PalAlertStore());
+
+/// Los avisos de pals de este teléfono.
+final palAlertPrefsProvider =
+    AsyncNotifierProvider<PalAlertPrefsNotifier, PalAlertPrefs>(
+      PalAlertPrefsNotifier.new,
+    );
+
+class PalAlertPrefsNotifier extends AsyncNotifier<PalAlertPrefs> {
+  @override
+  Future<PalAlertPrefs> build() => ref.read(palAlertStoreProvider).load();
+
+  Future<void> set(PalAlertPrefs value) async {
+    state = AsyncData(value);
+    await ref.read(palAlertStoreProvider).save(value);
+  }
+}

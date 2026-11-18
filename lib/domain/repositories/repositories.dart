@@ -92,8 +92,6 @@ class DuplicateCandidate {
   final DuplicateScore score;
 }
 
-enum DuplicateResolution { keepIncoming, keepExisting, keepBoth, defer }
-
 /// Todas las superficies de datos juntas. Existe para que la presentación
 /// pueda inyectar un único objeto sin conocer la implementación concreta.
 abstract interface class CeresRepositories
@@ -112,8 +110,7 @@ abstract interface class CeresRepositories
         SummaryRepository,
         HealthRepository,
         AiPhotoRepository,
-        BackupRepository,
-        ConnectivityRepository {}
+        BackupRepository {}
 
 abstract interface class ProfileRepository {
   UserProfile? get profileOrNull;
@@ -136,12 +133,18 @@ abstract interface class ProfileRepository {
   bool get needsOnboarding;
 
   Future<void> updateProfile(UserProfile profile);
+
+  /// Pone o quita (`null`) la foto de perfil. Queda en el teléfono en el
+  /// acto y se sube al bucket cuando hay sesión.
+  Future<void> setProfilePhoto(String? localPath);
   Future<void> setExerciseCredit({
     required int percentage,
     required bool enabled,
   });
+
   /// Modo demo sin cuenta: usuario local anónimo (D-15).
   Future<void> startDemoSession({required bool seeded});
+
   /// Marca el documento local como el de esta cuenta.
   ///
   /// [accountId] es el `auth.users.id`. Va porque es lo que permite distinguir
@@ -322,6 +325,7 @@ abstract interface class BodyRepository {
   List<WeightLog> get weightLogs;
   WeightLog? weightOn(DateTime date);
   double? get currentWeightKg;
+
   /// [source] distingue lo que cargó la persona de lo que trajo una
   /// integración. La base contempla `'imported'` desde siempre y la app
   /// mandaba `'manual'` para todo, así que la procedencia de un peso que vino
@@ -420,17 +424,9 @@ abstract interface class HealthRepository {
   Future<void> disconnect();
   Future<HealthSyncResult> sync();
   Future<void> deleteImported();
-  Future<void> resolveDuplicate(
-    DuplicateCandidate candidate,
-    DuplicateResolution resolution,
-  );
-  List<DuplicateCandidate> get pendingReviews;
 }
 
 abstract interface class AiPhotoRepository {
-  /// Cuota diaria de análisis (D-18).
-  int get quotaLimit;
-  int get quotaUsed;
   /// [onStage] avisa en qué paso real va el circuito, para que la pantalla de
   /// espera muestre lo que está pasando y no una animación decorativa.
   ///
@@ -563,17 +559,4 @@ abstract interface class BackupRepository {
   /// Aplica un documento ya armado. Lo usa la lectura desde las tablas, que
   /// devuelve la misma forma que el documento del respaldo.
   Future<void> importDocument(Map<String, dynamic> document);
-}
-
-abstract interface class ConnectivityRepository {
-  /// ⚠️ Hoy siempre `false`: no hay detección real de conectividad. Es el
-  /// punto donde enchufarla — ver la nota en `LocalRepository`.
-  bool get isOffline;
-  int get pendingCount;
-  // `setOffline` se sacó junto con el interruptor de simulación: nadie podía
-  // llamarlo y dejaba la puerta abierta a que alguien "simulara" sin conexión
-  // en producción, con las escrituras quedando en pendiente sin explicación.
-
-  /// Vacía la cola: todo lo pendiente pasa a sincronizado.
-  Future<void> flushQueue();
 }

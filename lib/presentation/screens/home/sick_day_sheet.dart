@@ -87,9 +87,8 @@ class _SickDaySheetState extends ConsumerState<_SickDaySheet> {
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
           const InfoNote(
-            text: 'Marcar el día no cambia tu objetivo ni tus promedios. '
-                'Queda como contexto: si ese día no entrenaste o comiste '
-                'distinto, se va a ver por qué.',
+            text: 'No cambia tu objetivo ni tus promedios: queda como '
+                'contexto.',
           ),
           const SizedBox(height: NmSpace.s5),
 

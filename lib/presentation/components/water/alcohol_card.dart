@@ -73,6 +73,20 @@ class AlcoholCard extends ConsumerWidget {
                   style: NmTextStyles.from(NmType.h4, color: nm.text),
                 ),
                 const Spacer(),
+                if (logs.isEmpty) ...<Widget>[
+                  Text(
+                    'Cargar',
+                    style: NmTextStyles.from(
+                      NmType.bodySm,
+                      color: nm.accentText,
+                    ),
+                  ),
+                  Icon(
+                    PhosphorIcons.caretRight(),
+                    size: NmIconSize.sm,
+                    color: nm.accentText,
+                  ),
+                ],
                 if (logs.isNotEmpty)
                   Text(
                     // El "≈" y no un número seco: la UBE sale de volumen y
@@ -86,37 +100,8 @@ class AlcoholCard extends ConsumerWidget {
               ],
             ),
 
-            const SizedBox(height: NmSpace.s4),
-
-            if (logs.isEmpty)
-              // El día sin alcohol no dice "0 tragos": un cero repetido todos
-              // los días convierte en ruido diario algo que la mayoría de las
-              // veces no pasó, y de paso lo pone en una escala que nadie pidió.
-              Row(
-                children: <Widget>[
-                  Text(
-                    'Sin registro',
-                    style: NmTextStyles.from(
-                      NmType.body,
-                      color: nm.textMuted,
-                    ),
-                  ),
-                  const Spacer(),
-                  Text(
-                    'Anotar',
-                    style: NmTextStyles.from(
-                      NmType.bodySm,
-                      color: nm.accentText,
-                    ),
-                  ),
-                  Icon(
-                    PhosphorIcons.caretRight(),
-                    size: NmIconSize.sm,
-                    color: nm.accentText,
-                  ),
-                ],
-              )
-            else
+            if (logs.isNotEmpty) ...<Widget>[
+              const SizedBox(height: NmSpace.s4),
               Semantics(
                 // Un lector de pantalla no puede con ocho siluetas sueltas: una
                 // sola etiqueta con el dato entero, y los íconos ocultos. Mismo
@@ -148,8 +133,6 @@ class AlcoholCard extends ConsumerWidget {
                   ],
                 ),
               ),
-
-            if (logs.isNotEmpty) ...<Widget>[
               const SizedBox(height: NmSpace.s3),
               Text(
                 // Dónde van esas calorías es la pregunta que sigue, y la

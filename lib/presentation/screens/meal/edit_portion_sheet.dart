@@ -145,8 +145,8 @@ class _EditPortionSheetState extends State<_EditPortionSheet> {
 
           const SizedBox(height: NmSpace.s4),
           Text(
-            'Los macros se reescalan en proporción a la cantidad original '
-            '(${_format(widget.item.quantity)} ${widget.item.unit}).',
+            'Los macros se ajustan a la cantidad. Original: '
+            '${widget.item.portionLabel}.',
             style: NmTextStyles.from(NmType.caption, color: nm.textMuted),
           ),
         ],

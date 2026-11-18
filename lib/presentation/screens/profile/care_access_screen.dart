@@ -1,13 +1,18 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../../../core/config/supabase_config.dart';
 import '../../../core/error/app_error.dart';
+import '../../../core/router/routes.dart';
 import '../../../core/theme/nm_theme.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/utils/dates.dart';
+import '../../../domain/models/care_article.dart';
 import '../../../domain/models/care_grant.dart';
 import '../../components/feedback/feedback.dart';
 import '../../components/system/buttons.dart';
@@ -16,24 +21,26 @@ import '../../components/system/nm_screen.dart';
 import '../../components/system/overlays.dart';
 import '../../components/system/surfaces.dart';
 import '../../providers/auth_providers.dart';
+import '../../providers/care_providers.dart';
 
-/// S-35 · Dar acceso a un profesional que te sigue.
+/// S-35 · Tu nutricionista: la invitación que te mandó, sumarte con su código
+/// y darte de baja.
 ///
-/// Es lo mismo que Pals en la forma —un código, un vínculo, categorías— y algo
-/// muy distinto en el fondo. Un pal ve una proyección: qué comiste y si te
+/// Desde la migración 55 no hay categorías que elegir: sumarse es darle a la
+/// profesional acceso a todo lo que registrás. Desde la 56 hay **una sola**
+/// nutricionista a la vez, y ella puede darte de alta desde su panel: te llega
+/// una invitación acá y, hasta que la aceptás, no ve nada.
+///
+/// Es lo mismo que Pals en la forma —un código, un vínculo— y algo muy
+/// distinto en el fondo. Un pal ve una proyección: qué comiste y si te
 /// moviste. Acá se abre lo que esa proyección deja afuera a propósito: el
-/// detalle de cada ítem, los macros, el peso, las medidas.
-///
-/// Por eso la pantalla dice qué se abre en cada interruptor en vez de dejarlo
-/// en "compartir mi progreso". La decisión de conceder esto tiene que poder
-/// tomarse leyendo, no adivinando.
+/// detalle de cada ítem, los macros, el peso, las medidas. Por eso cada
+/// pantalla que lo concede lo dice antes del botón.
 class CareAccessScreen extends ConsumerWidget {
   const CareAccessScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final nm = context.nm;
-
     // Sin servidor no hay nada que conceder y decirlo es más honesto que
     // mostrar una pantalla vacía que parece rota.
     if (!SupabaseConfig.isConfigured) {
@@ -42,13 +49,20 @@ class CareAccessScreen extends ConsumerWidget {
         child: EmptyState(
           icon: PhosphorIcons.stethoscope(),
           title: 'Necesitás una cuenta',
-          body: 'Sin cuenta tus datos viven solo en este teléfono, así que no '
+          body:
+              'Sin cuenta tus datos viven solo en este teléfono, así que no '
               'hay nada a lo que darle acceso desde otro lado.',
         ),
       );
     }
 
     final grantsAsync = ref.watch(careGrantsProvider);
+    final invites =
+        ref.watch(careInvitesProvider).valueOrNull ?? const <CareInvite>[];
+    final articles =
+        ref.watch(careArticlesProvider).valueOrNull ?? const <CareArticle>[];
+    final seen = ref.watch(articleSeenProvider).valueOrNull;
+    final unseen = seen == null ? 0 : articles.where(seen.isNew).length;
 
     return NmScreen(
       title: 'Mi nutricionista',
@@ -64,23 +78,57 @@ class CareAccessScreen extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
             const SizedBox(height: NmSpace.s4),
-            Text(
-              'Dale acceso a quien te sigue para que pueda ver tu día a día '
-              'desde su computadora. Vos elegís qué ve y podés cortarlo cuando '
-              'quieras.',
-              style: NmTextStyles.from(NmType.bodySm, color: nm.textMuted),
+
+            // Lo que la profesional devuelve. Vive acá además de en Inicio
+            // porque Inicio lo muestra solo cuando hay algo nuevo o vigente, y
+            // las devoluciones viejas también se buscan.
+            //
+            // Los artículos van debajo solo si hay alguno: sin nada publicado
+            // la fila sería una promesa vacía, y si la consulta falla tampoco
+            // se muestra.
+            NmCard(
+              padding: const EdgeInsets.symmetric(vertical: NmSpace.s2),
+              child: Column(
+                children: <Widget>[
+                  NmListRow(
+                    title: 'Devoluciones e indicaciones',
+                    subtitle: _feedbackSubtitle(
+                      ref
+                              .watch(careFeedbackProvider)
+                              .valueOrNull
+                              ?.unreadCount ??
+                          0,
+                    ),
+                    leading: Icon(PhosphorIcons.chatCircleText()),
+                    onTap: () => context.push(Routes.careFeedback),
+                  ),
+                  if (articles.isNotEmpty)
+                    NmListRow(
+                      title: 'Artículos y recetas',
+                      subtitle: _articlesSubtitle(articles.length, unseen),
+                      leading: Icon(PhosphorIcons.bookOpenText()),
+                      onTap: () => context.push(Routes.careArticles),
+                    ),
+                ],
+              ),
             ),
             const SizedBox(height: NmSpace.s6),
 
-            if (grants.isEmpty)
-              EmptyState(
-                compact: true,
-                icon: PhosphorIcons.stethoscope(),
-                title: 'Todavía no le diste acceso a nadie',
-                body: 'Pedile su código, que empieza con NT-, y cargalo acá.',
-              )
-            else ...<Widget>[
-              const NmSectionHeader(title: 'Con acceso'),
+            if (invites.isNotEmpty) ...<Widget>[
+              const NmSectionHeader(title: 'Te invitaron'),
+              for (final invite in invites)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: NmSpace.s3),
+                  child: _InviteCard(
+                    invite: invite,
+                    current: grants.isEmpty ? null : grants.first,
+                  ),
+                ),
+              const SizedBox(height: NmSpace.s4),
+            ],
+
+            if (grants.isNotEmpty) ...<Widget>[
+              const NmSectionHeader(title: 'Tu nutricionista'),
               for (final grant in grants)
                 Padding(
                   padding: const EdgeInsets.only(bottom: NmSpace.s3),
@@ -89,18 +137,15 @@ class CareAccessScreen extends ConsumerWidget {
               const SizedBox(height: NmSpace.s4),
             ],
 
-            NmButton.secondary(
-              label: 'Dar acceso con un código',
-              block: true,
-              icon: PhosphorIcons.plus(),
-              onPressed: () => _openGrantSheet(context, ref),
-            ),
-            const SizedBox(height: NmSpace.s6),
-
-            const InfoNote(
-              text: 'Quien tenga acceso solo puede mirar: no puede cambiar ni '
-                  'borrar nada de lo tuyo. Y lo que no prendas, no lo ve.',
-            ),
+            // Una sola nutricionista a la vez: con una, para cambiar primero
+            // hay que darse de baja.
+            if (grants.isEmpty)
+              NmButton.secondary(
+                label: 'Sumarme con un código',
+                block: true,
+                icon: PhosphorIcons.plus(),
+                onPressed: () => _openGrantSheet(context, ref),
+              ),
           ],
         ),
       ),
@@ -108,27 +153,131 @@ class CareAccessScreen extends ConsumerWidget {
   }
 }
 
-/// Un permiso vigente, con qué ve y el botón para cortarlo.
+/// Una invitación de una nutricionista: quién es, qué ve si aceptás, y las dos
+/// respuestas. Con otra nutricionista vigente, aceptar no se ofrece: primero
+/// hay que darse de baja de la actual (la base lo exige igual).
+class _InviteCard extends ConsumerStatefulWidget {
+  const _InviteCard({required this.invite, required this.current});
+
+  final CareInvite invite;
+  final CareGrant? current;
+
+  @override
+  ConsumerState<_InviteCard> createState() => _InviteCardState();
+}
+
+class _InviteCardState extends ConsumerState<_InviteCard> {
+  bool _busy = false;
+
+  Future<void> _answer({required bool accept}) async {
+    final client = ref.read(careClientProvider);
+    if (client == null) return;
+    setState(() => _busy = true);
+    try {
+      if (accept) {
+        await client.acceptInvite(widget.invite.id);
+      } else {
+        await client.declineInvite(widget.invite.id);
+      }
+      ref
+        ..invalidate(careInvitesProvider)
+        ..invalidate(careGrantsProvider);
+      if (mounted) {
+        NmSnackbar.show(
+          context,
+          accept
+              ? 'Listo, ya estás con tu nutricionista'
+              : 'Invitación rechazada',
+        );
+      }
+    } on AppError catch (error) {
+      if (mounted) NmSnackbar.show(context, error.message);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final nm = context.nm;
+    final invite = widget.invite;
+    final name = invite.professionalName.isEmpty
+        ? 'Una nutricionista'
+        : invite.professionalName;
+    final current = widget.current;
+
+    return NmCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(name, style: NmTextStyles.from(NmType.h4, color: nm.text)),
+          if (invite.orgName != null) ...<Widget>[
+            const SizedBox(height: NmSpace.s1),
+            Text(
+              invite.orgName!,
+              style: NmTextStyles.from(NmType.caption, color: nm.textMuted),
+            ),
+          ],
+          const SizedBox(height: NmSpace.s2),
+          Text(
+            current == null
+                ? 'Te invitó a sumarte. Si aceptás, ve todo lo que registrás '
+                      'y te puede escribir devoluciones.'
+                : 'Te invitó a sumarte. Para aceptar, primero date de baja de '
+                      '${current.displayName.isEmpty ? 'tu nutricionista actual' : current.displayName}.',
+            style: NmTextStyles.from(NmType.bodySm, color: nm.textMuted),
+          ),
+          const SizedBox(height: NmSpace.s3),
+          Row(
+            children: <Widget>[
+              if (current == null) ...<Widget>[
+                Expanded(
+                  child: NmButton(
+                    label: 'Aceptar',
+                    loading: _busy,
+                    onPressed: _busy ? null : () => _answer(accept: true),
+                  ),
+                ),
+                const SizedBox(width: NmSpace.s3),
+              ],
+              Expanded(
+                child: NmButton.ghost(
+                  label: 'Rechazar',
+                  onPressed: _busy ? null : () => _answer(accept: false),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// La nutricionista a la que estás sumado, y cómo darte de baja.
 class _GrantCard extends ConsumerWidget {
   const _GrantCard({required this.grant});
 
   final CareGrant grant;
 
-  Future<void> _revoke(BuildContext context, WidgetRef ref) async {
+  Future<void> _leave(BuildContext context, WidgetRef ref) async {
+    final name = grant.displayName.isEmpty
+        ? 'Tu nutricionista'
+        : grant.displayName;
     final confirmed = await showNmDialog<bool>(
       context: context,
       builder: (context) => NmDialog(
-        title: 'Cortar el acceso',
-        body: grant.displayName.isEmpty
-            ? 'Deja de ver tus datos en el acto.'
-            : '${grant.displayName} deja de ver tus datos en el acto.',
+        title: '¿Darte de baja?',
+        body:
+            '$name deja de ver tus datos. Si la IA te la pagaba ella, '
+            'volvés a tu plan.',
         actions: <Widget>[
           NmButton.ghost(
             label: 'Cancelar',
             onPressed: () => Navigator.of(context).pop(false),
           ),
           NmButton(
-            label: 'Cortar',
+            label: 'Darme de baja',
             variant: NmButtonVariant.danger,
             onPressed: () => Navigator.of(context).pop(true),
           ),
@@ -140,7 +289,7 @@ class _GrantCard extends ConsumerWidget {
     try {
       await ref.read(careClientProvider)?.revoke(grant.id);
       ref.invalidate(careGrantsProvider);
-      if (context.mounted) NmSnackbar.show(context, 'Acceso cortado');
+      if (context.mounted) NmSnackbar.show(context, 'Te diste de baja');
     } on AppError catch (error) {
       if (context.mounted) NmSnackbar.show(context, error.message);
     }
@@ -154,58 +303,20 @@ class _GrantCard extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Row(
-            children: <Widget>[
-              Expanded(
-                child: Text(
-                  grant.displayName.isEmpty
-                      ? 'Profesional'
-                      : grant.displayName,
-                  style: NmTextStyles.from(NmType.h4, color: nm.text),
-                ),
-              ),
-              NmButton.ghost(
-                label: 'Cortar',
-                onPressed: () => _revoke(context, ref),
-              ),
-            ],
+          Text(
+            grant.displayName.isEmpty ? 'Profesional' : grant.displayName,
+            style: NmTextStyles.from(NmType.h4, color: nm.text),
           ),
-          const SizedBox(height: NmSpace.s2),
-
-          // Un permiso con todo apagado existe y desde afuera se ve igual que
-          // uno activo. Decirlo evita creer que alguien está siguiendo un
-          // tratamiento con datos que en realidad no le llegan.
-          if (grant.sharesNothing)
-            Text(
-              'No ve nada: apagaste todas las categorías.',
-              style: NmTextStyles.from(NmType.caption, color: nm.caution),
-            )
-          else
-            Wrap(
-              spacing: NmSpace.s2,
-              runSpacing: NmSpace.s2,
-              children: <Widget>[
-                for (final label in grant.categoryLabels)
-                  NmTag(label: label, variant: NmTagVariant.outline),
-              ],
-            ),
-
-          if (grant.expiresAt != null) ...<Widget>[
-            const SizedBox(height: NmSpace.s2),
-            Text(
-              'Vence el ${shortDay(grant.expiresAt!)}',
-              style: NmTextStyles.from(NmType.caption, color: nm.textMuted),
-            ),
-          ],
-
+          const SizedBox(height: NmSpace.s1),
+          Text(
+            'Ve todo lo que registrás'
+            '${grant.expiresAt == null ? '' : ' · hasta el ${shortDay(grant.expiresAt!)}'}.',
+            style: NmTextStyles.from(NmType.caption, color: nm.textMuted),
+          ),
           const SizedBox(height: NmSpace.s3),
           NmButton.ghost(
-            label: 'Cambiar qué ve',
-            onPressed: () => _openGrantSheet(
-              context,
-              ref,
-              editing: grant,
-            ),
+            label: 'Darme de baja',
+            onPressed: () => _leave(context, ref),
           ),
         ],
       ),
@@ -213,22 +324,15 @@ class _GrantCard extends ConsumerWidget {
   }
 }
 
-/// Conceder y cambiar son el mismo formulario: cambiar qué ve es volver a
-/// decir qué ve. Dos caminos al mismo lugar es uno que en algún momento queda
-/// sin arreglar.
-Future<void> _openGrantSheet(
-  BuildContext context,
-  WidgetRef ref, {
-  CareGrant? editing,
-}) => showNmSheet<void>(
-  context: context,
-  builder: (context) => _GrantSheet(editing: editing),
-);
+/// Sumarse a una nutricionista con el código que le muestra su panel.
+Future<void> _openGrantSheet(BuildContext context, WidgetRef ref) =>
+    showNmSheet<void>(
+      context: context,
+      builder: (context) => const _GrantSheet(),
+    );
 
 class _GrantSheet extends ConsumerStatefulWidget {
-  const _GrantSheet({this.editing});
-
-  final CareGrant? editing;
+  const _GrantSheet();
 
   @override
   ConsumerState<_GrantSheet> createState() => _GrantSheetState();
@@ -237,19 +341,8 @@ class _GrantSheet extends ConsumerStatefulWidget {
 class _GrantSheetState extends ConsumerState<_GrantSheet> {
   late final TextEditingController _code = TextEditingController();
 
-  late CareCategories _categories = widget.editing == null
-      ? const CareCategories()
-      : CareCategories(
-          meals: widget.editing!.shareMeals,
-          photos: widget.editing!.sharePhotos,
-          body: widget.editing!.shareBody,
-          wellbeing: widget.editing!.shareWellbeing,
-        );
-
   bool _busy = false;
   String? _error;
-
-  bool get _isEditing => widget.editing != null;
 
   @override
   void dispose() {
@@ -261,11 +354,8 @@ class _GrantSheetState extends ConsumerState<_GrantSheet> {
     final client = ref.read(careClientProvider);
     if (client == null) return;
 
-    // Al editar no se vuelve a pedir el código: ya hay un vínculo y hacerlo
-    // dictar de nuevo para apagar una categoría sería pedir una llave para
-    // entrar a una puerta que ya está abierta.
     final code = _code.text.trim();
-    if (!_isEditing && code.length < 3) {
+    if (code.length < 3) {
       setState(() => _error = 'Cargá el código que te pasó.');
       return;
     }
@@ -276,21 +366,11 @@ class _GrantSheetState extends ConsumerState<_GrantSheet> {
     });
 
     try {
-      if (_isEditing) {
-        await client.updateCategories(
-          grantId: widget.editing!.id,
-          categories: _categories,
-        );
-      } else {
-        await client.grant(code: code, categories: _categories);
-      }
+      await client.grant(code: code);
       ref.invalidate(careGrantsProvider);
       if (!mounted) return;
       Navigator.of(context).pop();
-      NmSnackbar.show(
-        context,
-        _isEditing ? 'Listo, cambiamos qué ve' : 'Acceso dado',
-      );
+      NmSnackbar.show(context, 'Listo, ya estás con tu nutricionista');
     } on AppError catch (error) {
       if (!mounted) return;
       setState(() {
@@ -305,94 +385,27 @@ class _GrantSheetState extends ConsumerState<_GrantSheet> {
     final nm = context.nm;
 
     return NmSheet(
-      title: _isEditing ? 'Qué ve' : 'Dar acceso',
+      title: 'Sumarme a mi nutricionista',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          if (!_isEditing) ...<Widget>[
-            Text(
-              'Pedile el código que le muestra su panel. Empieza con NT-.',
-              style: NmTextStyles.from(NmType.bodySm, color: nm.textMuted),
-            ),
-            const SizedBox(height: NmSpace.s4),
-            NmTextField(
-              label: 'Código',
-              controller: _code,
-              hint: 'NT-K7M2QP',
-              autofocus: true,
-            ),
-            const SizedBox(height: NmSpace.s5),
-          ],
-
           Text(
-            'Qué puede ver',
-            style: NmTextStyles.from(NmType.h4, color: nm.text),
+            'Pedile el código que le muestra su panel. Va a ver todo lo que '
+            'registrás.',
+            style: NmTextStyles.from(NmType.bodySm, color: nm.textMuted),
           ),
-          const SizedBox(height: NmSpace.s2),
-          NmCard(
-            padding: const EdgeInsets.symmetric(vertical: NmSpace.s2),
-            child: Column(
-              children: <Widget>[
-                NmSwitchRow(
-                  title: 'Comidas',
-                  subtitle: 'Cada comida con sus ítems, calorías y macros, y '
-                      'tu objetivo del día.',
-                  value: _categories.meals,
-                  onChanged: (v) =>
-                      setState(() => _categories = _categories.copyWith(meals: v)),
-                ),
-                const NmDivider(indent: NmSpace.s3),
-                NmSwitchRow(
-                  title: 'Fotos',
-                  subtitle: 'Las fotos de las comidas que analizaste.',
-                  value: _categories.photos,
-                  onChanged: (v) => setState(
-                    () => _categories = _categories.copyWith(photos: v),
-                  ),
-                ),
-                const NmDivider(indent: NmSpace.s3),
-                NmSwitchRow(
-                  title: 'Peso y medidas',
-                  subtitle: 'Tu peso día a día y los perímetros que cargaste.',
-                  value: _categories.body,
-                  onChanged: (v) =>
-                      setState(() => _categories = _categories.copyWith(body: v)),
-                ),
-                const NmDivider(indent: NmSpace.s3),
-                NmSwitchRow(
-                  title: 'Actividad, agua y sueño',
-                  subtitle: 'El ejercicio con sus calorías estimadas, los '
-                      'vasos de agua y cuánto dormiste.',
-                  value: _categories.wellbeing,
-                  onChanged: (v) => setState(
-                    () => _categories = _categories.copyWith(wellbeing: v),
-                  ),
-                ),
-              ],
-            ),
+          const SizedBox(height: NmSpace.s4),
+          NmTextField(
+            label: 'Código',
+            controller: _code,
+            hint: 'CE-K7M2QP',
+            autofocus: true,
+            error: _error,
           ),
-
-          if (_categories.none) ...<Widget>[
-            const SizedBox(height: NmSpace.s3),
-            const InfoNote(
-              tone: NmNoteTone.caution,
-              text: 'Sin ninguna categoría prendida no va a ver nada. Es '
-                  'válido, pero probablemente no sea lo que buscás.',
-            ),
-          ],
-
-          if (_error != null) ...<Widget>[
-            const SizedBox(height: NmSpace.s3),
-            Text(
-              _error!,
-              style: NmTextStyles.from(NmType.bodySm, color: nm.danger),
-            ),
-          ],
-
           const SizedBox(height: NmSpace.s5),
           NmButton(
-            label: _isEditing ? 'Guardar' : 'Dar acceso',
+            label: 'Sumarme',
             block: true,
             loading: _busy,
             onPressed: _submit,
@@ -402,3 +415,15 @@ class _GrantSheetState extends ConsumerState<_GrantSheet> {
     );
   }
 }
+
+String _articlesSubtitle(int total, int unseen) => switch (unseen) {
+  0 => total == 1 ? '1 publicado' : '$total publicados',
+  1 => '1 sin leer',
+  _ => '$unseen sin leer',
+};
+
+String? _feedbackSubtitle(int unread) => switch (unread) {
+  0 => null,
+  1 => '1 nueva sin leer',
+  _ => '$unread nuevas sin leer',
+};
