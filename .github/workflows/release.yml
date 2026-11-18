@@ -27,6 +27,15 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
+      # El JDK fijo, no el que trae la imagen: en noviembre de 2026
+      # ubuntu-latest pasó a Java 25, Kotlin 2.1 no lo reconoce y Gradle se
+      # caía con un "What went wrong: 25.0.5" sin más. El 21 es el mismo con el
+      # que se compila local.
+      - uses: actions/setup-java@dded0888837ed1f317902acf8a20df0ad188d165 # v5.0.0
+        with:
+          distribution: temurin
+          java-version: '21'
+
       - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
