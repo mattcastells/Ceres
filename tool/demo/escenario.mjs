@@ -15,7 +15,6 @@ export const ORGANIZACION = {
 // dictan sin confundir: sin 0/O, 1/I/L).
 export const PROFESIONALES = [
   { key: 'valentina', name: 'Lic. Valentina Ruiz', email: 'valentina', sex: 'female', birth: '1988-04-12', height: 165, role: 'owner', code: 'CE-VRUZ26' },
-  { key: 'martin', name: 'Lic. Martín Sosa', email: 'martin', sex: 'male', birth: '1985-09-03', height: 178, role: 'professional', code: 'CE-MSSA27' },
 ];
 
 // Cada paciente tiene un patrón: es lo que el tablero y los informes tienen
@@ -41,11 +40,10 @@ export const PACIENTES = [
   { key: 'ana', of: 'valentina', name: 'Ana Torres', sex: 'female', birth: '1966-07-19', height: 158, weight: 66, goal: 'maintain', target: 1700, eats: 1.0, weekend: 1.0, adh: 0.98, kgWeek: 0.0, activity: 'sedentary', act: ['walking'], actPerWeek: 2, share: 'meals_body', plan: 'free' },
   { key: 'nicolas', of: 'valentina', name: 'Nicolás Paz', sex: 'male', birth: '1993-12-01', height: 176, weight: 92, goal: 'lose', target: 2300, eats: 0.97, weekend: 1.05, adh: 0.92, kgWeek: -0.8, activity: 'high', act: ['running', 'strength_training', 'sports'], actPerWeek: 5, share: 'all', plan: 'premium' },
   { key: 'camila', of: 'valentina', name: 'Camila Ríos', sex: 'female', birth: '1996-04-27', height: 162, weight: 70, goal: 'lose', target: 1600, eats: 1.0, weekend: 1.1, adh: 0.95, kgWeek: -0.4, days: 10, activity: 'moderate', act: ['dancing', 'walking'], actPerWeek: 3, share: 'all', plan: 'free' },
-  // Los pacientes de Martín: con poco historial. Están para que la
-  // organización tenga más de una profesional con su equipo.
-  { key: 'raul', of: 'martin', name: 'Raúl Benítez', sex: 'male', birth: '1979-08-14', height: 175, weight: 88, goal: 'lose', target: 2100, eats: 1.0, weekend: 1.2, adh: 0.85, kgWeek: -0.3, days: 21, activity: 'light', act: ['walking'], actPerWeek: 2, share: 'all', plan: 'free' },
-  { key: 'paula', of: 'martin', name: 'Paula Acosta', sex: 'female', birth: '1991-10-05', height: 166, weight: 63, goal: 'maintain', target: 1850, eats: 1.0, weekend: 1.1, adh: 0.9, kgWeek: 0.0, days: 21, activity: 'moderate', act: ['yoga'], actPerWeek: 3, share: 'all', plan: 'free' },
-  { key: 'esteban', of: 'martin', name: 'Esteban Molina', sex: 'male', birth: '1970-02-11', height: 170, weight: 84, goal: 'lose', target: 2000, eats: 1.05, weekend: 1.3, adh: 0.75, kgWeek: -0.1, days: 21, activity: 'sedentary', act: ['walking'], actPerWeek: 1, share: 'meals', plan: 'free' },
+  // Con poco historial: empezaron hace tres semanas.
+  { key: 'raul', of: 'valentina', name: 'Raúl Benítez', sex: 'male', birth: '1979-08-14', height: 175, weight: 88, goal: 'lose', target: 2100, eats: 1.0, weekend: 1.2, adh: 0.85, kgWeek: -0.3, days: 21, activity: 'light', act: ['walking'], actPerWeek: 2, share: 'all', plan: 'free' },
+  { key: 'paula', of: 'valentina', name: 'Paula Acosta', sex: 'female', birth: '1991-10-05', height: 166, weight: 63, goal: 'maintain', target: 1850, eats: 1.0, weekend: 1.1, adh: 0.9, kgWeek: 0.0, days: 21, activity: 'moderate', act: ['yoga'], actPerWeek: 3, share: 'all', plan: 'free' },
+  { key: 'esteban', of: 'valentina', name: 'Esteban Molina', sex: 'male', birth: '1970-02-11', height: 170, weight: 84, goal: 'lose', target: 2000, eats: 1.05, weekend: 1.3, adh: 0.75, kgWeek: -0.1, days: 21, activity: 'sedentary', act: ['walking'], actPerWeek: 1, share: 'meals', plan: 'free' },
 ];
 
 // Usuarios del plan gratis sin profesional: los que ven anuncios. Opcionalmente
@@ -65,7 +63,6 @@ export const DEVOLUCIONES = [
   { to: 'carla', kind: 'indication', daysAgo: 12, read: true, body: 'Sumá una porción de proteína en el desayuno: un huevo, queso o yogur.' },
   { to: 'javier', kind: 'indication', daysAgo: 10, read: false, body: 'Intentá cenar antes de las 22 h, y si se hace tarde, que sea algo liviano.' },
   { to: 'sofia', kind: 'feedback', daysAgo: 4, read: false, body: 'Sofía, vi que estuviste con angina la semana pasada: es normal que el registro y la actividad bajen esos días, no te preocupes por eso. Retomá de a poco, empezando por las caminatas.' },
-  { to: 'diego', kind: 'feedback', daysAgo: 1, draft: true, body: 'Borrador: Diego, entre semana venís muy bien. Hablemos de los fines de semana en la consulta.' },
 ];
 
 // El objetivo recomendado (migración 53): una indicación con números que el

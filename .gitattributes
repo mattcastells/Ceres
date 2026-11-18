@@ -1,0 +1,2 @@
+# Los scripts de la demo para macOS tienen que llegar con LF.
+*.sh text eol=lf

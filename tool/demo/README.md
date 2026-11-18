@@ -9,7 +9,6 @@ no se toca**, y lo que se haga en un ensayo no le llega a la cuenta real.
 | Quién | Mail | Plan | Para qué |
 | --- | --- | --- | --- |
 | Lic. Valentina Ruiz | `valentina@demo.ceres.app` | Pro, dueña del consultorio · código **`CE-VRUZ26`** | El panel: equipo, devoluciones, informes, organización |
-| Lic. Martín Sosa | `martin@demo.ceres.app` | Pro · código `CE-MSSA27` | Segunda profesional del consultorio |
 | Vos | tu mail real | Premium | Tus 105+ días reales, copiados de una instantánea |
 | Lucía, Diego, Carla, Pablo… (10) | `<nombre>@demo.ceres.app` | Gratis → IA pagada por Valentina | Pacientes con patrones distintos (abajo) |
 | Tomás | `tomas@demo.ceres.app` | Gratis | Ve anuncios y no tiene IA; es tu pal |
@@ -20,10 +19,10 @@ Contraseña de todas: la de `DEMO_PASSWORD` en `.env.demo` (por defecto
 
 Los pacientes están armados para que el panel tenga algo que contar:
 
-- **Pablo** dejó de registrar hace 6 días → aparece primero, en ámbar.
+- **Pablo** dejó de registrar hace 6 días → su ficha lo dice en ámbar (la lista va por nombre).
 - **Diego** registra déficit y la balanza no se mueve → "¿Los números cierran?".
 - **Carla** come poca proteína y tiene una indicación vigente.
-- **Javier** cena tarde, comparte solo comidas y tiene una indicación sin leer.
+- **Javier** cena tarde y tiene una indicación sin leer.
 - **Sofía** tuvo angina hace 9 días (día de enfermedad marcado).
 - **Martina** quiere ganar músculo y come de menos.
 - **Camila** empezó hace 10 días.
@@ -54,13 +53,36 @@ Los pacientes están armados para que el panel tenga algo que contar:
    nutricionista**, cargar el código de Valentina (`CE-VRUZ26`, fijo). Desde ahí aparecés en su
    panel. (Esto mismo se puede hacer en vivo en la defensa.)
 
-   La otra forma, desde la migración 56: Valentina toca **Dar de alta** en el
-   panel y escribe el mail; la invitación aparece en Perfil → Mi
-   nutricionista y se acepta ahí. Para la defensa sirve con Tomás
-   (`tomas@demo.ceres.app`, gratis y sin nutricionista): al aceptar deja de
-   ver anuncios y le aparece la IA, porque se la paga Valentina.
+   **Dar de alta**, en el panel, tiene los tres caminos (migraciones 56 y 60):
+
+   - **Cargar sus datos**: Valentina completa la primera consulta (datos para
+     la app y anamnesis) con un mail nuevo. Al crear la cuenta con ese mail, el
+     onboarding muestra "Valentina cargó tus datos"; al aceptar, cada paso
+     arranca precargado y la persona confirma. La anamnesis queda en las notas
+     de Valentina, nunca en la app. Para la defensa: un mail `@demo.ceres.app`
+     nuevo (lo borra `limpiar.mjs`).
+   - **Invitar por mail**: la invitación sale vacía y aparece en Perfil → Mi
+     nutricionista. Sirve con Tomás (`tomas@demo.ceres.app`, gratis y sin
+     nutricionista): al aceptar deja de ver anuncios y le aparece la IA,
+     porque se la paga Valentina.
+   - **Darle tu código**: el código de arriba, para quien ya usa Ceres.
 
 Panel: http://localhost:3100, con `valentina@demo.ceres.app`.
+
+## En una Mac
+
+Lo mismo con los scripts de bash (Docker Desktop, `brew install
+supabase/tap/supabase node`; Flutter y Android Studio solo para el emulador):
+
+```bash
+./tool/demo/levantar.sh              # base, funciones y panel
+./tool/demo/levantar.sh --emulador   # además, la app en el emulador de Android
+./tool/demo/bajar.sh                 # --borrar para empezar de cero
+```
+
+Las funciones y el panel corren en segundo plano, con sus logs en
+`.demo/funciones.log` y `.demo/panel.log`. El túnel al teléfono real queda solo
+en Windows. Paso a paso para dejar la Mac lista: `docs/handoff-tesis.md`.
 
 ## Con el teléfono real
 
@@ -85,7 +107,7 @@ levantarlo ahí mismo, con el emulador como plan B.
    En la misma pestaña, **Objetivo recomendado** → calorías y proteínas →
    Publicar.
 3. **App**: la devolución aparece en Inicio, en "De tu nutricionista".
-4. **Panel**: "Analizar el equipo con IA" en la portada; **Organización** con
+4. **Panel → Organización**: "Tus pacientes, con IA" (Analizar) y
    el fondo de IA del consultorio.
 5. **App (Tomás, plan gratis)**: anuncios en Historial/Buscar/Progreso, la IA
    pide Premium → **Planes** → "Pasarme a Premium" (compra simulada) → los

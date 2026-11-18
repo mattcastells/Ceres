@@ -109,6 +109,9 @@ function generar(p, userId, activityTypes, r) {
   let ultimoTrago = null;
   const days = Math.min(p.days ?? DIAS, DIAS);
   const nowMs = Date.now();
+  // Los días de descanso salen de un generador propio: si usaran `r`, correría
+  // la secuencia y cambiaría todo lo que se siembra después (comidas, pesos).
+  const rDescanso = rng(`ceres-demo-descanso:${p.key}`);
 
   for (let ago = days - 1; ago >= 0; ago--) {
     const date = addDays(todayAR, -ago);
@@ -212,6 +215,13 @@ function generar(p, userId, activityTypes, r) {
         });
         dayActivities = [{ name: type.name, minutes: duration, kcal }];
       }
+    }
+
+    // Un día sin actividad a veces es descanso planificado (el panel los
+    // cuenta en la tarjeta). Uno o dos por semana, nunca un día de enfermedad.
+    if (!sick && dayActivities.length === 0 && rDescanso() < 0.3) {
+      // Mismas claves que el de enfermedad: PostgREST rechaza un lote con filas de claves distintas.
+      markers.push({ id: randomUUID(), user_id: userId, local_date: date, kind: 'rest', severity: null, note: null });
     }
 
     let glasses = null, sleepMin = null, quality = null;
