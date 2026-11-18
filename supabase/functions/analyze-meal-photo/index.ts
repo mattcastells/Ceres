@@ -99,6 +99,19 @@ Deno.serve(async (req) => {
     return fail('ERR_FORBIDDEN', 'Esa foto no es tuya.', 403);
   }
 
+  // ── Foto ───────────────────────────────────────────────────────────────
+  // Antes que la cuota: una ruta que no existe no tiene por qué gastar un
+  // análisis del día.
+  const { data: blob, error: downloadError } = await supabase
+    .storage.from('meal-photos').download(photoPath);
+
+  if (downloadError || !blob) {
+    return fail('ERR_NOT_FOUND', 'No encontramos esa foto.', 404);
+  }
+
+  const bytes = new Uint8Array(await blob.arrayBuffer());
+  const base64 = toBase64(bytes);
+
   // ── Cuota diaria ───────────────────────────────────────────────────────
   // Atómico vía `check_rate_limit` (migración 24) — ver el comentario gemelo
   // en `analyze-meal-text`, que comparte este mismo cupo.
@@ -117,17 +130,6 @@ Deno.serve(async (req) => {
       429,
     );
   }
-
-  // ── Foto ───────────────────────────────────────────────────────────────
-  const { data: blob, error: downloadError } = await supabase
-    .storage.from('meal-photos').download(photoPath);
-
-  if (downloadError || !blob) {
-    return fail('ERR_NOT_FOUND', 'No encontramos esa foto.', 404);
-  }
-
-  const bytes = new Uint8Array(await blob.arrayBuffer());
-  const base64 = toBase64(bytes);
 
   // ── Gemini ─────────────────────────────────────────────────────────────
   // La aclaración va **después** de la imagen: lo que dice es sobre lo que se

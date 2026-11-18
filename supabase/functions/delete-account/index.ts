@@ -58,6 +58,8 @@ function fail(code: string, message: string, status = 400): Response {
  * `list()` devuelve archivos y carpetas mezclados y los distingue por `id`:
  * una carpeta no tiene. Es la única forma de saberlo con esta API.
  */
+const PAGE = 1000;
+
 async function listAll(
   admin: SupabaseClient,
   bucket: string,
@@ -66,20 +68,27 @@ async function listAll(
 ): Promise<string[]> {
   if (depth >= MAX_DEPTH) return [];
 
-  const { data, error } = await admin.storage
-    .from(bucket)
-    .list(prefix, { limit: 1000 });
-  if (error) throw new Error(`${bucket}/${prefix}: ${error.message}`);
-  if (!data) return [];
-
+  // Paginado: `list` devuelve como mucho [PAGE] entradas, y las fotos viven
+  // todas planas en `userId/`. Con una sola página, quien tenía más de mil
+  // fotos se iba con la cuenta borrada y el resto de sus fotos en el bucket,
+  // sin dueño y sin forma de encontrarlas.
   const paths: string[] = [];
-  for (const entry of data) {
-    const full = `${prefix}/${entry.name}`;
-    if (entry.id === null) {
-      paths.push(...await listAll(admin, bucket, full, depth + 1));
-    } else {
-      paths.push(full);
+  for (let offset = 0; ; offset += PAGE) {
+    const { data, error } = await admin.storage
+      .from(bucket)
+      .list(prefix, { limit: PAGE, offset });
+    if (error) throw new Error(`${bucket}/${prefix}: ${error.message}`);
+    if (!data || data.length === 0) break;
+
+    for (const entry of data) {
+      const full = `${prefix}/${entry.name}`;
+      if (entry.id === null) {
+        paths.push(...await listAll(admin, bucket, full, depth + 1));
+      } else {
+        paths.push(full);
+      }
     }
+    if (data.length < PAGE) break;
   }
   return paths;
 }
@@ -127,8 +136,11 @@ Deno.serve(async (req) => {
       const paths = await listAll(admin, bucket, user.id);
       if (paths.length === 0) continue;
 
-      const { error } = await admin.storage.from(bucket).remove(paths);
-      if (error) throw new Error(error.message);
+      // De a [PAGE] por llamada: la API de Storage no borra lotes sin techo.
+      for (let i = 0; i < paths.length; i += PAGE) {
+        const { error } = await admin.storage.from(bucket).remove(paths.slice(i, i + PAGE));
+        if (error) throw new Error(error.message);
+      }
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
       console.error(`delete-account: falló ${bucket}:`, detail);

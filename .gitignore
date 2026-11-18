@@ -39,3 +39,4 @@ coverage/
 .flutter-plugins-dependencies
 android/local.properties
 android/.cxx/
+android/.kotlin/
