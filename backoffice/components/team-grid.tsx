@@ -1,8 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
-import { conSigno, diasEntre, fechaCorta, miles } from '@/lib/format';
+import { useState } from 'react';
+import { conSigno, diasEntre, fechaCorta, horas, miles, num } from '@/lib/format';
 import { cambioPeso30, diasDesde, type Alerta, type OverviewRow } from '@/lib/team';
 import type { PatientRow } from '@/components/patients-list';
 
@@ -11,121 +11,75 @@ export type FilaEquipo = {
   o: OverviewRow | null;
   nombre: string;
   alertas: Alerta[];
+  /** URL firmada de la foto de perfil, o `null` para mostrar iniciales. */
+  avatar?: string | null;
 };
 
-type Orden = 'prioridad' | 'nombre' | 'ultima' | 'objetivo';
-
-const ORDENES: { id: Orden; label: string }[] = [
-  { id: 'prioridad', label: 'Quién pide atención' },
-  { id: 'nombre', label: 'Nombre' },
-  { id: 'ultima', label: 'Última comida' },
-  { id: 'objetivo', label: 'Calorías contra objetivo' },
-];
-
 /**
- * La grilla del equipo, con búsqueda y orden.
+ * La grilla del equipo, en el orden en que llega (por nombre).
  *
- * Llega ya ordenada por prioridad (`ordenarEquipo`, en el servidor): ese es el
- * orden por defecto porque contesta "a quién le escribo hoy". Los otros
- * órdenes son para buscar a alguien en una cartera grande, no para
- * reemplazarlo.
+ * Sin buscador ni selector de orden desde el 15/11/2026: la lista es estable
+ * y cada ficha dice lo suyo.
  */
 export function TeamGrid({ filas, hoy }: { filas: FilaEquipo[]; hoy: string }) {
-  const [q, setQ] = useState('');
-  const [orden, setOrden] = useState<Orden>('prioridad');
-
-  const visibles = useMemo(() => {
-    const texto = normalizar(q.trim());
-    const filtradas = texto
-      ? filas.filter((f) => normalizar(f.nombre).includes(texto))
-      : filas;
-    if (orden === 'prioridad') return filtradas;
-    const copia = [...filtradas];
-    if (orden === 'nombre') copia.sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
-    if (orden === 'ultima') {
-      // La más reciente primero; quien nunca registró, al final.
-      copia.sort((a, b) =>
-        (b.o?.last_meal_date ?? '').localeCompare(a.o?.last_meal_date ?? ''),
-      );
-    }
-    if (orden === 'objetivo') {
-      // Quien más se aleja de su objetivo (para los dos lados) primero.
-      const desvio = (f: FilaEquipo) =>
-        f.o?.avg_kcal_7 && f.o.target_kcal
-          ? Math.abs(f.o.avg_kcal_7 / f.o.target_kcal - 1)
-          : -1;
-      copia.sort((a, b) => desvio(b) - desvio(a));
-    }
-    return copia;
-  }, [filas, q, orden]);
-
   return (
-    <>
-      {filas.length > 4 && (
-        <div className="row team-tools">
-          <input
-            type="search"
-            placeholder="Buscar por nombre"
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            aria-label="Buscar paciente por nombre"
-          />
-          <label className="caption row" style={{ gap: 'var(--s3)' }}>
-            Ordenar por
-            <select value={orden} onChange={(e) => setOrden(e.target.value as Orden)}>
-              {ORDENES.map((o) => (
-                <option key={o.id} value={o.id}>
-                  {o.label}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-      )}
-
-      {visibles.length === 0 ? (
-        <div className="card">
-          <p className="muted" style={{ margin: 0 }}>
-            Nadie se llama así en tu equipo.
-          </p>
-        </div>
-      ) : (
-        <div className="grid grid--auto">
-          {visibles.map((f, i) => (
-            <Card
-              key={f.patient.grant_id}
-              patient={f.patient}
-              o={f.o}
-              alertas={f.alertas}
-              hoy={hoy}
-              // Las cartas entran escalonadas, como el resto del panel: un
-              // fundido corto, y tope para que la vigésima no tarde.
-              delay={Math.min(i, 8) * 30}
-            />
-          ))}
-        </div>
-      )}
-    </>
+    <div className="grid grid--auto">
+      {filas.map((f, i) => (
+        <Card
+          key={f.patient.grant_id}
+          patient={f.patient}
+          o={f.o}
+          alertas={f.alertas}
+          avatar={f.avatar ?? null}
+          hoy={hoy}
+          // Las cartas entran escalonadas, como el resto del panel: un
+          // fundido corto, y tope para que la vigésima no tarde.
+          delay={Math.min(i, 8) * 30}
+        />
+      ))}
+    </div>
   );
 }
 
-function normalizar(s: string): string {
-  return s
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .toLowerCase();
+/**
+ * La foto de perfil, o las iniciales si no hay (o si la URL firmada falla al
+ * cargar: venció la hora, o la foto se borró desde que se armó la página).
+ */
+export function Avatar({ nombre, src }: { nombre: string; src: string | null }) {
+  const [rota, setRota] = useState(false);
+  if (src && !rota) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element -- URL firmada de Supabase, sin optimizador
+      <img className="avatar" src={src} alt="" onError={() => setRota(true)} />
+    );
+  }
+  return (
+    <span className="avatar avatar--iniciales" aria-hidden="true">
+      {iniciales(nombre)}
+    </span>
+  );
+}
+
+function iniciales(nombre: string): string {
+  const partes = nombre.trim().split(/\s+/).filter(Boolean);
+  if (partes.length === 0) return '?';
+  const a = partes[0][0] ?? '';
+  const b = partes.length > 1 ? partes[partes.length - 1][0] ?? '' : '';
+  return (a + b).toUpperCase();
 }
 
 function Card({
   patient: p,
   o,
   alertas,
+  avatar,
   hoy,
   delay,
 }: {
   patient: PatientRow;
   o: OverviewRow | null;
   alertas: Alerta[];
+  avatar: string | null;
   hoy: string;
   delay: number;
 }) {
@@ -140,7 +94,9 @@ function Card({
   const de14 = antiguedad === null ? 14 : Math.max(Math.min(14, antiguedad), 0);
   const pct =
     o?.avg_kcal_7 && o.target_kcal ? Math.round((o.avg_kcal_7 / o.target_kcal) * 100) : null;
-  const sinLeer = o?.unread_feedback ?? 0;
+  // Una base sin la migración 59 no trae las columnas: el bloque no aparece,
+  // en vez de decir "no comparte" de alguien que sí comparte.
+  const bienestar = o !== null && o.activity_sessions_7 !== undefined;
 
   return (
     <Link
@@ -149,7 +105,10 @@ function Card({
       style={{ animationDelay: `${delay}ms` }}
     >
       <div className="row" style={{ justifyContent: 'space-between' }}>
-        <h3>{p.patient_name || 'Sin nombre'}</h3>
+        <div className="row plist-nombre">
+          <Avatar nombre={p.patient_name || 'Sin nombre'} src={avatar} />
+          <h3>{p.patient_name || 'Sin nombre'}</h3>
+        </div>
         {p.birth_date && (
           <span className="caption tnum">{edad(p.birth_date)} años</span>
         )}
@@ -208,12 +167,7 @@ function Card({
             <dt className="caption">Peso, 30 días</dt>
             <dd className="tnum">{peso === null ? '—' : `${conSigno(peso)} kg`}</dd>
           </div>
-          <div>
-            <dt className="caption">Devoluciones</dt>
-            <dd className="tnum">
-              {sinLeer > 0 ? `${sinLeer} sin leer` : <span className="muted">al día</span>}
-            </dd>
-          </div>
+          {bienestar && <Bienestar o={o} />}
         </dl>
       )}
 
@@ -223,6 +177,85 @@ function Card({
         </p>
       )}
     </Link>
+  );
+}
+
+/**
+ * Actividad, descanso, agua y sueño de los últimos 7 días (migración 59).
+ *
+ * Van debajo de una línea porque son otra pregunta —cómo vive la semana, no
+ * cuánto come—, y cada uno dice cuántos días tuvieron registro: "7 h por
+ * noche" sobre dos noches no es lo mismo que sobre siete. Lo que no se cargó
+ * se dice así, sin un cero que se lea como "no durmió".
+ */
+function Bienestar({ o }: { o: OverviewRow }) {
+  if (!o.share_wellbeing) {
+    return (
+      <div className="team-stats-full team-stats-sep">
+        <dt className="caption">Actividad, descanso, agua y sueño</dt>
+        <dd className="muted">No los comparte</dd>
+      </div>
+    );
+  }
+  const sesiones = o.activity_sessions_7 ?? 0;
+  const minutos = o.activity_minutes_7 ?? 0;
+  const descansos = o.rest_days_7 ?? 0;
+  const agua = o.water_avg_7 === null || o.water_avg_7 === undefined ? null : Number(o.water_avg_7);
+  const sueno = o.sleep_avg_7 ?? null;
+  const sinDatos = <span className="muted">sin registros</span>;
+
+  return (
+    <>
+      <div className="team-stats-sep">
+        <dt className="caption">Actividad, 7 días</dt>
+        <dd className="tnum">
+          {sesiones === 0 ? (
+            sinDatos
+          ) : (
+            <>
+              {sesiones} {sesiones === 1 ? 'sesión' : 'sesiones'}
+              <span className="caption"> · {horas(minutos)}</span>
+            </>
+          )}
+        </dd>
+      </div>
+      <div className="team-stats-sep">
+        <dt className="caption">Días de descanso</dt>
+        <dd className="tnum">
+          {descansos === 0 ? (
+            <span className="muted">ninguno</span>
+          ) : (
+            `${descansos} ${descansos === 1 ? 'día' : 'días'}`
+          )}
+        </dd>
+      </div>
+      <div>
+        <dt className="caption">Agua, por día</dt>
+        <dd className="tnum">
+          {agua === null ? (
+            sinDatos
+          ) : (
+            <>
+              {num(agua)} {agua === 1 ? 'vaso' : 'vasos'}
+              <span className="caption"> · {o.water_days_7 ?? 0} de 7 días</span>
+            </>
+          )}
+        </dd>
+      </div>
+      <div>
+        <dt className="caption">Sueño, por noche</dt>
+        <dd className="tnum">
+          {sueno === null ? (
+            sinDatos
+          ) : (
+            <>
+              {horas(sueno)}
+              <span className="caption"> · {o.sleep_days_7 ?? 0} de 7 noches</span>
+            </>
+          )}
+        </dd>
+      </div>
+    </>
   );
 }
 

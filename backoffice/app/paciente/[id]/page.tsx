@@ -22,6 +22,7 @@ import {
   type PatientProfile,
 } from '@/components/patient-view';
 import type { OrgPatientRow } from '@/lib/org';
+import { leerAnamnesis } from '@/lib/alta';
 
 export const dynamic = 'force-dynamic';
 
@@ -169,6 +170,28 @@ export default async function PatientPage({
         .then(({ data }) => (typeof data === 'string' ? data : null)),
     ]);
 
+    // La anamnesis de la primera consulta (migración 60): vive en la
+    // invitación aceptada, que solo lee quien la mandó. La titular que mira
+    // una ficha ajena no la tiene, y si la consulta falla la ficha sigue: es
+    // un agregado, no un dato del período.
+    const anamnesis = soloLectura
+      ? null
+      : await supabase
+          .from('care_invites')
+          .select('anamnesis, responded_at')
+          .eq('patient_id', id)
+          .eq('status', 'accepted')
+          .not('anamnesis', 'is', null)
+          .order('responded_at', { ascending: false })
+          .limit(1)
+          .maybeSingle()
+          .then(({ data }) => {
+            const campos = leerAnamnesis(data?.anamnesis);
+            return campos.length
+              ? { fecha: (data?.responded_at as string | null) ?? null, campos }
+              : null;
+          });
+
     const photoUrls = p.share_photos
       ? await signPhotos(
           supabase,
@@ -191,6 +214,7 @@ export default async function PatientPage({
       report,
       plan,
       photoUrls,
+      anamnesis,
     };
   } catch (e) {
     return <ErrorDeCarga detalle={e instanceof Error ? e.message : String(e)} />;
@@ -234,7 +258,7 @@ function ErrorDeCarga({ detalle }: { detalle: string }) {
   return (
     <div className="page">
       <p className="topbar-back caption">
-        <Link href="/">← Tu equipo</Link>
+        <Link href="/pacientes">← Pacientes</Link>
       </p>
       <h1 style={{ marginTop: 'var(--s4)' }}>No se pudo abrir la ficha</h1>
       <div className="card" style={{ marginTop: 'var(--s5)' }}>

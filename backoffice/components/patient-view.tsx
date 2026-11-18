@@ -110,6 +110,9 @@ export type PatientData = {
    *  administra) del consultorio: ve la ficha, no le escribe. Trae el nombre
    *  de la profesional responsable. Ver la migración 56. */
   soloLectura?: { profesional: string | null } | null;
+  /** La anamnesis que cargó al darlo de alta (migración 60), si hay. Solo la
+   *  ve ella: sale de su invitación, no de los datos del paciente. */
+  anamnesis?: { fecha: string | null; campos: { titulo: string; texto: string }[] } | null;
 };
 
 /**
@@ -345,7 +348,7 @@ export function PatientView({ data, tab }: { data: PatientData; tab?: string }) 
   const apagadas = [
     !p.share_meals && 'Comidas',
     !p.share_photos && 'Fotos',
-    !p.share_body && 'Cuerpo',
+    !p.share_body && 'Medidas',
     !p.share_wellbeing && 'Hábitos',
   ].filter(Boolean) as string[];
 
@@ -354,9 +357,9 @@ export function PatientView({ data, tab }: { data: PatientData; tab?: string }) 
       <div style={{ minWidth: 0 }}>
         <p className="topbar-back caption">
           {data.soloLectura ? (
-            <Link href="/organizacion">← Organización</Link>
+            <Link href="/">← Organización</Link>
           ) : (
-            <Link href="/">← Tu equipo</Link>
+            <Link href="/pacientes">← Pacientes</Link>
           )}
         </p>
         <h1>{p.patient_name || 'Sin nombre'}</h1>
@@ -381,7 +384,7 @@ export function PatientView({ data, tab }: { data: PatientData; tab?: string }) 
         <DischargeButton
           patientId={p.patient_id}
           name={p.patient_name ?? ''}
-          volverA={data.soloLectura ? '/organizacion' : '/'}
+          volverA={data.soloLectura ? '/' : '/pacientes'}
         />
         <SignOut />
       </div>
@@ -454,8 +457,30 @@ export function PatientView({ data, tab }: { data: PatientData; tab?: string }) 
 
   const avisoTope = data.mealsTruncated ? <AvisoTope /> : null;
 
+  // Plegada: se consulta, no se lee cada vez. Arriba de todo porque es el
+  // punto de partida del seguimiento.
+  const anamnesis = data.anamnesis ? (
+    <details className="card anamnesis">
+      <summary>
+        <span className="anamnesis-titulo">Anamnesis de la primera consulta</span>
+        {data.anamnesis.fecha && (
+          <span className="caption"> · {fechaCorta(data.anamnesis.fecha.slice(0, 10))}</span>
+        )}
+      </summary>
+      <dl className="anamnesis-campos">
+        {data.anamnesis.campos.map((c) => (
+          <div key={c.titulo}>
+            <dt className="caption">{c.titulo}</dt>
+            <dd>{c.texto}</dd>
+          </div>
+        ))}
+      </dl>
+    </details>
+  ) : null;
+
   const resumen = (
     <>
+      {anamnesis}
       {avisoTope}
       <Section
         title="Resumen del período"
@@ -707,10 +732,7 @@ export function PatientView({ data, tab }: { data: PatientData; tab?: string }) 
       )}
 
       {balance && (
-        <Section
-          title="¿Los números cierran?"
-          hint="El déficit registrado contra la balanza. Es una estimación, no un diagnóstico."
-        >
+        <Section title="Registro contra balanza">
           <BalanceCard b={balance} shareBody={p.share_body} />
         </Section>
       )}
@@ -1224,7 +1246,6 @@ export function PatientView({ data, tab }: { data: PatientData; tab?: string }) 
     {avisoTope}
     <Section
       title="Día a día"
-      hint="Tocá un día para ver el detalle."
     >
       {!p.share_meals && !p.share_wellbeing ? (
         <div className="card">
@@ -1275,7 +1296,6 @@ export function PatientView({ data, tab }: { data: PatientData; tab?: string }) 
       authorId={data.viewerId}
       initial={data.feedback}
       hoy={to}
-      plan={data.plan}
       objetivoActual={p.share_meals ? goal : null}
       conoceObjetivo={p.share_meals}
       titulosDeComidas={titulosDeComidas}
@@ -1293,13 +1313,12 @@ export function PatientView({ data, tab }: { data: PatientData; tab?: string }) 
   const deLaProfesional: Tab[] = data.soloLectura
     ? []
     : [
-        { id: 'informe', label: 'Informe con IA', content: informe },
         { id: 'devoluciones', label: 'Devoluciones', content: devoluciones },
+        { id: 'informe', label: 'Informe con IA', content: informe },
       ];
 
   const tabs: Tab[] = [
     { id: 'resumen', label: 'Resumen', content: resumen },
-    ...deLaProfesional,
     { id: 'diario', label: 'Día a día', content: diario, print: false },
     {
       id: 'habitos',
@@ -1309,7 +1328,8 @@ export function PatientView({ data, tab }: { data: PatientData; tab?: string }) 
     },
     { id: 'comidas', label: 'Comidas', off: !p.share_meals, content: comidas },
     { id: 'fotos', label: 'Fotos', off: !p.share_photos, content: fotos, print: false },
-    { id: 'cuerpo', label: 'Cuerpo', off: !p.share_body, content: cuerpo },
+    { id: 'cuerpo', label: 'Medidas', off: !p.share_body, content: cuerpo },
+    ...deLaProfesional,
   ];
 
   // El provider del modal del día envuelve a toda la ficha: lo abren el

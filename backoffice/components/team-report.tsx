@@ -26,11 +26,15 @@ export function TeamReport({
   initial,
   nombres,
   plan,
+  titulo,
 }: {
   initial: CareReport | null;
   /** patient_id → nombre, de la lista que se está viendo. */
   nombres: Record<string, string>;
   plan: string | null;
+  /** El título de la sección donde vive ("Pacientes · 13"): el botón va en su
+   *  misma fila, a la derecha, y el análisis aparece debajo cuando lo hay. */
+  titulo: React.ReactNode;
 }) {
   const db = useMemo(() => browserClient(), []);
   const [report, setReport] = useState(initial);
@@ -50,80 +54,91 @@ export function TeamReport({
   const c = report ? leer(report.content) : null;
   const prioridades = c ? c.prioridades.filter((p) => nombres[p.patientId]) : [];
 
+  const hayAlgo = !permitido || generando || !!error || !!c;
+
   return (
-    <section className="section team-ai">
-      <div className="card">
-        <div className="ai-toolbar ai-toolbar--plain">
-          <div style={{ minWidth: 0 }}>
-            <h2>El equipo, con IA</h2>
-            <p className="caption" style={{ margin: 'var(--s1) 0 0' }}>
-              {report
-                ? `Análisis del ${fechaHora(report.created_at)}.`
-                : 'A quién escribirle primero y qué se repite en el equipo.'}
-            </p>
-          </div>
+    <>
+      <div className="section-title-row">
+        <h2>{titulo}</h2>
+        <div className="ai-action">
+          {report && !generando && <span className="caption tnum">{fechaHora(report.created_at)}</span>}
           <button
             type="button"
-            className={report ? undefined : 'button--primary'}
+            className="button--ai"
             onClick={generar}
             disabled={generando || !permitido}
           >
-            {generando ? 'Analizando…' : report ? 'Analizar de nuevo' : 'Analizar'}
+            <Destello />
+            {generando ? 'Analizando…' : report ? 'Volver a analizar' : 'Analizar con IA'}
           </button>
         </div>
-
-        {!permitido && (
-          <p className="caption" style={{ margin: 'var(--s3) 0 0' }}>
-            El análisis del equipo con IA es parte del plan Pro.
-          </p>
-        )}
-        {generando && (
-          <div style={{ marginTop: 'var(--s4)' }}>
-            <AiProgress
-              etapas={['Leyendo el tablero del equipo', 'Buscando a quién priorizar', 'Redactando']}
-            />
-          </div>
-        )}
-        {error && (
-          <p className="form-error" role="alert" style={{ marginTop: 'var(--s4)' }}>
-            {error}
-          </p>
-        )}
-
-        {c && (
-          <div className="ai-text" style={{ marginTop: 'var(--s5)' }}>
-            <span className="chip chip--warn ai-tag">Redactado con IA · revisalo</span>
-            <p className="ai-resumen">{c.resumen}</p>
-
-            {prioridades.length > 0 && (
-              <>
-                <h3 style={{ marginTop: 'var(--s5)' }}>Para contactar primero</h3>
-                <ol className="team-prioridades">
-                  {prioridades.map((p) => (
-                    <li key={p.patientId}>
-                      <Link href={`/paciente/${p.patientId}`}>{nombres[p.patientId]}</Link>
-                      <span>{p.motivo}</span>
-                      {p.accion && <span className="caption">{p.accion}</span>}
-                    </li>
-                  ))}
-                </ol>
-              </>
-            )}
-
-            {c.observaciones.length > 0 && (
-              <>
-                <h3 style={{ marginTop: 'var(--s5)' }}>En el equipo</h3>
-                <ul className="ai-lista">
-                  {c.observaciones.map((o, i) => (
-                    <li key={i}>{o}</li>
-                  ))}
-                </ul>
-              </>
-            )}
-          </div>
-        )}
       </div>
-    </section>
+
+      {hayAlgo && (
+        <div className="card team-ai-card">
+          {!permitido && (
+            <p className="caption" style={{ margin: 0 }}>
+              El análisis del equipo con IA es parte del plan Pro.
+            </p>
+          )}
+          {generando && (
+            <div>
+              <AiProgress
+                etapas={['Leyendo el tablero del equipo', 'Buscando a quién priorizar', 'Redactando']}
+              />
+            </div>
+          )}
+          {error && (
+            <p className="form-error" role="alert" style={{ margin: 0 }}>
+              {error}
+            </p>
+          )}
+
+          {c && !generando && (
+            <div className="ai-text">
+              <span className="chip chip--warn ai-tag">Redactado con IA · revisalo</span>
+              <p className="ai-resumen">{c.resumen}</p>
+
+              {prioridades.length > 0 && (
+                <>
+                  <h3 style={{ marginTop: 'var(--s5)' }}>Para contactar primero</h3>
+                  <ol className="team-prioridades">
+                    {prioridades.map((p) => (
+                      <li key={p.patientId}>
+                        <Link href={`/paciente/${p.patientId}`}>{nombres[p.patientId]}</Link>
+                        <span>{p.motivo}</span>
+                        {p.accion && <span className="caption">{p.accion}</span>}
+                      </li>
+                    ))}
+                  </ol>
+                </>
+              )}
+
+              {c.observaciones.length > 0 && (
+                <>
+                  <h3 style={{ marginTop: 'var(--s5)' }}>En el equipo</h3>
+                  <ul className="ai-lista">
+                    {c.observaciones.map((o, i) => (
+                      <li key={i}>{o}</li>
+                    ))}
+                  </ul>
+                </>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+    </>
+  );
+}
+
+/** La estrellita de "esto usa IA", la misma idea que en la app. */
+function Destello() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round">
+      <path d="M11 3.5l1.8 4.9 4.9 1.8-4.9 1.8L11 16.9l-1.8-4.9-4.9-1.8 4.9-1.8z" />
+      <path d="M18.5 14.5l.8 2.1 2.1.8-2.1.8-.8 2.1-.8-2.1-2.1-.8 2.1-.8z" />
+    </svg>
   );
 }
 

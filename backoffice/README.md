@@ -25,9 +25,9 @@ noviembre de 2026 (migraciones 48 y 49) escribe dos cosas, y ninguna es un dato
 del paciente:
 
 - **Devoluciones e indicaciones** (`care_feedback`), desde la pestaña
-  Devoluciones. Mientras no se publican son borradores privados —es la regla de
-  las viejas notas (`care_notes`), que se fueron en la misma migración: una nota
-  para mí es un borrador que no publico nunca—. Borrar es `deleted_at`, porque
+  Devoluciones. Se publican al guardar: el panel ya no arma borradores (la
+  base los sigue admitiendo con `published_at` nulo, y no se muestran). Borrar
+  es `deleted_at`, porque
   la base no deja un `DELETE`. Escribir exige un acceso vigente: revocado, lo
   escrito se sigue viendo pero no se toca. "Leída" la marca el paciente desde la
   app (`mark_care_feedback_read`); el panel no puede.
@@ -289,7 +289,7 @@ nombre, para que nadie salte de lugar cada mañana.
   saber quién dejó de registrar es peor que la lista completa, pero es mucho
   mejor que no poder entrar a ninguna ficha.
 
-Arriba de las fichas está **"Analizar el equipo con IA"** (`components/team-report.tsx`):
+En **Organización** (desde el 15/11/2026; antes estaba en la portada) está **"Tus pacientes, con IA"** (`components/team-report.tsx`):
 la Edge Function `care-report` con `kind: 'team'` redacta un resumen, hasta cinco
 pacientes para contactar primero —con enlace a la ficha— y patrones del equipo,
 sobre los mismos números de `care_overview()`. Se muestra el último guardado en
@@ -313,8 +313,8 @@ está partido igual y por lo mismo.
 
 Una ficha son 30 días de comidas, o 365, y en una sola tira eso es imposible de
 leer. La pantalla se reparte en **ocho pestañas**, en el orden en que se usan
-en una consulta: Resumen, Informe con IA, Devoluciones, Día a día, Hábitos,
-Comidas, Fotos, Cuerpo. **Cuatro de ellas son exactamente las cuatro categorías
+en una consulta: Resumen, Día a día, Hábitos, Comidas, Fotos, Medidas,
+Devoluciones e Informe con IA. Las dos de la profesional van al final. **Cuatro de ellas son exactamente las cuatro categorías
 con las que se concede el permiso** (`share_wellbeing`, `share_meals`,
 `share_photos`, `share_body`): así "esta pestaña está apagada" y "esto no me lo
 compartieron" son la misma frase. Informe y Devoluciones no tienen punto ámbar
@@ -333,17 +333,16 @@ porque no dependen de una categoría: son de la profesional.
   `lib/care-report.ts` dice igual para todo lo de IA —sin clave del modelo
   (`ERR_PROVIDER_UNAVAILABLE`, el caso de la base local): "La IA no está
   disponible en este servidor."; tiempo agotado; sin conexión—.
-- **Devoluciones** (`components/feedback-panel.tsx`): escribir, editar,
-  publicar y borrar devoluciones (sobre un día o generales) e indicaciones (lo
-  que el paciente ve en Inicio hasta que se saca), y "Proponer borrador" con IA
-  con un foco opcional, que la función ya guarda como borrador privado y la
-  pantalla abre en el editor. Nada de lo que propone la IA se publica solo.
+- **Devoluciones** (`components/feedback-panel.tsx`): escribir, editar y
+  borrar devoluciones (sobre un día o generales) e indicaciones (lo que el
+  paciente ve en Inicio hasta que se saca), y el objetivo recomendado. Todo se
+  publica al guardar; lo publicado se puede editar.
 
 El Resumen suma dos piezas de **análisis de consulta**
 (`docs/panel-proximas-features.md`), y Comidas otras dos. Son aritmética sobre
 lo que la ficha ya trajo, sin IA, en `lib/analysis.ts` con test:
 
-- **¿Los números cierran?** El déficit registrado contra el TDEE del objetivo de
+- **Registro contra balanza.** El déficit registrado contra el TDEE del objetivo de
   cada día, proyectado a los días entre el primer y el último pesaje, puesto
   contra lo que marcó la balanza. Sin semáforo: es una hipótesis a chequear, y
   la brecha típica —bajó menos de lo esperado— se explica en palabras (comidas

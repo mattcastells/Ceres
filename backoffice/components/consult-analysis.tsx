@@ -32,21 +32,26 @@ export function BalanceCard({ b, shareBody }: { b: Balance; shareBody: boolean }
     return (
       <div className="card">
         <p className="muted" style={{ margin: 0 }}>
-          {b.dias} {b.dias === 1 ? 'día registrado' : 'días registrados'}. La
-          cuenta se muestra desde los siete.
+          {b.dias} {b.dias === 1 ? 'día registrado' : 'días registrados'} de
+          los 7 que hacen falta.
         </p>
       </div>
     );
   }
 
+  // Positivo = comió de menos. Se dice como "de más / de menos" contra lo que
+  // gasta, que es como se habla en consulta, y no como déficit o superávit.
   const deficit = b.deficitPromedio;
   const linea = (
     <div className="balance-row">
-      <span className="caption">
-        {deficit >= 0 ? 'Déficit registrado' : 'Superávit registrado'}
+      <span className="caption">Come por día</span>
+      <span className="tnum balance-value estimate">
+        ≈ {miles(Math.abs(deficit))} kcal {deficit >= 0 ? 'de menos' : 'de más'}
       </span>
-      <span className="tnum balance-value estimate">≈ {miles(Math.abs(deficit))} kcal/día</span>
-      <span className="caption">sobre {b.dias} días con registro</span>
+      <span className="caption">
+        {b.estado === 'ok' ? `gasta ≈ ${miles(b.gastoPromedio)} kcal · ` : ''}
+        {b.dias} días registrados
+      </span>
     </div>
   );
 
@@ -55,9 +60,7 @@ export function BalanceCard({ b, shareBody }: { b: Balance; shareBody: boolean }
       <div className="card">
         {linea}
         <p className="caption" style={{ margin: 'var(--s4) 0 0' }}>
-          {shareBody
-            ? 'Para compararlo con la balanza hacen falta dos pesajes separados por una semana.'
-            : 'El peso no está compartido.'}
+          {shareBody ? 'Faltan dos pesajes separados por una semana.' : 'El peso no está compartido.'}
         </p>
       </div>
     );
@@ -67,39 +70,31 @@ export function BalanceCard({ b, shareBody }: { b: Balance; shareBody: boolean }
     <div className="card">
       {linea}
       <div className="balance-row">
-        <span className="caption">Cambio esperado</span>
+        <span className="caption">Según lo que comió</span>
         <span className="tnum balance-value estimate">{conSigno(b.esperadoKg)} kg</span>
-        <span className="caption">
-          en los {b.diasEntrePesajes} días entre el primer y el último pesaje
-        </span>
+        <span className="caption">en {b.diasEntrePesajes} días</span>
       </div>
       <div className="balance-row">
-        <span className="caption">Cambio medido</span>
+        <span className="caption">Según la balanza</span>
         <span className="tnum balance-value">{conSigno(b.medidoKg)} kg</span>
         <span className="caption">
           {b.lectura === 'coincide'
-            ? 'cerca de lo esperado'
-            : `${dec(Math.abs(b.brechaKg))} kg de diferencia con lo esperado`}
+            ? 'casi lo mismo'
+            : `${dec(Math.abs(b.brechaKg))} kg de diferencia`}
         </span>
       </div>
 
       <p style={{ margin: 'var(--s5) 0 0' }}>{LECTURA[b.lectura]}</p>
-      <p className="caption" style={{ margin: 'var(--s2) 0 0' }}>
-        Gasto: el TDEE del objetivo (≈ {miles(b.gastoPromedio)} kcal/día) ·
-        7.700 kcal por kilo · supone que los días sin registro se parecen a los
-        registrados.
-      </p>
     </div>
   );
 }
 
 const LECTURA: Record<'coincide' | 'menos-de-lo-esperado' | 'mas-de-lo-esperado', string> = {
-  coincide:
-    'La balanza coincide con lo que explica el registro.',
+  coincide: 'Cierra: lo que registra explica lo que pesa.',
   'menos-de-lo-esperado':
-    'La balanza se movió menos de lo esperado. Suele ser comida sin registrar antes que metabolismo: vale preguntar por los fines de semana.',
+    'No cierra: pesa más de lo que explica el registro. Lo más común es comida sin anotar, sobre todo los fines de semana.',
   'mas-de-lo-esperado':
-    'Bajó más de lo esperado. Al principio suele ser agua; si sigue, el gasto real puede ser mayor que el estimado.',
+    'No cierra: bajó más de lo que explica el registro. Al principio suele ser agua; si sigue, gasta más de lo estimado.',
 };
 
 /* ── 3 · Los alimentos que se repiten ─────────────────────────────────── */

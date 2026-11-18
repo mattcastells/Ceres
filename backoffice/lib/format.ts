@@ -170,9 +170,11 @@ export function hhmm(minutos: number): string {
   return `${pad(Math.floor(total / 60) % 24)}:${pad(total % 60)}`;
 }
 
+/** "7 h 10 min", "2 h" o "35 min": sin "0 h" delante de menos de una hora. */
 export function horas(minutes: number): string {
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
+  if (h === 0) return `${m} min`;
   return m === 0 ? `${h} h` : `${h} h ${m} min`;
 }
 

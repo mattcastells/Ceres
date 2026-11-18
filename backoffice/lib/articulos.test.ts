@@ -66,3 +66,65 @@ test('validarArticulo', () => {
   assert.match(validarArticulo({ title: 'T', body: 'x', tag: 'e'.repeat(41) }) ?? '', /etiqueta/);
   assert.equal(validarArticulo({ title: 'T', body: 'x', tag: '' }), null);
 });
+
+// ── Adjuntos y editor visual (migración 61) ──────────────────────────────
+import { aHtml, aMarkdown, leerAdjuntos, youtubeId, type Nodo } from './articulos.ts';
+
+test('youtubeId reconoce los enlaces que se pegan', () => {
+  const id = 'dQw4w9WgXcQ';
+  for (const u of [
+    id,
+    `https://www.youtube.com/watch?v=${id}&t=42s`,
+    `youtube.com/watch?v=${id}`,
+    `https://youtu.be/${id}?si=abc`,
+    `https://m.youtube.com/shorts/${id}`,
+    `https://www.youtube.com/embed/${id}`,
+  ]) {
+    assert.equal(youtubeId(u), id, u);
+  }
+  assert.equal(youtubeId('https://vimeo.com/123'), null);
+  assert.equal(youtubeId('hola'), null);
+});
+
+test('leerAdjuntos descarta lo que no cierra y respeta el tope', () => {
+  const bueno = { type: 'youtube', id: 'dQw4w9WgXcQ' };
+  assert.deepEqual(leerAdjuntos(null), []);
+  assert.deepEqual(leerAdjuntos([{ type: 'image' }, { type: 'youtube', id: 'x' }, bueno]), [bueno]);
+  assert.equal(leerAdjuntos(Array(8).fill(bueno)).length, 5);
+});
+
+// Un DOM mínimo, para probar el editor sin navegador.
+const t = (s: string): Nodo => ({ nodeType: 3, nodeName: '#text', childNodes: [], textContent: s });
+const el = (name: string, ...kids: Nodo[]): Nodo => ({
+  nodeType: 1,
+  nodeName: name,
+  childNodes: kids,
+  textContent: kids.map((k) => k.textContent).join(''),
+});
+
+test('aMarkdown: títulos, negrita, listas y párrafos', () => {
+  const raiz = el(
+    'DIV',
+    el('H4', t('Ingredientes')),
+    el('UL', el('LI', t('1 taza de '), el('B', t('avena '))), el('LI', t('2 bananas'))),
+    el('H4', t('Preparación')),
+    el('OL', el('LI', t('Mezclar')), el('LI', t('Hornear'))),
+    el('P', t('Sale '), el('STRONG', t('rico')), t('.')),
+    el('DIV', el('BR')),
+    t('Suelto al final'),
+  );
+  assert.equal(
+    aMarkdown(raiz),
+    '# Ingredientes\n\n- 1 taza de **avena**\n- 2 bananas\n\n# Preparación\n\n1. Mezclar\n2. Hornear\n\nSale **rico**.\n\nSuelto al final',
+  );
+});
+
+test('aHtml y aMarkdown son ida y vuelta para lo que dibuja la app', () => {
+  const md = '# Título\n\nUn párrafo con **negrita**.\n\n- uno\n- dos\n\n1. a\n2. b';
+  const html = aHtml(md);
+  assert.equal(
+    html,
+    '<h4>Título</h4><p>Un párrafo con <b>negrita</b>.</p><ul><li>uno</li><li>dos</li></ul><ol><li>a</li><li>b</li></ol>',
+  );
+  assert.equal(aHtml('<script>'), '<p>&lt;script&gt;</p>');
+});

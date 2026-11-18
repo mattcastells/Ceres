@@ -2,8 +2,9 @@
 
 import { useMemo } from 'react';
 import { SLOT_LABEL } from '@/lib/queries';
-import { diaDeSemana, fechaLarga, miles } from '@/lib/format';
+import { diaDeSemana, fechaLarga, miles, num } from '@/lib/format';
 import { useAbrirDia } from '@/components/day-modal';
+import { Icono, type NombreIcono } from '@/components/icons';
 import type { DayBundle } from '@/components/day-detail';
 
 const LETRAS = ['Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sá', 'Do'];
@@ -155,23 +156,39 @@ function Celda({
     dia.goal !== undefined ? (dia.goal?.base_calorie_target ?? null) : targetKcal;
   const pasado = objetivo !== null && objetivo > 0 && kcal > objetivo;
   const enfermo = dia.markers.some((m) => m.kind === 'sick');
+  const descanso = dia.markers.some((m) => m.kind === 'rest');
+  const tragos = dia.alcohol.reduce((a, x) => a + x.std_drinks, 0);
   const alcohol = dia.alcohol.length > 0;
   const minutos = dia.activities.reduce((a, x) => a + x.duration_minutes, 0);
 
-  const alrededor = [
-    minutos ? `${minutos} min` : null,
-    dia.water ? `${dia.water.glasses} vasos` : null,
-    dia.sleep ? horasCortas(dia.sleep.minutes) : null,
-  ]
-    .filter(Boolean)
-    .join(' · ');
+  // Lo de alrededor, con su ícono: actividad, agua y sueño.
+  const alrededor: { icono: NombreIcono; texto: string; titulo: string }[] = shareWellbeing
+    ? [
+        minutos
+          ? { icono: 'actividad' as const, texto: `${minutos}′`, titulo: `${minutos} min de actividad` }
+          : null,
+        dia.water
+          ? { icono: 'agua' as const, texto: String(dia.water.glasses), titulo: `${dia.water.glasses} vasos de agua` }
+          : null,
+        dia.sleep
+          ? { icono: 'sueno' as const, texto: horasCortas(dia.sleep.minutes), titulo: `Durmió ${horasCortas(dia.sleep.minutes)}` }
+          : null,
+      ].filter((x) => x !== null)
+    : [];
+
+  const marcas: { icono: NombreIcono; titulo: string; clase: string }[] = [
+    enfermo ? { icono: 'enfermedad' as const, titulo: 'Enfermedad', clase: 'dcal-mark--sick' } : null,
+    alcohol
+      ? { icono: 'alcohol' as const, titulo: `${num(tragos)} tragos`, clase: 'dcal-mark--drink' }
+      : null,
+    descanso ? { icono: 'descanso' as const, titulo: 'Descanso', clase: 'dcal-mark--rest' } : null,
+  ].filter((x) => x !== null);
 
   const etiqueta = [
     fechaLarga(dia.date),
     shareMeals && dia.meals.length ? `${miles(kcal)} kcal` : null,
-    alrededor || null,
-    enfermo ? 'día de enfermedad' : null,
-    alcohol ? 'con alcohol' : null,
+    ...alrededor.map((a) => a.titulo),
+    ...marcas.map((m) => m.titulo),
   ]
     .filter(Boolean)
     .join(', ');
@@ -179,21 +196,25 @@ function Celda({
   return (
     <button
       type="button"
-      className="dcal-cell dcal-cell--on"
+      className={`dcal-cell dcal-cell--on${enfermo ? ' dcal-cell--sick' : ''}`}
       data-today={dia.date === hoy ? '1' : undefined}
       onClick={onOpen}
       aria-label={etiqueta}
     >
       <span className="dcal-top">
         <span className="dcal-num tnum">{Number(dia.date.slice(8))}</span>
-        {(enfermo || alcohol) && (
+        {marcas.length > 0 && (
           <span className="dcal-marks" aria-hidden>
-            {enfermo && (
-              <i className="dcal-mark dcal-mark--sick" title="Día de enfermedad" />
-            )}
-            {alcohol && (
-              <i className="dcal-mark dcal-mark--drink" title="Con alcohol" />
-            )}
+            {marcas.map((m) => (
+              <span key={m.icono} className={`dcal-mark ${m.clase}`} title={m.titulo}>
+                <Icono nombre={m.icono} size={12} />
+                {m.icono === 'alcohol' ? (
+                  <span className="tnum">{num(tragos)}</span>
+                ) : (
+                  marcas.length === 1 && <span className="dcal-mark-txt">{m.titulo}</span>
+                )}
+              </span>
+            ))}
           </span>
         )}
       </span>
@@ -225,8 +246,15 @@ function Celda({
         </span>
       )}
 
-      {shareWellbeing && alrededor && (
-        <span className="dcal-sub caption tnum">{alrededor}</span>
+      {alrededor.length > 0 && (
+        <span className="dcal-sub tnum" aria-hidden>
+          {alrededor.map((a) => (
+            <span key={a.icono} className={`dcal-dato dcal-dato--${a.icono}`} title={a.titulo}>
+              <Icono nombre={a.icono} size={13} />
+              {a.texto}
+            </span>
+          ))}
+        </span>
       )}
     </button>
   );

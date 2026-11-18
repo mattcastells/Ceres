@@ -3,10 +3,11 @@
 import { useMemo, useRef, useState } from 'react';
 import { browserClient } from '@/lib/supabase-browser';
 import { ARTICLE_COLUMNS, type CareArticle } from '@/lib/queries';
-import { MAX_CUERPO, MAX_ETIQUETA, MAX_TITULO, extracto, validarArticulo } from '@/lib/articulos';
+import { MAX_ETIQUETA, MAX_TITULO, extracto, leerAdjuntos, validarArticulo, type Adjunto } from '@/lib/articulos';
 import { fechaHora, miles } from '@/lib/format';
 import { Section } from '@/components/stat';
-import { ArticleBody } from '@/components/article-body';
+import { RichEditor } from '@/components/rich-editor';
+import { ArticleMedia } from '@/components/article-media';
 
 type Kind = CareArticle['kind'];
 
@@ -18,9 +19,11 @@ type Editor = {
   body: string;
   tag: string;
   publicado: boolean;
+  /** Imágenes y videos (migración 61), hasta cinco. */
+  media: Adjunto[];
 };
 
-const VACIO: Editor = { id: null, kind: 'article', title: '', body: '', tag: '', publicado: false };
+const VACIO: Editor = { id: null, kind: 'article', title: '', body: '', tag: '', publicado: false, media: [] };
 
 const TIPO: Record<Kind, string> = { article: 'Artículo', recipe: 'Receta' };
 
@@ -39,7 +42,9 @@ export function ArticlesPanel({ authorId, initial }: { authorId: string; initial
   const db = useMemo(() => browserClient(), []);
   const [items, setItems] = useState(initial);
   const [editor, setEditor] = useState<Editor>(VACIO);
-  const [vista, setVista] = useState<'escribir' | 'previa'>('escribir');
+  // Cambia cada vez que el editor arranca de nuevo (abrir otro, guardar,
+  // cancelar): es la `key` que vuelve a montar el editor visual.
+  const [version, setVersion] = useState(0);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [errorLista, setErrorLista] = useState<string | null>(null);
@@ -61,8 +66,9 @@ export function ArticlesPanel({ authorId, initial }: { authorId: string; initial
       body: a.body,
       tag: a.tag ?? '',
       publicado: a.published_at !== null,
+      media: leerAdjuntos(a.media),
     });
-    setVista('escribir');
+    setVersion((v) => v + 1);
     setError(null);
     requestAnimationFrame(() =>
       editorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
@@ -80,6 +86,7 @@ export function ArticlesPanel({ authorId, initial }: { authorId: string; initial
       title: editor.title.trim(),
       body: editor.body.trim(),
       tag: editor.tag.trim() || null,
+      media: editor.media,
     };
     const ahora = new Date().toISOString();
     const res = editor.id === null
@@ -99,7 +106,7 @@ export function ArticlesPanel({ authorId, initial }: { authorId: string; initial
     if (res.error || !res.data) return setError(mensaje(res.error?.message));
     reemplazar(res.data as unknown as CareArticle);
     setEditor(VACIO);
-    setVista('escribir');
+    setVersion((v) => v + 1);
   }
 
   async function cambiarPublicacion(a: CareArticle, publicar: boolean) {
@@ -136,7 +143,10 @@ export function ArticlesPanel({ authorId, initial }: { authorId: string; initial
     setBusy(null);
     if (res.error) return setErrorLista(mensaje(res.error.message));
     setItems((xs) => xs.filter((x) => x.id !== a.id));
-    if (editor.id === a.id) setEditor(VACIO);
+    if (editor.id === a.id) {
+      setEditor(VACIO);
+      setVersion((v) => v + 1);
+    }
   }
 
   const publicados = items
@@ -147,10 +157,7 @@ export function ArticlesPanel({ authorId, initial }: { authorId: string; initial
 
   return (
     <>
-      <Section
-        title={editor.id === null ? 'Escribir' : 'Editar'}
-        hint="Los borradores son privados. Lo publicado lo ve todo tu equipo en la app."
-      >
+      <Section title={editor.id === null ? 'Escribir' : 'Editar'}>
         <div className="card fb-editor" ref={editorRef}>
           <div className="row" style={{ flexWrap: 'wrap', gap: 'var(--s4)' }}>
             <div className="seg seg--buttons" role="group" aria-label="Tipo">
@@ -169,7 +176,7 @@ export function ArticlesPanel({ authorId, initial }: { authorId: string; initial
               type="text"
               value={editor.tag}
               maxLength={MAX_ETIQUETA}
-              placeholder="Etiqueta (opcional)"
+              placeholder="Etiqueta"
               aria-label="Etiqueta"
               onChange={(e) => setEditor((x) => ({ ...x, tag: e.target.value }))}
               style={{ flex: '0 1 220px', minWidth: 0 }}
@@ -181,51 +188,26 @@ export function ArticlesPanel({ authorId, initial }: { authorId: string; initial
             className="art-titulo"
             value={editor.title}
             maxLength={MAX_TITULO}
-            placeholder={editor.kind === 'recipe' ? 'Por ejemplo: Budín de avena y banana' : 'Por ejemplo: Cómo armar una vianda'}
+            placeholder="Título"
             aria-label="Título"
             onChange={(e) => setEditor((x) => ({ ...x, title: e.target.value }))}
           />
 
-          <div className="row" style={{ justifyContent: 'space-between', flexWrap: 'wrap', gap: 'var(--s3)' }}>
-            <div className="seg seg--buttons" role="group" aria-label="Vista">
-              <button type="button" aria-pressed={vista === 'escribir'} onClick={() => setVista('escribir')}>
-                Escribir
-              </button>
-              <button
-                type="button"
-                aria-pressed={vista === 'previa'}
-                onClick={() => setVista('previa')}
-                disabled={!editor.body.trim()}
-              >
-                Vista previa
-              </button>
-            </div>
-            <span className="caption">Párrafos, listas con «- » o «1. », títulos con «# » y **negrita**.</span>
-          </div>
+          <RichEditor
+            key={version}
+            initial={editor.body}
+            label="Texto"
+            onChange={(body) => setEditor((x) => ({ ...x, body }))}
+          />
 
-          {vista === 'escribir' ? (
-            <textarea
-              value={editor.body}
-              rows={12}
-              maxLength={MAX_CUERPO}
-              placeholder={
-                editor.kind === 'recipe'
-                  ? '# Ingredientes\n- 1 taza de avena\n- 2 bananas\n\n# Preparación\n1. Mezclar…'
-                  : 'Escribí el texto. Una línea en blanco separa los párrafos.'
-              }
-              onChange={(e) => setEditor((x) => ({ ...x, body: e.target.value }))}
-              aria-label="Texto"
-            />
-          ) : (
-            <div className="art-previa">
-              <h3>{editor.title.trim() || 'Sin título'}</h3>
-              <ArticleBody body={editor.body} />
-            </div>
-          )}
+          <ArticleMedia
+            authorId={authorId}
+            media={editor.media}
+            onChange={(media) => setEditor((x) => ({ ...x, media }))}
+          />
 
           <div className="row fb-actions">
             <span className="caption tnum">
-              {editor.publicado ? 'Publicado: tu equipo ve los cambios · ' : ''}
               {miles(editor.body.trim().length)} caracteres
             </span>
             <span style={{ flex: 1 }} />
@@ -248,7 +230,7 @@ export function ArticlesPanel({ authorId, initial }: { authorId: string; initial
                 className="button--quiet"
                 onClick={() => {
                   setEditor(VACIO);
-                  setVista('escribir');
+                  setVersion((v) => v + 1);
                   setError(null);
                 }}
                 disabled={!!busy}
@@ -279,7 +261,6 @@ export function ArticlesPanel({ authorId, initial }: { authorId: string; initial
       />
       <Lista
         titulo="Borradores"
-        hint="Privados: tu equipo no los ve."
         vacio="Sin borradores."
         items={borradores}
         busy={busy}
@@ -327,6 +308,12 @@ function Lista({
                 <span className="chip chip--on">{TIPO[a.kind]}</span>
                 {a.tag && <span className="chip">{a.tag}</span>}
                 {!a.published_at && <span className="chip">Borrador</span>}
+                {leerAdjuntos(a.media).length > 0 && (
+                  <span className="chip tnum">
+                    {leerAdjuntos(a.media).length}{' '}
+                    {leerAdjuntos(a.media).length === 1 ? 'adjunto' : 'adjuntos'}
+                  </span>
+                )}
               </div>
               <div>
                 <h3>{a.title}</h3>

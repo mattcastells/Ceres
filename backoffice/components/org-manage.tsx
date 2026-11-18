@@ -158,53 +158,24 @@ export function RemoveMember({ id, nombre }: { id: string; nombre: string }) {
 }
 
 /**
- * Los pacientes de todo el consultorio: de quién es cada uno, cómo viene, y
- * las dos acciones de quien administra —pasarlo a otra profesional o darlo de
- * baja—. El nombre abre la ficha (en modo lectura si no es suyo).
+ * Los pacientes de la organización (todos de su única profesional), con los
+ * números del tablero y la baja. Se busca por nombre.
  */
 export function OrgPatientsTable({
   pacientes,
-  miembros,
-  viewerId,
   hoy,
 }: {
   pacientes: OrgPatientRow[];
-  miembros: Miembro[];
-  viewerId: string | null;
   hoy: string;
 }) {
-  const router = useRouter();
   const [q, setQ] = useState('');
-  const [de, setDe] = useState('todas');
-  const [mover, setMover] = useState<{ p: OrgPatientRow; a: Miembro } | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   const visibles = useMemo(() => {
     const texto = q.trim().toLowerCase();
     return pacientes.filter(
-      (p) =>
-        (de === 'todas' || p.professional_id === de) &&
-        (!texto || (p.patient_name ?? '').toLowerCase().includes(texto)),
+      (p) => !texto || (p.patient_name ?? '').toLowerCase().includes(texto),
     );
-  }, [pacientes, q, de]);
-
-  async function reasignar() {
-    if (!mover) return;
-    setBusy(true);
-    setError(null);
-    const { error } = await browserClient().rpc('reassign_patient', {
-      p_patient: mover.p.patient_id,
-      p_to: mover.a.id,
-    });
-    setBusy(false);
-    if (error) {
-      setError(error.hint || 'No se pudo reasignar. Probá de nuevo.');
-      return;
-    }
-    setMover(null);
-    router.refresh();
-  }
+  }, [pacientes, q]);
 
   return (
     <>
@@ -216,16 +187,6 @@ export function OrgPatientsTable({
           onChange={(e) => setQ(e.target.value)}
           aria-label="Buscar paciente por nombre"
         />
-        {miembros.length > 1 && (
-          <select value={de} onChange={(e) => setDe(e.target.value)} aria-label="Filtrar por profesional">
-            <option value="todas">Todas las profesionales</option>
-            {miembros.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.nombre}
-              </option>
-            ))}
-          </select>
-        )}
       </div>
       <div style={{ height: 'var(--s4)' }} />
       <div className="card scroll-x">
@@ -233,7 +194,6 @@ export function OrgPatientsTable({
           <thead>
             <tr>
               <th>Paciente</th>
-              <th>Profesional</th>
               <th className="num">Última comida</th>
               <th className="num">Días con comidas (7)</th>
               <th className="num">Calorías vs objetivo</th>
@@ -253,30 +213,6 @@ export function OrgPatientsTable({
                 <tr key={p.patient_id}>
                   <td>
                     <Link href={`/paciente/${p.patient_id}`}>{p.patient_name || 'Sin nombre'}</Link>
-                  </td>
-                  <td>
-                    {miembros.length > 1 ? (
-                      <select
-                        value={p.professional_id}
-                        aria-label={`Profesional de ${p.patient_name ?? 'este paciente'}`}
-                        onChange={(e) => {
-                          const a = miembros.find((m) => m.id === e.target.value);
-                          if (a && a.id !== p.professional_id) {
-                            setError(null);
-                            setMover({ p, a });
-                          }
-                        }}
-                      >
-                        {miembros.map((m) => (
-                          <option key={m.id} value={m.id}>
-                            {m.nombre}
-                            {m.id === viewerId ? ' (vos)' : ''}
-                          </option>
-                        ))}
-                      </select>
-                    ) : (
-                      p.professional_name
-                    )}
                   </td>
                   <td
                     className="num tnum"
@@ -302,32 +238,14 @@ export function OrgPatientsTable({
             })}
             {visibles.length === 0 && (
               <tr>
-                <td colSpan={7} className="muted">
-                  {pacientes.length === 0 ? 'Todavía no hay pacientes en el consultorio.' : 'Nadie con ese nombre.'}
+                <td colSpan={6} className="muted">
+                  {pacientes.length === 0 ? 'Todavía no hay pacientes.' : 'Nadie con ese nombre.'}
                 </td>
               </tr>
             )}
           </tbody>
         </table>
       </div>
-
-      <ConfirmDialog
-        open={mover !== null}
-        title={`¿Pasar a ${mover?.p.patient_name ?? 'este paciente'} con ${mover?.a.nombre ?? ''}?`}
-        body={
-          <>
-            Desde ahora lo atiende {mover?.a.nombre}: ve su ficha y le escribe.{' '}
-            {mover?.p.professional_name ?? 'Su profesional anterior'} deja de verlo.
-            Las devoluciones que ya tiene quedan en su app.
-          </>
-        }
-        confirmLabel="Reasignar"
-        busyLabel="Reasignando…"
-        busy={busy}
-        error={error}
-        onConfirm={reasignar}
-        onClose={() => setMover(null)}
-      />
     </>
   );
 }

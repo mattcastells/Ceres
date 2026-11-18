@@ -1,8 +1,7 @@
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { serverClient } from '@/lib/supabase';
 import { fetchArticles, type CareArticle } from '@/lib/queries';
-import { SignOut } from '@/components/sign-out';
+import { MainNav } from '@/components/main-nav';
 import { ArticlesPanel } from '@/components/articles-panel';
 
 export const dynamic = 'force-dynamic';
@@ -43,17 +42,14 @@ export default async function ArticulosPage() {
         <div className="topbar-inner topbar-inner--plain">
           <div className="topbar-id">
             <div style={{ minWidth: 0 }}>
-              <p className="topbar-back caption">
-                <Link href="/">← Tu equipo</Link>
-              </p>
               <h1>Artículos y recetas</h1>
               <p className="topbar-sub caption">
                 {publicados} {publicados === 1 ? 'publicado' : 'publicados'}
                 {pacientes !== null &&
-                  ` · ${pacientes} ${pacientes === 1 ? 'paciente' : 'pacientes'} en tu equipo`}
+                  ` · ${pacientes} ${pacientes === 1 ? 'paciente' : 'pacientes'}`}
               </p>
             </div>
-            <SignOut />
+            <MainNav actual="articulos" />
           </div>
         </div>
       </header>

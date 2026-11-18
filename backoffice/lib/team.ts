@@ -18,6 +18,17 @@ export type OverviewRow = {
   weight_first_30: number | string | null;
   weight_last_30: number | string | null;
   unread_feedback: number | null;
+  // Bienestar, últimos 7 días (migración 59). `null` = no lo comparte, o una
+  // base sin la migración: la tarjeta lo dice en vez de mostrar un cero.
+  activity_sessions_7?: number | null;
+  activity_minutes_7?: number | null;
+  rest_days_7?: number | null;
+  /** Vasos por día, sobre los días con registro (sin hoy). Llega como texto. */
+  water_avg_7?: number | string | null;
+  water_days_7?: number | null;
+  /** Minutos por noche, sobre las noches con registro. */
+  sleep_avg_7?: number | null;
+  sleep_days_7?: number | null;
 };
 
 export type Alerta = {

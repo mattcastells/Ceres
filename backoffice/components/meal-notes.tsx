@@ -87,7 +87,7 @@ export function MealComments({
 
   if (!store) return null;
   const notas = store.items
-    .filter((f) => f.meal_id === mealId)
+    .filter((f) => f.meal_id === mealId && f.published_at)
     .sort((a, b) => a.created_at.localeCompare(b.created_at));
   if (notas.length === 0 && !store.canWrite) return null;
 
@@ -130,9 +130,7 @@ export function MealComments({
         <div key={n.id} className="meal-note">
           <p>{n.body}</p>
           <span className="caption tnum">
-            {n.published_at
-              ? `Tu comentario · ${fechaHora(n.published_at)}${n.read_at ? ' · leído' : ''}`
-              : 'Borrador · no lo ve el paciente'}
+            {`Tu comentario · ${fechaHora(n.published_at!)}${n.read_at ? ' · leído' : ''}`}
           </span>
         </div>
       ))}
@@ -143,7 +141,7 @@ export function MealComments({
             <textarea
               value={texto}
               onChange={(e) => setTexto(e.target.value)}
-              placeholder="Un comentario sobre esta comida. Lo ve el paciente en la app."
+              placeholder="Comentario"
               rows={2}
               maxLength={4000}
               autoFocus

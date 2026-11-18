@@ -14,11 +14,14 @@ export function Dialog({
   title,
   children,
   locked = false,
+  wide = false,
 }: {
   open: boolean;
   onClose: () => void;
   title: string;
   children: ReactNode;
+  /** Más ancho, para un formulario largo (el alta con datos). */
+  wide?: boolean;
   /** Mientras corre la acción no se cierra: ni Escape ni clic afuera. Si se
    *  cerrara, el error de la acción quedaría sin mostrarse y el estado de
    *  React diría "abierto" con el diálogo cerrado. */
@@ -41,7 +44,7 @@ export function Dialog({
   return (
     <dialog
       ref={ref}
-      className="modal modal--form"
+      className={wide ? 'modal modal--form modal--wide' : 'modal modal--form'}
       aria-label={title}
       onClose={onClose}
       onCancel={(e) => {

@@ -166,10 +166,12 @@ export type CareArticle = {
   published_at: string | null;
   created_at: string;
   updated_at: string;
+  /** Imágenes y videos (migración 61); se leen con `leerAdjuntos`. */
+  media?: unknown;
 };
 
 export const ARTICLE_COLUMNS =
-  'id, kind, title, body, tag, published_at, created_at, updated_at';
+  'id, kind, title, body, tag, published_at, created_at, updated_at, media';
 
 /** Un informe guardado por `care-report`. `content` depende de `kind`; ver
  *  `lib/care-report.ts`. */

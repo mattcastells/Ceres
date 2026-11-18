@@ -1,8 +1,7 @@
-import Link from 'next/link';
-import { SignOut } from '@/components/sign-out';
-import { AddMember, OrgPatientsTable, RemoveMember, type Miembro } from '@/components/org-manage';
+import { MainNav } from '@/components/main-nav';
+import { OrgPatientsTable } from '@/components/org-manage';
 import { conSigno, miles } from '@/lib/format';
-import { porProfesional, resumirConsultorio, type OrgPatientRow, type ResumenConsultorio } from '@/lib/org';
+import { resumirConsultorio, type OrgPatientRow, type ResumenConsultorio } from '@/lib/org';
 
 /** Una fila de `public.my_organization()` (migración 49): una por miembro, con
  *  los datos de la organización repetidos en cada una. */
@@ -17,24 +16,12 @@ export type OrgRow = {
   member_patients: number;
 };
 
-const ROL: Record<string, string> = {
-  owner: 'Titular',
-  admin: 'Administración',
-  professional: 'Profesional',
-};
-
 /**
- * El consultorio.
+ * La portada: la organización de una sola profesional, su dueña (desde el
+ * 15/11/2026; antes admitía varias, con reasignación entre ellas).
  *
- * Lo ven todas sus profesionales: quiénes son, cuántos pacientes tiene cada
- * una y cuánto del fondo de IA del mes se usó.
- *
- * Quien lo **administra** (la titular, o alguien con rol de administración)
- * además lo maneja (migración 56): los números de todo el consultorio, los
- * pacientes de todas con la profesional de cada uno —para reasignarlos o darlos
- * de baja—, y sumar o sacar profesionales. Las fichas de los pacientes de otra
- * profesional las abre en modo lectura: escribirle al paciente es de quien lo
- * atiende.
+ * Los números de todos sus pacientes, el análisis con IA, la tabla de
+ * pacientes y el fondo de IA del mes.
  *
  * Es una función pura de las filas, como `PatientView`, para poder mirarla
  * con datos de ejemplo (`app/preview/organizacion`).
@@ -44,12 +31,20 @@ export function OrgView({
   viewerId,
   pacientes = null,
   hoy,
+  plan = null,
+  analisis = null,
 }: {
+  /** `effective_plan()`: lo usa el modal de Dar de alta (el código). */
+  plan?: string | null;
   rows: OrgRow[];
   viewerId: string | null;
   /** `org_patients()`: `null` para quien no administra (o si falló). */
   pacientes?: OrgPatientRow[] | null;
   hoy: string;
+  /** El análisis de los pacientes con IA (`TeamReport`), que vive acá desde
+   *  el 15/11/2026. Llega armado para que esta vista siga siendo pura, y
+   *  reemplaza al título "Pacientes · N": el botón va en esa misma fila. */
+  analisis?: React.ReactNode;
 }) {
   const org = rows[0];
   const usado = org.ai_used_month;
@@ -57,19 +52,7 @@ export function OrgView({
   const pct = cupo > 0 ? Math.round((usado / cupo) * 100) : 0;
   const totalPacientes = rows.reduce((a, r) => a + r.member_patients, 0);
 
-  const yo = rows.find((r) => r.member_id === viewerId);
-  const administra = yo?.member_role === 'owner' || yo?.member_role === 'admin';
-  const esTitular = yo?.member_role === 'owner';
-
-  const miembros: Miembro[] = rows.map((r) => ({
-    id: r.member_id,
-    nombre: r.member_name || 'Sin nombre',
-    rol: r.member_role,
-    pacientes: r.member_patients,
-  }));
-
   const resumen = pacientes ? resumirConsultorio(pacientes, hoy) : null;
-  const porPro = pacientes ? porProfesional(pacientes, miembros, hoy) : null;
 
   return (
     <>
@@ -77,20 +60,12 @@ export function OrgView({
         <div className="topbar-inner topbar-inner--plain">
           <div className="topbar-id">
             <div style={{ minWidth: 0 }}>
-              <p className="topbar-back caption">
-                <Link href="/">← Tu equipo</Link>
-              </p>
               <h1>{org.org_name}</h1>
               <p className="topbar-sub caption">
-                {rows.length} {rows.length === 1 ? 'profesional' : 'profesionales'} ·{' '}
                 {totalPacientes} {totalPacientes === 1 ? 'paciente' : 'pacientes'}
-                {yo && ` · sos ${(ROL[yo.member_role] ?? yo.member_role).toLowerCase()}`}
               </p>
             </div>
-            <nav className="row topbar-nav">
-              {administra && <AddMember esTitular={esTitular} />}
-              <SignOut />
-            </nav>
+            <MainNav actual="organizacion" plan={plan} />
           </div>
         </div>
       </header>
@@ -98,94 +73,18 @@ export function OrgView({
       <main className="page">
         {resumen && resumen.pacientes > 0 && <Numeros r={resumen} />}
 
-        <section className="section" style={{ marginTop: resumen ? undefined : 'var(--s5)' }}>
-          <h2>Profesionales</h2>
-          <p className="caption" style={{ marginTop: 2, marginBottom: 'var(--s4)' }}>
-            {administra
-              ? 'Cómo viene el equipo de cada una. Activos: registraron comidas en los últimos 3 días.'
-              : 'Quiénes atienden en el consultorio.'}
-          </p>
-          <div className="card scroll-x">
-            <table className="tabla-datos">
-              <thead>
-                <tr>
-                  <th>Nombre</th>
-                  <th>Rol</th>
-                  <th className="num">Pacientes</th>
-                  {porPro && <th className="num">Activos</th>}
-                  {porPro && <th className="num">Días con comidas (7)</th>}
-                  {porPro && <th className="num">Dentro del objetivo</th>}
-                  {administra && <th />}
-                </tr>
-              </thead>
-              <tbody>
-                {miembros.map((m) => {
-                  const r = porPro?.find((x) => x.id === m.id)?.resumen;
-                  return (
-                    <tr key={m.id}>
-                      <td>
-                        {m.nombre}
-                        {m.id === viewerId && <span className="caption"> · vos</span>}
-                      </td>
-                      <td>{ROL[m.rol] ?? m.rol}</td>
-                      <td className="num tnum">{m.pacientes}</td>
-                      {porPro && (
-                        <td className="num tnum">
-                          {r && r.pacientes > 0 ? `${r.activos} de ${r.pacientes}` : '—'}
-                        </td>
-                      )}
-                      {porPro && (
-                        <td className="num tnum">
-                          {r?.adherencia !== null && r?.adherencia !== undefined
-                            ? `${r.adherencia.toLocaleString('es-AR')} de 7`
-                            : '—'}
-                        </td>
-                      )}
-                      {porPro && (
-                        <td className="num tnum">
-                          {r && r.dentroObjetivo.de > 0
-                            ? `${r.dentroObjetivo.si} de ${r.dentroObjetivo.de}`
-                            : '—'}
-                        </td>
-                      )}
-                      {administra && (
-                        <td className="num">
-                          {m.rol !== 'owner' && m.id !== viewerId && (
-                            <RemoveMember id={m.id} nombre={m.nombre} />
-                          )}
-                        </td>
-                      )}
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </section>
-
-        {pacientes && (
+        {pacientes ? (
           <section className="section">
-            <h2>Pacientes del consultorio · {pacientes.length}</h2>
-            <p className="caption" style={{ marginTop: 2, marginBottom: 'var(--s4)' }}>
-              Los de todas las profesionales. Para pasar a alguien con otra
-              profesional, cambiala en su fila. Las fichas de otras se abren en
-              modo lectura.
-            </p>
-            <OrgPatientsTable
-              pacientes={pacientes}
-              miembros={miembros}
-              viewerId={viewerId}
-              hoy={hoy}
-            />
+            {/* El análisis con IA trae su propio título, con el botón en la misma fila. */}
+            {analisis ?? <h2 style={{ marginBottom: 'var(--s4)' }}>Pacientes · {pacientes.length}</h2>}
+            <OrgPatientsTable pacientes={pacientes} hoy={hoy} />
           </section>
+        ) : (
+          analisis && <section className="section">{analisis}</section>
         )}
 
         <section className="section">
-          <h2>Fondo de IA del mes</h2>
-          <p className="caption" style={{ marginTop: 2, marginBottom: 'var(--s4)' }}>
-            Análisis de comidas de los pacientes e informes del panel, de todo el
-            consultorio. Se renueva el 1.° de cada mes.
-          </p>
+          <h2 style={{ marginBottom: 'var(--s4)' }}>Recursos de IA</h2>
           <div className="card">
             <div className="row" style={{ justifyContent: 'space-between', alignItems: 'baseline' }}>
               <span className="tnum" style={{ fontSize: 25 }}>
@@ -229,11 +128,7 @@ function Numeros({ r }: { r: ResumenConsultorio }) {
 
   return (
     <section className="section" style={{ marginTop: 'var(--s5)' }}>
-      <h2>El consultorio en números</h2>
-      <p className="caption" style={{ marginTop: 2, marginBottom: 'var(--s4)' }}>
-        Todos los pacientes, la última semana. Agregado: el detalle de cada uno
-        está en su ficha.
-      </p>
+      <h2 style={{ marginBottom: 'var(--s4)' }}>Estadísticas del equipo</h2>
       <div className="org-kpis">
         <div className="card org-kpi">
           <span className="caption">Activos</span>

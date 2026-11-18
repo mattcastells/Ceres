@@ -1,10 +1,10 @@
 /** El tablero del equipo con datos de ejemplo. **Solo en desarrollo**: ver
- *  `app/preview/page.tsx`. `?ia=1` le agrega un análisis del equipo guardado. */
+ *  `app/preview/page.tsx`. El análisis del equipo con IA se mudó a
+ *  /organizacion el 15/11/2026. */
 import { notFound } from 'next/navigation';
 import { PatientsList, type PatientRow } from '@/components/patients-list';
 import { haceISO, hoyISO } from '@/lib/format';
 import type { OverviewRow } from '@/lib/team';
-import type { CareReport } from '@/lib/queries';
 
 export const dynamic = 'force-dynamic';
 
@@ -125,45 +125,9 @@ function overview(): OverviewRow[] {
   ];
 }
 
-function informe(): CareReport {
-  return {
-    id: 't1',
-    kind: 'team',
-    patient_id: null,
-    period_from: haceISO(13),
-    period_to: hoyISO(),
-    created_at: `${hoyISO()}T08:40:00-03:00`,
-    content: {
-      resumen:
-        'El equipo viene registrando bien en general: tres de cuatro personas cargaron esta semana. Bruno lleva cinco días sin registrar y su promedio quedó muy por debajo del objetivo.',
-      prioridades: [
-        {
-          patientId: 'demo2',
-          motivo: 'Cinco días sin registrar y un promedio de 1.400 kcal contra 2.200 de objetivo.',
-          accion: 'Escribirle para saber si pasó algo y si está anotando todo.',
-        },
-        {
-          patientId: 'demo',
-          motivo: 'Promedio un 15 % por encima del objetivo, con el peso bajando igual.',
-          accion: 'Revisar en la consulta si el objetivo sigue siendo el adecuado.',
-        },
-      ],
-      observaciones: [
-        'Los fines de semana son los días con menos registros en todo el equipo.',
-        'Una persona no comparte las comidas: su seguimiento depende del peso.',
-      ],
-    },
-  };
-}
-
-export default async function PreviewLista({
-  searchParams,
-}: {
-  searchParams: Promise<{ ia?: string }>;
-}) {
+export default async function PreviewLista() {
   // Solo en desarrollo, por lo mismo que `app/preview/page.tsx`.
   if (process.env.NODE_ENV === 'production') notFound();
-  const { ia } = await searchParams;
 
   return (
     <PatientsList
@@ -172,7 +136,6 @@ export default async function PreviewLista({
       hoy={hoyISO()}
       plan="pro"
       hasOrg
-      teamReport={ia === '1' ? informe() : null}
     />
   );
 }

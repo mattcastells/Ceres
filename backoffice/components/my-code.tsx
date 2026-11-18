@@ -84,10 +84,13 @@ export function MyCode({ plan }: { plan?: string | null }) {
         code && (
           <button
             type="button"
+            className={copied ? 'button--done' : undefined}
+            aria-live="polite"
             onClick={async () => {
-              await navigator.clipboard.writeText(code);
-              setCopied(true);
-              setTimeout(() => setCopied(false), 2000);
+              if (await copiar(code)) {
+                setCopied(true);
+                setTimeout(() => setCopied(false), 1500);
+              }
             }}
           >
             {copied ? 'Copiado' : 'Copiar'}
@@ -96,4 +99,34 @@ export function MyCode({ plan }: { plan?: string | null }) {
       )}
     </div>
   );
+}
+
+/**
+ * Copia el texto y dice si pudo.
+ *
+ * `navigator.clipboard` existe solo en contextos seguros (https o localhost) y
+ * puede rechazar la escritura si la pestaña no tiene el foco; antes ese
+ * rechazo cortaba el clic sin cambiar el botón. El plan B es el
+ * `execCommand('copy')` de siempre sobre un campo temporal.
+ */
+async function copiar(texto: string): Promise<boolean> {
+  try {
+    await navigator.clipboard.writeText(texto);
+    return true;
+  } catch {
+    const campo = document.createElement('textarea');
+    campo.value = texto;
+    campo.setAttribute('readonly', '');
+    campo.style.position = 'fixed';
+    campo.style.opacity = '0';
+    document.body.appendChild(campo);
+    campo.select();
+    try {
+      return document.execCommand('copy');
+    } catch {
+      return false;
+    } finally {
+      campo.remove();
+    }
+  }
 }

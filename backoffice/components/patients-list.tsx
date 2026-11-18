@@ -1,17 +1,10 @@
-import Link from 'next/link';
-import { SignOut } from '@/components/sign-out';
-import { MyCode } from '@/components/my-code';
-import { TeamReport } from '@/components/team-report';
+import { MainNav } from '@/components/main-nav';
 import { TeamGrid } from '@/components/team-grid';
-import { InvitePatient, InvitesList, type CareInvite } from '@/components/invite-patient';
+import { InvitesList, type CareInvite } from '@/components/invite-patient';
 import { fechaCorta } from '@/lib/format';
-import {
-  alertasDe,
-  ordenarEquipo,
-  pideAtencion,
-  type OverviewRow,
-} from '@/lib/team';
-import type { CareReport } from '@/lib/queries';
+import { alertasDe, type OverviewRow } from '@/lib/team';
+
+const PLAN: Record<string, string> = { pro: 'Pro', premium: 'Premium', free: 'Gratis' };
 
 export type PatientRow = {
   grant_id: string;
@@ -23,6 +16,8 @@ export type PatientRow = {
   share_body: boolean;
   share_wellbeing: boolean;
   expires_at: string | null;
+  /** Ruta de la foto de perfil en `progress-photos` (migración 58). */
+  avatar_path?: string | null;
 };
 
 /** Una fila de `care_discharged()` (migración 56). */
@@ -46,10 +41,11 @@ export type DischargedRow = {
  * paginada: PostgREST corta en mil filas sin avisar, y a partir de unos 25
  * pacientes activos la semana de los últimos de la lista salía vacía.
  *
- * La pantalla contesta **a quién le escribo hoy**: arriba va quien pide
- * atención (`lib/team.ts`), y cada ficha dice por qué en una frase. Sin
- * semáforos ni puntajes: comer por encima del objetivo se menciona, pero no es
- * una alarma (README, "lo que la pantalla no califica").
+ * Los pacientes van por nombre, sin buscador ni orden por prioridad (se
+ * sacaron el 15/11/2026: la profesional prefirió una lista estable). Cada
+ * ficha sigue diciendo en una frase lo que conviene mirar, sin semáforos ni
+ * puntajes: comer por encima del objetivo se menciona, pero no es una alarma
+ * (README, "lo que la pantalla no califica").
  *
  * El ciclo del paciente empieza y termina acá: **Dar de alta** lo invita por
  * mail (migración 56), las invitaciones esperan debajo del código, y las bajas
@@ -62,7 +58,7 @@ export function PatientsList({
   error,
   plan = null,
   hasOrg = false,
-  teamReport = null,
+  avatars = {},
   invites = [],
   discharged = [],
 }: {
@@ -74,26 +70,25 @@ export function PatientsList({
   error?: boolean;
   plan?: string | null;
   hasOrg?: boolean;
-  teamReport?: CareReport | null;
+  /** patient_id → URL firmada de la foto de perfil. */
+  avatars?: Record<string, string>;
   invites?: CareInvite[];
   discharged?: DischargedRow[];
 }) {
   const porId = new Map((overview ?? []).map((r) => [r.patient_id, r]));
 
-  const filas = ordenarEquipo(
-    patients.map((p) => {
+  const filas = patients
+    .map((p) => {
       const o = porId.get(p.patient_id) ?? null;
       return {
         patient: p,
         o,
         nombre: p.patient_name || 'Sin nombre',
         alertas: o ? alertasDe(o, hoy) : [],
+        avatar: avatars[p.patient_id] ?? null,
       };
-    }),
-  );
-
-  const atencion = filas.filter((f) => pideAtencion(f.alertas)).length;
-  const nombres = Object.fromEntries(filas.map((f) => [f.patient.patient_id, f.nombre]));
+    })
+    .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
 
   return (
     <>
@@ -101,27 +96,18 @@ export function PatientsList({
         <div className="topbar-inner topbar-inner--plain">
           <div className="topbar-id">
             <div>
-              <h1>Tu equipo</h1>
+              <h1>Pacientes</h1>
               <p className="topbar-sub caption">
                 {patients.length} {patients.length === 1 ? 'paciente' : 'pacientes'}
-                {atencion > 0 && ` · ${atencion} para mirar hoy`}
+                {plan && PLAN[plan] && ` · plan ${PLAN[plan]}`}
               </p>
             </div>
-            <nav className="row topbar-nav">
-              <Link href="/articulos">Artículos y recetas</Link>
-              {hasOrg && <Link href="/organizacion">Organización</Link>}
-              <InvitePatient />
-              <SignOut />
-            </nav>
+            <MainNav actual="pacientes" plan={plan} conOrganizacion={hasOrg} />
           </div>
         </div>
       </header>
 
       <main className="page">
-        <MyCode plan={plan} />
-
-        <InvitesList invites={invites} />
-
         {error && (
           <p className="form-error" style={{ marginTop: 'var(--s6)' }}>
             No pudimos cargar la lista. Probá de nuevo en un rato.
@@ -131,15 +117,7 @@ export function PatientsList({
         {!error && patients.length === 0 && (
           <div className="card" style={{ marginTop: 'var(--s6)' }}>
             <h3>Todavía no tenés pacientes</h3>
-            <p className="muted" style={{ marginTop: 'var(--s2)' }}>
-              Dalos de alta con su mail (arriba, <strong>Dar de alta</strong>) o
-              pasales tu código: lo cargan en la app, en Perfil → Mi nutricionista.
-            </p>
           </div>
-        )}
-
-        {patients.length > 0 && (
-          <TeamReport initial={teamReport} nombres={nombres} plan={plan} />
         )}
 
         {overview === null && patients.length > 0 && !error && (
@@ -154,12 +132,13 @@ export function PatientsList({
 
         {filas.length > 0 && (
           <>
-            <div className="section-header">
-              {atencion > 0 ? 'Primero, quien pide atención' : 'Pacientes'}
-            </div>
+            <div className="section-header">Pacientes</div>
             <TeamGrid filas={filas} hoy={hoy} />
           </>
         )}
+
+        {/* Debajo de los pacientes: lo que se mira primero es el equipo. */}
+        <InvitesList invites={invites} />
 
         {discharged.length > 0 && (
           <details className="bajas">

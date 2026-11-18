@@ -204,6 +204,12 @@ button:disabled {
   background: color-mix(in srgb, var(--accent) 32%, transparent);
 }
 
+/* El botón confirma lo que hizo ("Copiado") con el color del acento. */
+.button--done {
+  color: var(--accent-text);
+  border-color: var(--accent);
+}
+
 input,
 select {
   font: inherit;
@@ -672,9 +678,9 @@ details[open] > summary .chev {
   flex-direction: column;
   align-items: stretch;
   gap: 2px;
-  min-height: 76px;
+  min-height: 104px;
   min-width: 0;
-  padding: var(--s3) var(--s3) var(--s4);
+  padding: var(--s3) var(--s3) var(--s3);
   border: 0;
   border-radius: 0;
   background: transparent;
@@ -730,30 +736,50 @@ details[open] > summary .chev {
   font-weight: 600;
 }
 
-/* Enfermedad y alcohol, como puntos arriba a la derecha: es lo que explica al
- * resto de la celda y tiene que verse antes de abrirla. Son los mismos dos
- * colores de las bandas de los gráficos de Hábitos, y los únicos que codifican
- * algo en esta pantalla. */
+/* Enfermedad, alcohol y descanso, con su ícono arriba a la derecha: es lo que
+ * explica al resto de la celda y tiene que verse antes de abrirla. Enfermedad
+ * y alcohol llevan los colores de las bandas de los gráficos de Hábitos. */
 .dcal-marks {
   display: flex;
   gap: 3px;
   flex: none;
-  padding-top: 4px;
 }
 
 .dcal-mark {
-  display: block;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px 6px;
+  border-radius: 999px;
+  font-size: 11px;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+@media (max-width: 1100px) {
+  .dcal-mark-txt {
+    display: none;
+  }
 }
 
 .dcal-mark--sick {
-  background: var(--caution);
+  color: var(--caution);
+  background: color-mix(in srgb, var(--caution) 16%, transparent);
 }
 
 .dcal-mark--drink {
-  background: var(--info);
+  color: var(--info);
+  background: color-mix(in srgb, var(--info) 16%, transparent);
+}
+
+.dcal-mark--rest {
+  color: var(--text-muted);
+  background: var(--surface-raised);
+}
+
+/* El día de enfermedad se tiñe entero: explica todo lo demás de la celda. */
+.dcal-cell--sick {
+  background: color-mix(in srgb, var(--caution) 6%, transparent);
 }
 
 .dcal-kcal {
@@ -814,16 +840,39 @@ details[open] > summary .chev {
   background: var(--chart-intake);
 }
 
-/* Hasta dos líneas y después se corta: "71 min · 3 vasos · 7 h 58" no entra en
- * una en una celda de 140 px, y cortado a una línea se perdía justo el sueño,
- * que es lo último. */
+/* Actividad, agua y sueño: cada uno con su ícono, y si no entran en una línea
+ * pasan a la siguiente. */
 .dcal-sub {
-  font-size: 11px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px var(--s3);
+  margin-top: var(--s2);
+  font-size: 12px;
   line-height: 1.35;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+  color: var(--text-secondary, var(--text));
+}
+
+.dcal-dato {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.dcal-dato svg {
+  flex: none;
+}
+
+.dcal-dato--actividad svg {
+  color: var(--accent);
+}
+
+.dcal-dato--agua svg {
+  color: var(--info);
+}
+
+.dcal-dato--sueno svg {
+  color: var(--chart-weight);
 }
 
 @media (max-width: 760px) {
@@ -1664,6 +1713,23 @@ input[type='date'] {
   flex-wrap: wrap;
 }
 
+/* Las secciones: la actual en el color del texto y subrayada con el acento. */
+.nav-link {
+  color: var(--text-muted);
+  padding: var(--s1) 0;
+  border-bottom: 2px solid transparent;
+}
+
+.nav-link:hover {
+  color: var(--text);
+  text-decoration: none;
+}
+
+.nav-link[aria-current='page'] {
+  color: var(--text);
+  border-bottom-color: var(--accent);
+}
+
 /* ── El tablero del equipo ──────────────────────────────────────────────── */
 
 .team-stats {
@@ -1681,8 +1747,67 @@ input[type='date'] {
   margin: 0;
 }
 
+/* El bloque de bienestar, separado de comidas y peso por una línea. */
+.team-stats-sep {
+  border-top: 1px solid var(--divider);
+  padding-top: var(--s3);
+}
+
+.team-stats-full {
+  grid-column: 1 / -1;
+}
+
 .team-ai {
   margin-top: var(--s6);
+}
+
+/* El título de una sección con una acción a la derecha, en la misma fila
+ * ("Pacientes · 13" y "Analizar con IA"). */
+.section-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s4);
+  flex-wrap: wrap;
+  margin-bottom: var(--s4);
+}
+
+.section-title-row h2 {
+  margin: 0;
+}
+
+.ai-action {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+}
+
+/* Una acción con IA secundaria: chica, en píldora y con el destello, para
+ * que no compita con el contenido que acompaña. */
+.button--ai {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  padding: 5px 12px 5px 10px;
+  border-radius: 999px;
+  border-color: color-mix(in srgb, var(--accent) 50%, transparent);
+}
+
+.button--ai:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+
+.button--ai svg {
+  width: 15px;
+  height: 15px;
+  flex: none;
+}
+
+.team-ai-card {
+  margin-bottom: var(--s4);
+  display: grid;
+  gap: var(--s4);
 }
 
 .team-prioridades {
@@ -2140,6 +2265,124 @@ button,
   padding: var(--s4) var(--s5);
 }
 
+/* ── El editor visual de artículos ─────────────────────────────────────── */
+.rte {
+  border: 1px solid var(--divider);
+  border-radius: var(--radius-sm);
+  background: var(--surface-raised);
+  overflow: hidden;
+}
+
+.rte:focus-within {
+  border-color: var(--accent);
+}
+
+.rte-barra {
+  display: flex;
+  gap: var(--s1);
+  padding: var(--s2);
+  border-bottom: 1px solid var(--divider);
+}
+
+.rte-barra > button {
+  border: 0;
+  background: none;
+  padding: var(--s1) var(--s3);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.rte-barra > button:hover {
+  color: var(--text);
+}
+
+.rte-barra > button[aria-pressed='true'] {
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+  color: var(--text);
+}
+
+.rte-barra > .rte-b {
+  font-weight: 700;
+  min-width: 32px;
+}
+
+.rte-area {
+  min-height: 260px;
+  max-height: 60vh;
+  overflow-y: auto;
+  padding: var(--s3) var(--s4) var(--s4);
+  outline: none;
+}
+
+.rte-area > :first-child {
+  margin-top: 0;
+}
+
+/* ── Adjuntos de un artículo ──────────────────────────────────────────── */
+.art-media {
+  display: grid;
+  gap: var(--s3);
+}
+
+.art-media-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: var(--s3);
+}
+
+.art-media-item {
+  position: relative;
+  margin: 0;
+  aspect-ratio: 16 / 10;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: var(--surface-raised);
+  border: 1px solid var(--divider);
+}
+
+.art-media-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.art-media-play {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 22px;
+  color: #fff;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.7);
+  pointer-events: none;
+}
+
+.art-media-quitar {
+  position: absolute;
+  top: var(--s1);
+  right: var(--s1);
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border-radius: 50%;
+  font-size: 12px;
+  line-height: 1;
+  background: color-mix(in srgb, var(--surface) 85%, transparent);
+}
+
+.art-media-acciones {
+  flex-wrap: wrap;
+  gap: var(--s3);
+  align-items: center;
+}
+
+.art-media-acciones input[type='url'] {
+  flex: 1 1 220px;
+  min-width: 0;
+}
+
 .art-body {
   line-height: 1.55;
 }
@@ -2210,6 +2453,138 @@ button,
   gap: var(--s3);
 }
 
+/* ── Dar de alta: los tres caminos ─────────────────────────────────────── */
+.modal--wide {
+  max-width: min(760px, 94vw);
+}
+
+.alta-caminos {
+  border-bottom: 1px solid var(--divider);
+  margin-top: calc(-1 * var(--s2));
+}
+
+.alta-codigo {
+  display: grid;
+  gap: var(--s4);
+}
+
+.alta-codigo .my-code {
+  margin-top: 0;
+}
+
+.alta-form {
+  display: grid;
+  gap: var(--s5);
+}
+
+.alta-grupo {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--s3);
+  min-width: 0;
+}
+
+.alta-grupo > legend {
+  padding: 0;
+  margin-bottom: var(--s3);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.alta-grupo > legend .caption {
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 400;
+}
+
+.alta-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: var(--s3) var(--s4);
+}
+
+.alta-grid--texto {
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+}
+
+.alta-campo {
+  display: grid;
+  gap: var(--s1);
+  min-width: 0;
+}
+
+.alta-campo input,
+.alta-campo select,
+.alta-campo textarea {
+  width: 100%;
+}
+
+.alta-campo--ancho {
+  grid-column: 1 / -1;
+}
+
+.alta-flags {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+
+.alta-flags > legend {
+  padding: 0;
+  margin-bottom: var(--s2);
+}
+
+.alta-checks {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: var(--s2) var(--s4);
+}
+
+.alta-check {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  cursor: pointer;
+}
+
+.alta-check input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--accent);
+}
+
+/* La anamnesis en la ficha, plegada. */
+.anamnesis {
+  margin-top: var(--s5);
+}
+
+.anamnesis > summary {
+  cursor: pointer;
+}
+
+.anamnesis-titulo {
+  font-weight: 600;
+}
+
+.anamnesis-campos {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--s4) var(--s5);
+  margin: var(--s4) 0 0;
+}
+
+.anamnesis-campos dd {
+  margin: var(--s1) 0 0;
+  white-space: pre-wrap;
+}
+
 .invite-form input {
   width: 100%;
 }
@@ -2240,16 +2615,30 @@ button,
   border-top: 1px solid var(--divider);
 }
 
-/* Buscar y ordenar el equipo. */
-.team-tools {
-  flex-wrap: wrap;
-  gap: var(--s4);
-  margin-bottom: var(--s4);
+/* La foto de perfil del paciente, a la izquierda del nombre. */
+.plist-nombre {
+  gap: var(--s3);
+  min-width: 0;
 }
 
-.team-tools input[type='search'] {
-  flex: 1 1 240px;
-  max-width: 360px;
+.avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  flex: none;
+  object-fit: cover;
+  background: var(--surface-raised);
+}
+
+.avatar--iniciales {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--accent-text);
+  border: 1px solid var(--divider);
 }
 
 /* Las cartas del equipo entran escalonadas (el retraso lo pone cada una). */
