@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/error/app_error.dart';
 import '../../../core/router/routes.dart';
@@ -289,11 +290,88 @@ class _CareArticleScreenState extends ConsumerState<CareArticleScreen> {
               ),
               const SizedBox(height: NmSpace.s6),
               ArticleBody(body: article.body),
+              if (article.media.isNotEmpty) ...<Widget>[
+                const SizedBox(height: NmSpace.s6),
+                for (final m in article.media)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: NmSpace.s3),
+                    child: _MediaTile(media: m),
+                  ),
+              ],
               const SizedBox(height: NmSpace.s12),
             ],
           ),
         );
       },
+    );
+  }
+}
+
+/// Una imagen o un video del artículo. La imagen va a lo ancho con su
+/// proporción; el video, con la miniatura de YouTube y un botón de play que lo
+/// abre en la app de YouTube (o en el navegador).
+class _MediaTile extends StatelessWidget {
+  const _MediaTile({required this.media});
+
+  final ArticleMedia media;
+
+  @override
+  Widget build(BuildContext context) {
+    final nm = context.nm;
+    final url = media.previewUrl;
+    if (url == null) return const SizedBox.shrink();
+    final esVideo = media.kind == ArticleMediaKind.youtube;
+
+    final imagen = Image.network(
+      url,
+      width: double.infinity,
+      fit: esVideo ? BoxFit.cover : BoxFit.fitWidth,
+      errorBuilder: (_, _, _) => Container(
+        height: 160,
+        color: nm.surfaceRaised,
+        alignment: Alignment.center,
+        child: Icon(PhosphorIcons.imageBroken(), color: nm.textMuted),
+      ),
+    );
+
+    final cuadro = ClipRRect(
+      borderRadius: NmRadius.brLg,
+      child: esVideo
+          ? AspectRatio(
+              aspectRatio: 16 / 9,
+              child: Stack(
+                fit: StackFit.expand,
+                children: <Widget>[
+                  imagen,
+                  Center(
+                    child: Container(
+                      width: 56,
+                      height: 56,
+                      decoration: const BoxDecoration(
+                        color: Color(0xCC000000),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        PhosphorIcons.play(PhosphorIconsStyle.fill),
+                        color: const Color(0xFFFFFFFF),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            )
+          : imagen,
+    );
+
+    final abrir = media.openUri;
+    if (abrir == null) return Semantics(image: true, label: 'Imagen', child: cuadro);
+    return Semantics(
+      button: true,
+      label: 'Ver el video en YouTube',
+      child: GestureDetector(
+        onTap: () => launchUrl(abrir, mode: LaunchMode.externalApplication),
+        child: cuadro,
+      ),
     );
   }
 }

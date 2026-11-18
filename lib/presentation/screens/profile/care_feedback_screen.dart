@@ -141,7 +141,6 @@ class _List extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final nm = context.nm;
     final target = inbox.target;
     final indications = inbox.indications;
     final feedback = inbox.items.where((f) => !f.isIndication).toList();
@@ -174,11 +173,6 @@ class _List extends StatelessWidget {
         ],
         if (indications.isNotEmpty) ...<Widget>[
           const NmSectionHeader(title: 'Indicaciones vigentes'),
-          Text(
-            'Siguen valiendo hasta que tu nutricionista las cambie.',
-            style: NmTextStyles.from(NmType.caption, color: nm.textMuted),
-          ),
-          const SizedBox(height: NmSpace.s3),
           for (final f in indications)
             _Item(feedback: f, isNew: fresh.contains(f.id)),
           const SizedBox(height: NmSpace.s6),

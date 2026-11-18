@@ -29,7 +29,7 @@ class CareArticlesClient {
     try {
       final rows = await _db
           .from('care_articles')
-          .select('id, author_id, kind, title, body, tag, published_at')
+          .select('id, author_id, kind, title, body, tag, published_at, media')
           .not('published_at', 'is', null)
           .isFilter('deleted_at', null)
           .order('published_at', ascending: false)
@@ -41,7 +41,10 @@ class CareArticlesClient {
         for (final r in rows)
           if (r['author_id'] case final String id) id,
       });
-      return parseRows(rows, namesById: names);
+      final urls = await _signImages(<String>[
+        for (final r in rows) ...ArticleMedia.imagePaths(r['media']),
+      ]);
+      return parseRows(rows, namesById: names, imageUrls: urls);
     } on Exception {
       throw const AppError(
         code: ApiErrorCode.offline,
@@ -50,16 +53,36 @@ class CareArticlesClient {
     }
   }
 
+  /// Las imágenes de los artículos, firmadas todas juntas (bucket
+  /// `article-media`, migración 61). Si falla, los artículos llegan igual,
+  /// sin esas imágenes.
+  Future<Map<String, String>> _signImages(List<String> paths) async {
+    if (paths.isEmpty) return const <String, String>{};
+    try {
+      final signed = await _db.storage
+          .from('article-media')
+          .createSignedUrlsResult(paths, 60 * 60)
+          .timeout(CareFeedbackClient.timeout);
+      return <String, String>{
+        for (final s in signed.whereType<SignedUrlSuccess>()) s.path: s.signedUrl,
+      };
+    } on Exception {
+      return const <String, String>{};
+    }
+  }
+
   /// Público para probarlo sin servidor: descarta las filas que no cierran.
   static List<CareArticle> parseRows(
     List<dynamic> rows, {
     Map<String, String> namesById = const <String, String>{},
+    Map<String, String> imageUrls = const <String, String>{},
   }) => <CareArticle>[
     for (final row in rows)
       if (row is Map)
         if (CareArticle.fromRow(
               Map<String, dynamic>.from(row),
               authorName: namesById[row['author_id']] ?? '',
+              imageUrls: imageUrls,
             )
             case final CareArticle a)
           a,

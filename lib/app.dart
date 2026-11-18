@@ -144,14 +144,15 @@ class _CeresAppState extends ConsumerState<CeresApp>
   Widget build(BuildContext context) {
     final router = ref.watch(routerProvider);
     final themeMode = ref.watch(themeModeProvider);
+    final palette = ref.watch(themePaletteProvider);
 
     return MaterialApp.router(
       title: 'Ceres',
       debugShowCheckedModeBanner: false,
       routerConfig: router,
       themeMode: themeMode,
-      theme: NmAppTheme.light(),
-      darkTheme: NmAppTheme.dark(),
+      theme: NmAppTheme.of(palette, dark: false),
+      darkTheme: NmAppTheme.of(palette, dark: true),
       locale: const Locale('es', 'AR'),
       supportedLocales: const <Locale>[Locale('es', 'AR'), Locale('es')],
       localizationsDelegates: const <LocalizationsDelegate<dynamic>>[

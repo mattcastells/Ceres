@@ -77,7 +77,7 @@ class _CalorieRingState extends State<CalorieRing> {
             builder: (context, value, _) => CustomPaint(
               painter: _RingPainter(
                 fraction: value,
-                track: nm.isDark ? NmNeutral.c800 : NmNeutral.c200,
+                track: nm.track,
                 arc: nm.accent,
                 excess: nm.overBudget,
               ),

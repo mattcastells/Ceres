@@ -12,6 +12,7 @@ import '../../../core/config/feature_flags.dart';
 import '../../../core/error/app_error.dart';
 import '../../../core/router/routes.dart';
 import '../../../core/theme/nm_theme.dart';
+import '../../../core/theme/palettes.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/utils/dates.dart';
@@ -215,6 +216,7 @@ class AppearanceScreen extends ConsumerWidget {
     final profile = ref.watch(profileProvider);
     final summary = ref.watch(todaySummaryProvider);
     final repo = ref.watch(repositoryProvider);
+    final palette = ref.watch(themePaletteProvider);
 
     return NmScreen(
       title: 'Apariencia',
@@ -222,16 +224,37 @@ class AppearanceScreen extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           const SizedBox(height: NmSpace.s4),
-          for (final mode in ThemeModeSetting.values)
-            Padding(
-              padding: const EdgeInsets.only(bottom: NmSpace.s2),
-              child: NmRadioRow<ThemeModeSetting>(
-                title: mode.label,
-                value: mode,
-                groupValue: profile.themeMode,
-                onChanged: repo.setThemeMode,
+          const NmSectionHeader(title: 'Tema'),
+          Row(
+            children: <Widget>[
+              for (final p in AppPalette.values) ...<Widget>[
+                if (p != AppPalette.values.first)
+                  const SizedBox(width: NmSpace.s4),
+                Expanded(
+                  child: _PaletteTile(
+                    palette: p,
+                    selected: p == palette,
+                    onTap: () =>
+                        ref.read(themePaletteProvider.notifier).set(p),
+                  ),
+                ),
+              ],
+            ],
+          ),
+          if (palette.fixedBrightness == null) ...<Widget>[
+            const SizedBox(height: NmSpace.s8),
+            const NmSectionHeader(title: 'Modo'),
+            for (final mode in ThemeModeSetting.values)
+              Padding(
+                padding: const EdgeInsets.only(bottom: NmSpace.s2),
+                child: NmRadioRow<ThemeModeSetting>(
+                  title: mode.label,
+                  value: mode,
+                  groupValue: profile.themeMode,
+                  onChanged: repo.setThemeMode,
+                ),
               ),
-            ),
+          ],
           const SizedBox(height: NmSpace.s6),
           const NmSectionHeader(title: 'Previsualización'),
           NmCard(
@@ -264,6 +287,127 @@ class AppearanceScreen extends ConsumerWidget {
 }
 
 /// Unidades.
+/// Un tema para elegir: una muestra con sus propios colores —el fondo, el
+/// anillo y tres tonos de datos— y el nombre abajo.
+class _PaletteTile extends StatelessWidget {
+  const _PaletteTile({
+    required this.palette,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final AppPalette palette;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final nm = context.nm;
+    // Ceres se muestra en su versión canónica, la oscura.
+    final d = palette.data(dark: true);
+    final c = d.colors;
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: 'Tema ${palette.label}',
+      child: GestureDetector(
+        onTap: onTap,
+        child: Column(
+          children: <Widget>[
+            AnimatedContainer(
+              duration: NmMotion.fast,
+              height: 112,
+              padding: const EdgeInsets.all(NmSpace.s4),
+              decoration: BoxDecoration(
+                color: c.bg,
+                borderRadius: NmRadius.brLg,
+                border: Border.all(
+                  color: selected ? nm.accent : nm.divider,
+                  width: selected ? 2.5 : 1,
+                ),
+              ),
+              child: Row(
+                children: <Widget>[
+                  SizedBox(
+                    width: 44,
+                    height: 44,
+                    child: CustomPaint(
+                      painter: _MiniRingPainter(
+                        track: d.isDark ? d.neutral.c800 : d.neutral.c200,
+                        arc: c.accent,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: NmSpace.s3),
+                  Expanded(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        for (final (color, ancho) in <(Color, double)>[
+                          (d.charts.intake, 1.0),
+                          (d.charts.running, 0.7),
+                          (d.accent2.c400, 0.45),
+                        ])
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 3),
+                            child: FractionallySizedBox(
+                              widthFactor: ancho,
+                              child: Container(
+                                height: 6,
+                                decoration: BoxDecoration(
+                                  color: color,
+                                  borderRadius: NmRadius.brFull,
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: NmSpace.s2),
+            Text(
+              palette.label,
+              style: NmTextStyles.from(
+                NmType.bodySm,
+                color: selected ? nm.text : nm.textMuted,
+              ).copyWith(fontWeight: selected ? FontWeight.w600 : null),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MiniRingPainter extends CustomPainter {
+  _MiniRingPainter({required this.track, required this.arc});
+
+  final Color track;
+  final Color arc;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    const stroke = 6.0;
+    final rect = Offset.zero & size;
+    final r = rect.deflate(stroke / 2);
+    final base = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = stroke
+      ..strokeCap = StrokeCap.round;
+    canvas
+      ..drawArc(r, 0, 6.2832, false, base..color = track)
+      ..drawArc(r, -1.5708, 4.4, false, base..color = arc);
+  }
+
+  @override
+  bool shouldRepaint(_MiniRingPainter old) =>
+      old.track != track || old.arc != arc;
+}
+
 class UnitsScreen extends ConsumerWidget {
   const UnitsScreen({super.key});
 

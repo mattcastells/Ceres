@@ -89,11 +89,11 @@ class NmTag extends StatelessWidget {
     final (Color bg, Color fg) = switch (variant) {
       NmTagVariant.accent => (nm.accentFill, nm.accentOnFill),
       NmTagVariant.accent2 => (
-        nm.isDark ? NmAccent2.c800 : NmAccent2.c100,
-        nm.isDark ? NmAccent2.c200 : NmAccent2.c700,
+        nm.isDark ? nm.accent2Ramp.c800 : nm.accent2Ramp.c100,
+        nm.isDark ? nm.accent2Ramp.c200 : nm.accent2Ramp.c700,
       ),
       NmTagVariant.neutral => (
-        nm.isDark ? NmNeutral.c800 : NmNeutral.c200,
+        nm.isDark ? nm.neutralRamp.c800 : nm.neutralRamp.c200,
         nm.text,
       ),
       NmTagVariant.outline => (Colors.transparent, nm.textMuted),

@@ -1,42 +1,40 @@
 import 'package:flutter/material.dart';
 
+import 'palettes.dart';
 import 'tokens.dart';
 
 /// Los tokens del sistema, disponibles desde cualquier widget vía `context.nm`.
 ///
 /// Ningún componente escribe un hex, un nombre de fuente ni un número de píxel
-/// que ya exista como token (06-design-tokens.md, regla de oro).
+/// que ya exista como token (06-design-tokens.md, regla de oro). Los colores
+/// salen del tema elegido en Apariencia ([AppPalette]): un componente que lee
+/// `NmAccent` o `NmChartColors` directo se queda con los de Ceres en Sakura.
 @immutable
 class NmTheme extends ThemeExtension<NmTheme> {
-  const NmTheme({
-    required this.colors,
-    required this.shadowSm,
-    required this.shadowMd,
-    required this.shadowLg,
-    required this.isDark,
-  });
+  const NmTheme(this.palette);
 
-  factory NmTheme.dark() => const NmTheme(
-    colors: NmColors.dark,
-    shadowSm: NmShadow.darkSm,
-    shadowMd: NmShadow.darkMd,
-    shadowLg: NmShadow.darkLg,
-    isDark: true,
-  );
+  factory NmTheme.dark() => const NmTheme(NmPalettes.ceresDark);
 
-  factory NmTheme.light() => const NmTheme(
-    colors: NmColors.light,
-    shadowSm: NmShadow.lightSm,
-    shadowMd: NmShadow.lightMd,
-    shadowLg: NmShadow.lightLg,
-    isDark: false,
-  );
+  factory NmTheme.light() => const NmTheme(NmPalettes.ceresLight);
 
-  final NmColorRoles colors;
-  final List<BoxShadow> shadowSm;
-  final List<BoxShadow> shadowMd;
-  final List<BoxShadow> shadowLg;
-  final bool isDark;
+  final NmPaletteData palette;
+
+  NmColorRoles get colors => palette.colors;
+  List<BoxShadow> get shadowSm => palette.shadowSm;
+  List<BoxShadow> get shadowMd => palette.shadowMd;
+  List<BoxShadow> get shadowLg => palette.shadowLg;
+  bool get isDark => palette.isDark;
+
+  /// Las rampas del tema, para los tonos que no son un rol.
+  NmRamp get accentRamp => palette.accent;
+  NmRamp get accent2Ramp => palette.accent2;
+  NmRamp get neutralRamp => palette.neutral;
+
+  /// Los colores de datos del tema (§1.4).
+  NmChartPalette get charts => palette.charts;
+
+  /// Lo que va encima del acento (el ícono del botón +, el tilde de una casilla).
+  Color get onAccent => isDark ? neutralRamp.c900 : Colors.white;
 
   // Atajos de rol, para no escribir `context.nm.colors.x` en cada línea.
   Color get bg => colors.bg;
@@ -58,14 +56,14 @@ class NmTheme extends ThemeExtension<NmTheme> {
   Color get info => colors.info;
 
   /// El arco excedente del anillo de calorías (D-17).
-  Color get overBudget => NmAccent.c700;
+  Color get overBudget => accentRamp.c700;
 
   /// Relleno tintado sobre fondo oscuro / claro para superficies de acento.
   Color get accentFill =>
-      isDark ? NmAccent.c800.withValues(alpha: 0.55) : NmAccent.c100;
+      isDark ? accentRamp.c800.withValues(alpha: 0.55) : accentRamp.c100;
 
   /// Texto legible sobre [accentFill].
-  Color get accentOnFill => isDark ? NmAccent.c200 : NmAccent.c700;
+  Color get accentOnFill => isDark ? accentRamp.c200 : accentRamp.c700;
 
   /// Relleno tintado de [caution], para el fondo de un estado marcado.
   ///
@@ -75,14 +73,17 @@ class NmTheme extends ThemeExtension<NmTheme> {
   Color get cautionFill => caution.withValues(alpha: isDark ? 0.22 : 0.16);
 
   /// Color del bloque de skeleton (21-motion-and-loading.md §4.2).
-  Color get skeleton => isDark ? NmNeutral.c800 : NmNeutral.c200;
+  Color get skeleton => isDark ? neutralRamp.c800 : neutralRamp.c200;
 
   Color get skeletonHighlight =>
-      isDark ? NmNeutral.c700 : NmNeutral.c100.withValues(alpha: 0.9);
+      isDark ? neutralRamp.c700 : neutralRamp.c100.withValues(alpha: 0.9);
+
+  /// El fondo del anillo de calorías y de las pistas vacías.
+  Color get track => isDark ? neutralRamp.c800 : neutralRamp.c200;
 
   /// Tinte de estado presionado (§7).
   Color get pressedAccent =>
-      (isDark ? NmAccent.c400 : accent).withValues(alpha: NmStateToken.pressedAccentAlpha);
+      (isDark ? accentRamp.c400 : accent).withValues(alpha: NmStateToken.pressedAccentAlpha);
 
   Color get hoverAccent =>
       accent.withValues(alpha: NmStateToken.hoverAccentAlpha);
@@ -94,19 +95,7 @@ class NmTheme extends ThemeExtension<NmTheme> {
       text.withValues(alpha: NmStateToken.pressedNeutralAlpha);
 
   @override
-  NmTheme copyWith({
-    NmColorRoles? colors,
-    List<BoxShadow>? shadowSm,
-    List<BoxShadow>? shadowMd,
-    List<BoxShadow>? shadowLg,
-    bool? isDark,
-  }) => NmTheme(
-    colors: colors ?? this.colors,
-    shadowSm: shadowSm ?? this.shadowSm,
-    shadowMd: shadowMd ?? this.shadowMd,
-    shadowLg: shadowLg ?? this.shadowLg,
-    isDark: isDark ?? this.isDark,
-  );
+  NmTheme copyWith({NmPaletteData? palette}) => NmTheme(palette ?? this.palette);
 
   @override
   NmTheme lerp(ThemeExtension<NmTheme>? other, double t) {

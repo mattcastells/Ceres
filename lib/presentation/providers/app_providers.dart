@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/theme/palettes.dart';
 import '../../core/utils/dates.dart';
+import '../../data/local/theme_palette_store.dart';
 import '../../domain/enums/enums.dart';
 import '../../domain/models/activity.dart';
 import '../../domain/models/goal.dart';
@@ -167,7 +169,13 @@ final currentGoalProvider = Provider<Goal?>((ref) {
   return ref.watch(repositoryProvider).currentGoalOrNull;
 });
 
+/// El modo que se pide a `MaterialApp`. Sakura y Neo Tokyo fijan el suyo; con
+/// Ceres manda lo elegido en Apariencia.
 final themeModeProvider = Provider<ThemeMode>((ref) {
+  final fixed = ref.watch(themePaletteProvider).fixedBrightness;
+  if (fixed != null) {
+    return fixed == Brightness.dark ? ThemeMode.dark : ThemeMode.light;
+  }
   final mode = ref.watch(profileProvider).themeMode;
   return switch (mode) {
     ThemeModeSetting.light => ThemeMode.light,
@@ -175,6 +183,32 @@ final themeModeProvider = Provider<ThemeMode>((ref) {
     ThemeModeSetting.system => ThemeMode.system,
   };
 });
+
+/// Dónde se guarda el tema. `bootstrap` lo lee antes de arrancar, para que la
+/// app no abra un instante con Ceres y después cambie.
+final themePaletteStoreProvider = Provider<ThemePaletteStore>(
+  (ref) => ThemePaletteStore(),
+);
+
+/// El valor con el que arranca [themePaletteProvider]; lo fija `bootstrap`.
+final initialThemePaletteProvider = Provider<AppPalette>(
+  (ref) => AppPalette.ceres,
+);
+
+class ThemePaletteController extends Notifier<AppPalette> {
+  @override
+  AppPalette build() => ref.read(initialThemePaletteProvider);
+
+  Future<void> set(AppPalette palette) async {
+    state = palette;
+    await ref.read(themePaletteStoreProvider).save(palette);
+  }
+}
+
+final themePaletteProvider =
+    NotifierProvider<ThemePaletteController, AppPalette>(
+      ThemePaletteController.new,
+    );
 
 final unitSystemProvider = Provider<UnitSystem>(
   (ref) => ref.watch(profileProvider).unitSystem,

@@ -17,6 +17,7 @@ import 'data/local/home_widget_publisher.dart';
 import 'data/local/local_auth_gateway.dart';
 import 'data/local/local_store.dart';
 import 'data/local/pal_alert_store.dart';
+import 'data/local/theme_palette_store.dart';
 import 'data/remote/calorie_target_client.dart';
 import 'data/remote/care_articles_client.dart';
 import 'data/remote/care_client.dart';
@@ -290,8 +291,13 @@ Future<void> bootstrap() async {
       ? CareArticlesClient.fromInstance()
       : null;
 
+  // El tema elegido, antes del primer cuadro: si no, la app abre con Ceres y
+  // cambia a Sakura un instante después.
+  final palette = await ThemePaletteStore().load();
+
   final container = ProviderContainer(
     overrides: <Override>[
+      initialThemePaletteProvider.overrideWithValue(palette),
       if (planClient != null) planClientProvider.overrideWithValue(planClient),
       if (careFeedbackClient != null)
         careFeedbackClientProvider.overrideWithValue(careFeedbackClient),

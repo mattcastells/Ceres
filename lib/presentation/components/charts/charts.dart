@@ -242,7 +242,7 @@ class WeightChart extends StatelessWidget {
             points: points,
             secondary: movingAverage,
             progress: t,
-            lineColor: NmChartColors.weight,
+            lineColor: nm.charts.weight,
             // La media móvil sale del tema y no de un color fijo.
             // `NmChartColors.trend` es #E9E9ED, que es el color de **texto del
             // tema oscuro**: sobre el fondo blanco del tema claro da 1,06:1 de
@@ -314,7 +314,7 @@ class CaloriesChart extends StatelessWidget {
             dates: days.map((d) => d.date).toList(),
             targetLine: days.isEmpty ? null : days.last.target.toDouble(),
             progress: t,
-            barColor: NmChartColors.intake,
+            barColor: nm.charts.intake,
             // Ídem: #CFD3E5 sobre blanco es 1,35:1 y la línea de objetivo se
             // perdía entera en tema claro.
             targetColor: nm.textMuted,
@@ -377,8 +377,8 @@ class ActivityHistoryChart extends StatelessWidget {
             dates: points.map((p) => p.date).toList(),
             overlayLine: points.map((p) => p.calories.toDouble()).toList(),
             progress: t,
-            barColor: NmChartColors.walking,
-            overlayColor: NmChartColors.running,
+            barColor: nm.charts.walking,
+            overlayColor: nm.charts.running,
             gridColor: nm.divider,
             labelStyle: NmTextStyles.from(NmType.micro, color: nm.textMuted),
             unitSuffix: ' min',
@@ -413,7 +413,7 @@ class ActivityCategoryChart extends StatelessWidget {
     }
 
     Color colorFor(int index) =>
-        NmChartColors.categories[index % NmChartColors.categories.length];
+        nm.charts.categories[index % nm.charts.categories.length];
 
     return _ChartAnimation(
       id: id,

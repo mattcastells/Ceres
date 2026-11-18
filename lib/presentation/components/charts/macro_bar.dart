@@ -20,10 +20,11 @@ class MacroBar extends StatelessWidget {
   Widget build(BuildContext context) {
     // Los tres colores salen de la paleta de datos (§1.4), no de los roles
     // semánticos: `caution` está reservado para lo estimado o incierto.
-    const items = <(String, String, Color)>[
-      ('Proteínas', 'protein', NmChartColors.intake),
-      ('Carbohidratos', 'carbs', NmChartColors.running),
-      ('Grasas', 'fat', NmChartColors.sports),
+    final charts = context.nm.charts;
+    final items = <(String, String, Color)>[
+      ('Proteínas', 'protein', charts.intake),
+      ('Carbohidratos', 'carbs', charts.running),
+      ('Grasas', 'fat', charts.sports),
     ];
 
     return Column(

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'nm_theme.dart';
+import 'palettes.dart';
 import 'text_styles.dart';
 import 'tokens.dart';
 
@@ -13,6 +14,11 @@ abstract final class NmAppTheme {
 
   static ThemeData light() => _build(NmTheme.light());
 
+  /// El tema elegido en Apariencia, en su variante clara u oscura. Sakura y
+  /// Neo Tokyo ignoran [dark]: tienen un solo modo.
+  static ThemeData of(AppPalette palette, {required bool dark}) =>
+      _build(NmTheme(palette.data(dark: dark)));
+
   static ThemeData _build(NmTheme nm) {
     final c = nm.colors;
     final brightness = nm.isDark ? Brightness.dark : Brightness.light;
@@ -21,17 +27,17 @@ abstract final class NmAppTheme {
     final scheme = ColorScheme(
       brightness: brightness,
       primary: c.accent,
-      onPrimary: nm.isDark ? NmNeutral.c900 : Colors.white,
+      onPrimary: nm.onAccent,
       primaryContainer: nm.accentFill,
       onPrimaryContainer: nm.accentOnFill,
-      secondary: nm.isDark ? NmAccent2.c400 : NmAccent2.c600,
-      onSecondary: nm.isDark ? NmNeutral.c900 : Colors.white,
+      secondary: nm.isDark ? nm.accent2Ramp.c400 : nm.accent2Ramp.c600,
+      onSecondary: nm.onAccent,
       surface: c.surface,
       onSurface: c.text,
       surfaceContainerHighest: c.surfaceRaised,
       onSurfaceVariant: c.textMuted,
       error: c.danger,
-      onError: nm.isDark ? NmNeutral.c900 : Colors.white,
+      onError: nm.onAccent,
       outline: c.divider,
       outlineVariant: c.divider,
       shadow: const Color(0xFF000000),
@@ -118,7 +124,7 @@ abstract final class NmAppTheme {
           }),
           foregroundColor: WidgetStateProperty.resolveWith((states) {
             if (states.contains(WidgetState.pressed)) {
-              return nm.isDark ? NmAccent.c300 : NmAccent.c700;
+              return nm.isDark ? nm.accentRamp.c300 : nm.accentRamp.c700;
             }
             return nm.isDark ? c.accentText : c.accent;
           }),
@@ -255,9 +261,9 @@ abstract final class NmAppTheme {
       switchTheme: SwitchThemeData(
         thumbColor: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
-            return nm.isDark ? NmAccent.c200 : Colors.white;
+            return nm.isDark ? nm.accentRamp.c200 : Colors.white;
           }
-          return nm.isDark ? NmNeutral.c400 : NmNeutral.c500;
+          return nm.isDark ? nm.neutralRamp.c400 : nm.neutralRamp.c500;
         }),
         trackColor: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) return c.accent;
@@ -282,7 +288,7 @@ abstract final class NmAppTheme {
           return Colors.transparent;
         }),
         checkColor: WidgetStatePropertyAll<Color>(
-          nm.isDark ? NmNeutral.c900 : Colors.white,
+          nm.onAccent,
         ),
         side: BorderSide(color: c.divider, width: 1.5),
         shape: const RoundedRectangleBorder(borderRadius: NmRadius.brSm),
