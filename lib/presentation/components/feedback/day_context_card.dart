@@ -64,17 +64,16 @@ class DayContextCard extends ConsumerWidget {
                   ].join(' · '),
             marcado: enfermo != null,
             onTap: onTapSick,
-            onToggle: (on) => repo.setMarker(
-              date: date,
-              kind: DayMarkerKind.sick,
-              on: on,
-            ),
+            onToggle: (on) =>
+                repo.setMarker(date: date, kind: DayMarkerKind.sick, on: on),
           ),
           const NmDivider(),
           _Fila(
             icon: PhosphorIcons.couch(),
             label: 'Descanso planificado',
-            detail: descanso == null ? null : 'No cuenta como día sin actividad',
+            // Sin subtítulo: al marcarla, la fila crecía un renglón y empujaba
+            // la tarjeta. El checkbox ya dice lo que hay que saber.
+            detail: null,
             marcado: descanso != null,
             onToggle: (on) => repo.setRestDay(date, on),
           ),
@@ -116,7 +115,8 @@ class _Fila extends StatelessWidget {
       button: true,
       // El estado va en la etiqueta y no solo en el color: "marcado" y "no
       // marcado" tienen que llegar igual a un lector de pantalla.
-      label: '$label, ${marcado ? "marcado" : "sin marcar"}'
+      label:
+          '$label, ${marcado ? "marcado" : "sin marcar"}'
           '${hayDetalle ? ". $detail" : ""}',
       excludeSemantics: true,
       child: InkWell(
@@ -168,10 +168,7 @@ class _Fila extends StatelessWidget {
                   ],
                 ),
               ),
-              Checkbox(
-                value: marcado,
-                onChanged: (v) => onToggle(v ?? false),
-              ),
+              Checkbox(value: marcado, onChanged: (v) => onToggle(v ?? false)),
             ],
           ),
         ),

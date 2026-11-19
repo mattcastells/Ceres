@@ -4,8 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
-import '../../../core/theme/nm_theme.dart';
-import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../data/local/photo_normalizer.dart';
 import '../system/buttons.dart';
@@ -23,7 +21,6 @@ class MealPhotoField extends StatefulWidget {
     required this.path,
     required this.onChanged,
     this.emptyLabel = 'Agregar una foto',
-    this.caption = 'La foto se guarda con la comida. No cambia las calorías.',
     super.key,
   });
 
@@ -34,11 +31,6 @@ class MealPhotoField extends StatefulWidget {
 
   /// Qué dice el botón cuando todavía no hay foto.
   final String emptyLabel;
-
-  /// La aclaración de abajo, o `null` para no mostrar ninguna. El texto por
-  /// omisión es cierto acá y **falso** al recalcular, donde la foto sí cambia
-  /// los números: por eso se puede reemplazar.
-  final String? caption;
 
   @override
   State<MealPhotoField> createState() => _MealPhotoFieldState();
@@ -61,7 +53,9 @@ class _MealPhotoFieldState extends State<MealPhotoField> {
       );
       // Salvo cuando no: si la imagen traía alfa, `imageQuality` se ignoró y lo
       // que hay es un PNG sin comprimir de varios MB (`PhotoNormalizer`).
-      final path = file == null ? null : await PhotoNormalizer.toJpeg(file.path);
+      final path = file == null
+          ? null
+          : await PhotoNormalizer.toJpeg(file.path);
       if (!mounted) return;
       setState(() => _busy = false);
       if (path != null) widget.onChanged(path);
@@ -102,7 +96,6 @@ class _MealPhotoFieldState extends State<MealPhotoField> {
 
   @override
   Widget build(BuildContext context) {
-    final nm = context.nm;
     final path = widget.path;
 
     if (path == null || path.isEmpty) {
@@ -146,11 +139,6 @@ class _MealPhotoFieldState extends State<MealPhotoField> {
             ),
           ],
         ),
-        if (widget.caption != null)
-          Text(
-            widget.caption!,
-            style: NmTextStyles.from(NmType.caption, color: nm.textMuted),
-          ),
       ],
     );
   }

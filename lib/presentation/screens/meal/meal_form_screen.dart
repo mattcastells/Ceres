@@ -197,67 +197,16 @@ class _MealFormScreenState extends ConsumerState<MealFormScreen> {
                           ),
                         ),
                         const SizedBox(height: NmSpace.s2),
-                        Wrap(
-                          spacing: NmSpace.s2,
-                          runSpacing: NmSpace.s2,
-                          children: <Widget>[
+                        // Un segmentado y no píldoras: las cuatro en una sola
+                        // fila, siempre. Con chips en un `Wrap`, "Snacks"
+                        // bajaba a un segundo renglón en un teléfono angosto.
+                        NmSegmentedControl<MealSlot>(
+                          options: <(MealSlot, String)>[
                             for (final slot in MealSlot.values)
-                              NmChip(
-                                label: slot.label,
-                                selected: slot == draft.slot,
-                                semanticsInRadioGroup: true,
-                                onTap: () => controller.setSlot(slot),
-                              ),
+                              (slot, slot.label),
                           ],
-                        ),
-                        const SizedBox(height: NmSpace.s6),
-                        Row(
-                          children: <Widget>[
-                            Icon(
-                              PhosphorIcons.clockCounterClockwise(),
-                              size: NmIconSize.md,
-                              color: nm.textMuted,
-                            ),
-                            const SizedBox(width: NmSpace.s2),
-                            // `Expanded` y no un `Text` suelto con `Spacer`:
-                            // así estaba y se desbordaba. La app promete texto
-                            // escalable hasta 200 % y con la fecha larga —un
-                            // día que no es hoy ni ayer— más "Cambiar hora" al
-                            // lado, la fila no daba. Ahora el que cede es el
-                            // texto, con puntos suspensivos.
-                            Expanded(
-                              child: Text(
-                                '${friendlyDay(draft.date)} · '
-                                '${timeOfDay(draft.eatenAt)}',
-                                overflow: TextOverflow.ellipsis,
-                                style: NmTextStyles.from(
-                                  NmType.bodySm,
-                                  color: nm.textMuted,
-                                ).tnum,
-                              ),
-                            ),
-                            NmButton.ghost(
-                              label: 'Cambiar hora',
-                              onPressed: () async {
-                                final picked = await showTimePicker(
-                                  context: context,
-                                  initialTime: TimeOfDay.fromDateTime(
-                                    draft.eatenAt,
-                                  ),
-                                );
-                                if (picked == null) return;
-                                controller.setEatenAt(
-                                  DateTime(
-                                    draft.date.year,
-                                    draft.date.month,
-                                    draft.date.day,
-                                    picked.hour,
-                                    picked.minute,
-                                  ),
-                                );
-                              },
-                            ),
-                          ],
+                          value: draft.slot,
+                          onChanged: controller.setSlot,
                         ),
                         const SizedBox(height: NmSpace.s6),
                         // El título, con el resumen automático de placeholder.
@@ -291,7 +240,8 @@ class _MealFormScreenState extends ConsumerState<MealFormScreen> {
                             compact: true,
                             icon: PhosphorIcons.magnifyingGlass(),
                             title: 'Agregá el primer alimento',
-                            body: 'Escribilo abajo, buscalo en el catálogo o '
+                            body:
+                                'Escribilo abajo, buscalo en el catálogo o '
                                 'sacale una foto.',
                           )
                         else
@@ -369,9 +319,8 @@ class _MealFormScreenState extends ConsumerState<MealFormScreen> {
                                   // El slot y el día los manda el borrador, no
                                   // la hora: se limpia el objetivo por si quedó
                                   // uno de otra entrada.
-                                  ref
-                                      .read(photoTargetProvider.notifier)
-                                      .state = null;
+                                  ref.read(photoTargetProvider.notifier).state =
+                                      null;
                                   context.push(Routes.photoCapture);
                                 }
                               : null,
@@ -418,6 +367,19 @@ class _MealFormScreenState extends ConsumerState<MealFormScreen> {
                             onChanged: controller.setPhoto,
                           ),
                         ],
+                        // La hora va al final, debajo de la foto: arriba,
+                        // entre el momento del día y el título, cortaba el
+                        // formulario en dos.
+                        SizedBox(
+                          height: widget.mealId != null
+                              ? NmSpace.s4
+                              : NmSpace.s6,
+                        ),
+                        _EatenAtRow(
+                          date: draft.date,
+                          eatenAt: draft.eatenAt,
+                          onChanged: controller.setEatenAt,
+                        ),
                       ],
                     ),
                   ),
@@ -465,6 +427,64 @@ class _MealFormScreenState extends ConsumerState<MealFormScreen> {
         if (!didPop) _discard();
       },
       child: form,
+    );
+  }
+}
+
+/// El día y la hora de la comida, con "Cambiar hora" al lado.
+class _EatenAtRow extends StatelessWidget {
+  const _EatenAtRow({
+    required this.date,
+    required this.eatenAt,
+    required this.onChanged,
+  });
+
+  final DateTime date;
+  final DateTime eatenAt;
+  final ValueChanged<DateTime> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final nm = context.nm;
+    return Row(
+      children: <Widget>[
+        Icon(
+          PhosphorIcons.clockCounterClockwise(),
+          size: NmIconSize.md,
+          color: nm.textMuted,
+        ),
+        const SizedBox(width: NmSpace.s2),
+        // `Expanded` y no un `Text` suelto con `Spacer`: así estaba y se
+        // desbordaba. La app promete texto escalable hasta 200 % y con la fecha
+        // larga —un día que no es hoy ni ayer— más "Cambiar hora" al lado, la
+        // fila no daba. Ahora el que cede es el texto, con puntos suspensivos.
+        Expanded(
+          child: Text(
+            '${friendlyDay(date)} · ${timeOfDay(eatenAt)}',
+            overflow: TextOverflow.ellipsis,
+            style: NmTextStyles.from(NmType.bodySm, color: nm.textMuted).tnum,
+          ),
+        ),
+        NmButton.ghost(
+          label: 'Cambiar hora',
+          onPressed: () async {
+            final picked = await showTimePicker(
+              context: context,
+              initialTime: TimeOfDay.fromDateTime(eatenAt),
+            );
+            if (picked == null) return;
+            onChanged(
+              DateTime(
+                date.year,
+                date.month,
+                date.day,
+                picked.hour,
+                picked.minute,
+              ),
+            );
+          },
+        ),
+      ],
     );
   }
 }

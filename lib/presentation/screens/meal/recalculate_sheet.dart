@@ -95,9 +95,9 @@ class _RecalculateSheetState extends ConsumerState<RecalculateSheet> {
     if (ruta == null) return;
     _subida = null;
     unawaited(
-      _photos?.delete(bucket: PhotoBucket.meal, path: ruta).catchError(
-            (Object _) {},
-          ) ??
+      _photos
+              ?.delete(bucket: PhotoBucket.meal, path: ruta)
+              .catchError((Object _) {}) ??
           Future<void>.value(),
     );
   }
@@ -158,7 +158,8 @@ class _RecalculateSheetState extends ConsumerState<RecalculateSheet> {
         _fallo(
           const AppError(
             code: ApiErrorCode.aiNoFood,
-            message: 'El recálculo no devolvió ningún ítem. La comida quedó '
+            message:
+                'El recálculo no devolvió ningún ítem. La comida quedó '
                 'como estaba.',
           ),
         );
@@ -234,9 +235,7 @@ class _RecalculateSheetState extends ConsumerState<RecalculateSheet> {
           loading: _busy,
           // Sin tope local: el límite diario lo hace cumplir el servidor y su
           // error se muestra abajo.
-          onPressed: draft == null || draft.isEmpty
-              ? null
-              : _recalculate,
+          onPressed: draft == null || draft.isEmpty ? null : _recalculate,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -244,7 +243,6 @@ class _RecalculateSheetState extends ConsumerState<RecalculateSheet> {
             MealPhotoField(
               path: photoPath,
               emptyLabel: 'Usar una foto',
-              caption: null,
               onChanged: (path) =>
                   ref.read(mealDraftProvider.notifier).setPhoto(path),
             ),
@@ -280,7 +278,6 @@ class _RecalculateSheetState extends ConsumerState<RecalculateSheet> {
               const SizedBox(height: NmSpace.s5),
               ErrorState(message: _error!.message, code: _error!.code.wire),
             ],
-
           ],
         ),
       ),
