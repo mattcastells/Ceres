@@ -1,12 +1,12 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:phosphor_flutter/phosphor_flutter.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../../core/error/app_error.dart';
 import '../../../core/theme/nm_theme.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/utils/dates.dart';
+import '../../../core/utils/phosphor_icons.dart';
 import '../../../data/remote/cloud_backup_client.dart';
 import '../../../domain/services/cloud_backup_service.dart';
 import '../../../domain/services/relational_sync_service.dart';
@@ -230,7 +230,7 @@ class _CloudBackupScreenState extends ConsumerState<CloudBackupScreen> {
   @override
   Widget build(BuildContext context) {
     final nm = context.nm;
-    final state = ref.watch(backupStateProvider).valueOrNull;
+    final state = ref.watch(backupStateProvider).value;
 
     if (state is BackupUnavailable) {
       return NmScreen(
@@ -312,7 +312,7 @@ class _CloudBackupScreenState extends ConsumerState<CloudBackupScreen> {
           // una herramienta para auditar a mano: es que un fallo **se vea**.
           // Cuatro restricciones desactualizadas rechazaron cada fila durante
           // meses y la app no lo dijo en ningún lado.
-          _SyncStatus(state: ref.watch(syncStateProvider).valueOrNull),
+          _SyncStatus(state: ref.watch(syncStateProvider).value),
 
           const SizedBox(height: NmSpace.s6),
           NmButton.secondary(

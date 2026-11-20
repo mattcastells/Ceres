@@ -1,5 +1,5 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../../core/theme/nm_theme.dart';
 import '../../../core/theme/text_styles.dart';
@@ -39,7 +39,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
   }
 
   Future<void> _toggle(Reminder reminder, {required bool on}) async {
-    if (on && !(ref.read(notificationPermissionProvider).valueOrNull ?? false)) {
+    if (on && !(ref.read(notificationPermissionProvider).value ?? false)) {
       final granted =
           await ref.read(reminderSchedulerProvider)?.requestPermission() ??
           false;
@@ -63,7 +63,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
   @override
   Widget build(BuildContext context) {
     final scheduler = ref.watch(reminderSchedulerProvider);
-    final granted = ref.watch(notificationPermissionProvider).valueOrNull;
+    final granted = ref.watch(notificationPermissionProvider).value;
     final repo = ref.watch(repositoryProvider);
 
     if (scheduler == null) {

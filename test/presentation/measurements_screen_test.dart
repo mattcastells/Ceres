@@ -14,10 +14,10 @@ import 'package:ceres/domain/repositories/repositories.dart';
 import 'package:ceres/presentation/components/system/inputs.dart';
 import 'package:ceres/presentation/providers/app_providers.dart';
 import 'package:ceres/presentation/screens/progress/progress_detail_screens.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 Future<(ProviderContainer, CeresRepositories)> _boot() async {
@@ -26,7 +26,7 @@ Future<(ProviderContainer, CeresRepositories)> _boot() async {
   void Function() notify = () {};
   final repository = LocalRepository(store, onChanged: () => notify());
   final container = ProviderContainer(
-    overrides: <Override>[repositoryProvider.overrideWithValue(repository)],
+    overrides: [repositoryProvider.overrideWithValue(repository)],
   );
   notify = () => container.read(appRevisionProvider.notifier).bump();
   return (container, repository);

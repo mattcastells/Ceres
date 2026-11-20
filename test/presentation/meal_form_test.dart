@@ -15,11 +15,11 @@ import 'package:ceres/presentation/components/food/food_widgets.dart';
 import 'package:ceres/presentation/providers/app_providers.dart';
 import 'package:ceres/presentation/screens/meal/meal_draft.dart';
 import 'package:ceres/presentation/screens/meal/meal_form_screen.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 Future<ProviderContainer> _boot() async {
@@ -28,7 +28,7 @@ Future<ProviderContainer> _boot() async {
   void Function() notify = () {};
   final repository = LocalRepository(store, onChanged: () => notify());
   final container = ProviderContainer(
-    overrides: <Override>[repositoryProvider.overrideWithValue(repository)],
+    overrides: [repositoryProvider.overrideWithValue(repository)],
   );
   notify = () => container.read(appRevisionProvider.notifier).bump();
   return container;

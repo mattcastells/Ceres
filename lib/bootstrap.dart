@@ -2,10 +2,10 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart' show TargetPlatform, defaultTargetPlatform;
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'app.dart';
@@ -297,7 +297,11 @@ Future<void> bootstrap() async {
   final palette = await ThemePaletteStore().load();
 
   final container = ProviderContainer(
-    overrides: <Override>[
+    // Riverpod 3 reintenta solo un provider que falla. Acá un fallo se cuenta
+    // apenas ocurre: reintentarlo en silencio lo deja como "cargando", que no
+    // se distingue de estar por terminar.
+    retry: (retryCount, error) => null,
+    overrides: [
       initialThemePaletteProvider.overrideWithValue(palette),
       if (careFeedbackClient != null)
         careFeedbackClientProvider.overrideWithValue(careFeedbackClient),

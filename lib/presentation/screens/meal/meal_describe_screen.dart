@@ -1,13 +1,13 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:phosphor_flutter/phosphor_flutter.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../../core/error/app_error.dart';
 import '../../../core/router/routes.dart';
 import '../../../core/theme/nm_theme.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
+import '../../../core/utils/phosphor_icons.dart';
 import '../../components/feedback/feedback.dart';
 import '../../components/system/buttons.dart';
 import '../../components/system/dictation.dart';
@@ -76,8 +76,8 @@ class _MealDescribeScreenState extends ConsumerState<MealDescribeScreen> {
 
       // La foto queda explícitamente en null: esta estimación no tiene imagen
       // y la revisión no debe mostrar la de un análisis anterior.
-      ref.read(photoPathProvider.notifier).state = null;
-      ref.read(analysisProvider.notifier).state = analysis;
+      ref.read(photoPathProvider.notifier).set(null);
+      ref.read(analysisProvider.notifier).set(analysis);
       context.pushReplacement(Routes.photoReview);
     } on AppError catch (error) {
       if (!mounted) return;

@@ -1,7 +1,6 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:phosphor_flutter/phosphor_flutter.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../../core/router/routes.dart';
 import '../../../core/theme/nm_theme.dart';
@@ -9,6 +8,7 @@ import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/utils/dates.dart';
 import '../../../core/utils/formats.dart';
+import '../../../core/utils/phosphor_icons.dart';
 import '../../../domain/models/summaries.dart';
 import '../../components/feedback/feedback.dart';
 import '../../components/system/buttons.dart';
@@ -23,7 +23,7 @@ import '../../providers/app_providers.dart';
 /// **Viven en memoria**: se pierden al cerrar la app. El comentario anterior
 /// decía que se persistían en preferencias, y la plomería está —`LocalStore`
 /// tiene un `historyFilters` en el documento— pero nadie la escribe:
-/// `historyFiltersProvider` es un `StateProvider` y nada más. Queda así a
+/// `historyFiltersProvider` es un `Settable` y nada más. Queda así a
 /// propósito hasta que alguien lo pida; lo que no puede quedar es el comentario
 /// prometiendo lo contrario.
 class HistoryFilters {
@@ -60,9 +60,10 @@ enum HistoryShow {
   final String label;
 }
 
-final historyFiltersProvider = StateProvider<HistoryFilters>(
-  (ref) => const HistoryFilters(),
-);
+final historyFiltersProvider =
+    NotifierProvider<Settable<HistoryFilters>, HistoryFilters>(
+      () => Settable(const HistoryFilters()),
+    );
 
 /// S-21 · Historial. Lista de días agrupada por mes.
 class HistoryScreen extends ConsumerWidget {
@@ -152,7 +153,7 @@ class HistoryScreen extends ConsumerWidget {
                     primaryLabel: filters.isDefault ? null : 'Quitar filtros',
                     onPrimary: () => ref
                         .read(historyFiltersProvider.notifier)
-                        .state = const HistoryFilters(),
+                        .set(const HistoryFilters()),
                   )
                 : ListView.builder(
                     padding: const EdgeInsets.only(bottom: NmSpace.s12),
@@ -235,7 +236,7 @@ class HistoryScreen extends ConsumerWidget {
                 NmButton.ghost(
                   label: 'Limpiar',
                   onPressed: () =>
-                      controller.state = const HistoryFilters(),
+                      controller.set(const HistoryFilters()),
                 ),
                 const Spacer(),
                 NmButton(
@@ -257,7 +258,7 @@ class HistoryScreen extends ConsumerWidget {
                       selected: filters.show == option,
                       semanticsInRadioGroup: true,
                       onTap: () =>
-                          controller.state = filters.copyWith(show: option),
+                          controller.set(filters.copyWith(show: option)),
                     ),
                   ),
                 const SizedBox(height: NmSpace.s6),
@@ -270,9 +271,9 @@ class HistoryScreen extends ConsumerWidget {
                         label: range == 366 ? '1 año' : '$range días',
                         selected: filters.rangeDays == range,
                         semanticsInRadioGroup: true,
-                        onTap: () => controller.state = filters.copyWith(
+                        onTap: () => controller.set(filters.copyWith(
                           rangeDays: range,
-                        ),
+                        )),
                       ),
                   ],
                 ),
@@ -280,9 +281,9 @@ class HistoryScreen extends ConsumerWidget {
                 NmSwitchRow(
                   title: 'Solo días fuera del objetivo',
                   value: filters.onlyOutsideTarget,
-                  onChanged: (v) => controller.state = filters.copyWith(
+                  onChanged: (v) => controller.set(filters.copyWith(
                     onlyOutsideTarget: v,
-                  ),
+                  )),
                 ),
               ],
             ),

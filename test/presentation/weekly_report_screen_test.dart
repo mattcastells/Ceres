@@ -11,10 +11,10 @@ import 'package:ceres/domain/models/weekly_report.dart';
 import 'package:ceres/presentation/providers/auth_providers.dart';
 import 'package:ceres/presentation/providers/care_providers.dart';
 import 'package:ceres/presentation/screens/progress/weekly_report_screen.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:material_ui/material_ui.dart';
 
 final WeeklyReport _report = WeeklyReport(
   id: 'r1',
@@ -57,7 +57,7 @@ class _FakeReportClient implements CareReportClient {
 
 Future<ProviderContainer> _boot(CareReportClient client) async {
   final container = ProviderContainer(
-    overrides: <Override>[
+    overrides: [
       isCloudEnabledProvider.overrideWithValue(true),
       careReportClientProvider.overrideWithValue(client),
     ],

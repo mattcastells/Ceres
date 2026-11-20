@@ -1,9 +1,8 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:phosphor_flutter/phosphor_flutter.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/error/app_error.dart';
@@ -12,6 +11,7 @@ import '../../../core/theme/nm_theme.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/utils/dates.dart';
+import '../../../core/utils/phosphor_icons.dart';
 import '../../../domain/models/care_article.dart';
 import '../../../domain/services/article_text.dart';
 import '../../components/care/article_body.dart';
@@ -70,7 +70,7 @@ class _CareArticlesScreenState extends ConsumerState<CareArticlesScreen> {
     }
 
     final async = ref.watch(careArticlesProvider);
-    final seen = ref.watch(articleSeenProvider).valueOrNull;
+    final seen = ref.watch(articleSeenProvider).value;
 
     return NmScreen(
       title: 'Artículos y recetas',
@@ -217,7 +217,7 @@ class _CareArticleScreenState extends ConsumerState<CareArticleScreen> {
       _,
       next,
     ) {
-      final found = next.valueOrNull?.any((a) => a.id == widget.articleId);
+      final found = next.value?.any((a) => a.id == widget.articleId);
       if (found != true) return;
       scheduleMicrotask(() {
         if (mounted) {

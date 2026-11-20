@@ -11,10 +11,10 @@ import 'package:ceres/domain/enums/enums.dart';
 import 'package:ceres/domain/models/pal.dart';
 import 'package:ceres/domain/models/sleep.dart';
 import 'package:ceres/presentation/screens/pals/pal_day_screen.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:material_ui/material_ui.dart';
 
 const String _userId = 'pal-1';
 
@@ -40,7 +40,7 @@ PalDay _day({
 );
 
 Widget _wrap(PalDay day) => ProviderScope(
-  overrides: <Override>[
+  overrides: [
     palDayProvider((
       userId: _userId,
       date: today(),
@@ -171,7 +171,7 @@ void main() {
     // Lo que devuelve cambia entre una consulta y la siguiente, como cambia lo
     // que esa persona tiene cargado.
     final container = ProviderContainer(
-      overrides: <Override>[
+      overrides: [
         palDayProvider((userId: _userId, date: today())).overrideWith(
           (ref) async {
             consultas++;
@@ -215,7 +215,7 @@ void main() {
   ) async {
     var consultas = 0;
     final container = ProviderContainer(
-      overrides: <Override>[
+      overrides: [
         palDayProvider((userId: _userId, date: today())).overrideWith(
           (ref) async {
             consultas++;

@@ -1,5 +1,5 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../../core/error/app_error.dart';
 import '../../../core/theme/tokens.dart';
@@ -86,7 +86,7 @@ class _SharingFormState extends ConsumerState<_SharingForm> {
 
   @override
   Widget build(BuildContext context) {
-    final alerts = ref.watch(palAlertPrefsProvider).valueOrNull;
+    final alerts = ref.watch(palAlertPrefsProvider).value;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

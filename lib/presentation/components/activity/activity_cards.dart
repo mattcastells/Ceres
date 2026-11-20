@@ -1,6 +1,5 @@
-import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart' show CustomSemanticsAction;
-import 'package:phosphor_flutter/phosphor_flutter.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../../core/theme/motion.dart';
 import '../../../core/theme/nm_theme.dart';
@@ -9,6 +8,7 @@ import '../../../core/theme/tokens.dart';
 import '../../../core/utils/dates.dart';
 import '../../../core/utils/formats.dart';
 import '../../../core/utils/icons.dart';
+import '../../../core/utils/phosphor_icons.dart';
 import '../../../domain/calculations/adherence.dart';
 import '../../../domain/enums/enums.dart';
 import '../../../domain/models/activity.dart';
@@ -60,15 +60,11 @@ class ActivityListItem extends StatelessWidget {
           'aproximadamente ${Fmt.integer(activity.estimatedCalories)} calorías '
           'estimadas',
       customSemanticsActions: <CustomSemanticsAction, VoidCallback>{
-        if (onEdit != null)
-          const CustomSemanticsAction(label: 'Editar'): onEdit!,
-        if (onDuplicate != null)
-          const CustomSemanticsAction(label: 'Duplicar'): onDuplicate!,
-        if (onDelete != null)
-          const CustomSemanticsAction(label: 'Eliminar'): onDelete!,
-        if (onToggleFavorite != null)
-          const CustomSemanticsAction(label: 'Marcar como favorita'):
-              onToggleFavorite!,
+        const CustomSemanticsAction(label: 'Editar'): ?onEdit,
+        const CustomSemanticsAction(label: 'Duplicar'): ?onDuplicate,
+        const CustomSemanticsAction(label: 'Eliminar'): ?onDelete,
+        const CustomSemanticsAction(label: 'Marcar como favorita'):
+              ?onToggleFavorite,
       },
       child: ExcludeSemantics(
         child: InkWell(

@@ -1,14 +1,14 @@
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:phosphor_flutter/phosphor_flutter.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../../core/error/app_error.dart';
 import '../../../core/router/routes.dart';
 import '../../../core/theme/nm_theme.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
+import '../../../core/utils/phosphor_icons.dart';
 import '../../../data/remote/pals_client.dart';
 import '../../../domain/models/pal.dart';
 import '../../components/feedback/feedback.dart';
@@ -194,7 +194,7 @@ class _PalsScreenState extends ConsumerState<PalsScreen> {
                 NmButton.ghost(
                   label: 'Copiar',
                   onPressed: () {
-                    final code = myCode.valueOrNull;
+                    final code = myCode.value;
                     if (code == null) return;
                     Clipboard.setData(ClipboardData(text: code));
                     NmSnackbar.show(context, 'Código copiado');

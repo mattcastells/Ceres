@@ -1,5 +1,5 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../core/theme/palettes.dart';
 import '../../core/utils/dates.dart';
@@ -96,6 +96,19 @@ final selectedDateProvider = NotifierProvider<SelectedDate, DateTime>(
   SelectedDate.new,
 );
 
+/// Un valor que la UI reemplaza entero. Es lo que hacía `StateProvider`, que
+/// Riverpod 3 dejó en `legacy`.
+class Settable<T> extends Notifier<T> {
+  Settable(this._initial);
+
+  final T _initial;
+
+  @override
+  T build() => _initial;
+
+  void set(T value) => state = value;
+}
+
 /// El día de hoy, como estado: cambia cuando pasa la medianoche y la app
 /// vuelve a primer plano.
 ///
@@ -153,9 +166,10 @@ enum ProgressRange {
   };
 }
 
-final progressRangeProvider = StateProvider<ProgressRange>(
-  (ref) => ProgressRange.d30,
-);
+final progressRangeProvider =
+    NotifierProvider<Settable<ProgressRange>, ProgressRange>(
+      () => Settable(ProgressRange.d30),
+    );
 
 // ── Lecturas derivadas ───────────────────────────────────────────────────
 

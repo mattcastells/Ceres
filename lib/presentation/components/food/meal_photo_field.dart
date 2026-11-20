@@ -1,10 +1,10 @@
 import 'dart:io';
 
-import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:phosphor_flutter/phosphor_flutter.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../../core/theme/tokens.dart';
+import '../../../core/utils/phosphor_icons.dart';
 import '../../../data/local/photo_normalizer.dart';
 import '../system/buttons.dart';
 import '../system/overlays.dart';

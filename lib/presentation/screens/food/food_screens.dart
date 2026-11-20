@@ -1,10 +1,9 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
-import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../core/error/app_error.dart';
@@ -13,6 +12,7 @@ import '../../../core/theme/nm_theme.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/utils/formats.dart';
+import '../../../core/utils/phosphor_icons.dart';
 import '../../../domain/calculations/macros.dart';
 import '../../../domain/enums/enums.dart';
 import '../../../domain/models/food.dart';

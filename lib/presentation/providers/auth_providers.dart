@@ -122,7 +122,7 @@ final incomingPalRequestsProvider = Provider.autoDispose<int>(
   (ref) =>
       ref
           .watch(palsProvider)
-          .valueOrNull
+          .value
           ?.where((p) => p.status == PalStatus.pending && p.isIncoming)
           .length ??
       0,

@@ -26,11 +26,11 @@ import 'package:ceres/domain/models/ai_calorie_target.dart';
 import 'package:ceres/presentation/providers/app_providers.dart';
 import 'package:ceres/presentation/providers/auth_providers.dart';
 import 'package:ceres/presentation/screens/auth/onboarding_screen.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Un cliente de propuestas que no sale a la red.
@@ -88,7 +88,7 @@ Future<(ProviderContainer, LocalRepository)> _boot({
     await repo.updateProfile(repo.profile.copyWith(birthDate: birthDate));
   }
   final container = ProviderContainer(
-    overrides: <Override>[
+    overrides: [
       repositoryProvider.overrideWithValue(repo),
       authGatewayProvider.overrideWithValue(LocalAuthGateway()),
     ],

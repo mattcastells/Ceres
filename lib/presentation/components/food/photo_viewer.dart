@@ -1,14 +1,14 @@
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:material_ui/material_ui.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../../core/error/app_error.dart';
 import '../../../core/theme/tokens.dart';
+import '../../../core/utils/phosphor_icons.dart';
 import '../../../data/local/gallery_saver.dart';
 import '../system/overlays.dart';
 

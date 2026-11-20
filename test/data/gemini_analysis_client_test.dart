@@ -31,6 +31,7 @@ class _Falla extends FunctionsClient {
   @override
   Future<FunctionResponse> invoke(
     String functionName, {
+    Future<void>? abortSignal,
     Map<String, String>? headers,
     Object? body,
     Iterable<http.MultipartFile>? files,
@@ -54,7 +55,7 @@ FunctionException _respuesta(
       'error': <String, dynamic>{
         'code': code,
         'message': message,
-        if (retryAfter != null) 'retryAfter': retryAfter,
+        'retryAfter': ?retryAfter,
       },
     },
   );

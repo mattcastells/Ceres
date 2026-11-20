@@ -1,8 +1,8 @@
 import 'package:flutter/widgets.dart';
-import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../../domain/calculations/alcohol.dart';
 import '../../domain/enums/enums.dart';
+import 'phosphor_icons.dart';
 
 /// Iconografía Phosphor, peso `regular`; `fill` solo para el estado activo del
 /// tab bar (06-design-tokens.md §4).

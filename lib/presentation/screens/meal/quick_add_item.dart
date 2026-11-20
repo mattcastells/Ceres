@@ -1,12 +1,12 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:phosphor_flutter/phosphor_flutter.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../core/config/feature_flags.dart';
 import '../../../core/config/supabase_config.dart';
 import '../../../core/error/app_error.dart';
 import '../../../core/theme/tokens.dart';
+import '../../../core/utils/phosphor_icons.dart';
 import '../../../domain/models/meal.dart';
 import '../../components/feedback/feedback.dart';
 import '../../components/system/buttons.dart';

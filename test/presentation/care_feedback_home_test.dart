@@ -15,10 +15,10 @@ import 'package:ceres/presentation/providers/auth_providers.dart';
 import 'package:ceres/presentation/providers/care_providers.dart';
 import 'package:ceres/presentation/screens/home/home_screen.dart';
 import 'package:ceres/presentation/screens/profile/care_feedback_screen.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Inicio no muestra nada de la nutricionista con `NM_NUTRITIONIST` apagado.
@@ -76,7 +76,7 @@ Future<ProviderContainer> _boot(
     void Function() notify = () {};
     final repository = LocalRepository(store, onChanged: () => notify());
     container = ProviderContainer(
-      overrides: <Override>[
+      overrides: [
         repositoryProvider.overrideWithValue(repository),
         isCloudEnabledProvider.overrideWithValue(true),
         careFeedbackClientProvider.overrideWithValue(client),
@@ -160,7 +160,7 @@ void main() {
         final store = await LocalStore.open();
         store.seed();
         container = ProviderContainer(
-          overrides: <Override>[
+          overrides: [
             repositoryProvider.overrideWithValue(
               LocalRepository(store, onChanged: () {}),
             ),
@@ -198,6 +198,6 @@ void main() {
     expect(client.marked.toSet(), <String>{'a', 'c'});
     // Leídas en el servidor, pero durante esta visita siguen marcadas.
     expect(find.text('Nueva'), findsNWidgets(2));
-    expect(container.read(careFeedbackProvider).valueOrNull?.unreadCount, 0);
+    expect(container.read(careFeedbackProvider).value?.unreadCount, 0);
   });
 }

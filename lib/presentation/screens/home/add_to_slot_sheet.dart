@@ -1,7 +1,6 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:phosphor_flutter/phosphor_flutter.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../../core/config/feature_flags.dart';
 import '../../../core/config/supabase_config.dart';
@@ -11,6 +10,7 @@ import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/utils/dates.dart';
 import '../../../core/utils/formats.dart';
+import '../../../core/utils/phosphor_icons.dart';
 import '../../../domain/enums/enums.dart';
 import '../../../domain/models/meal.dart';
 import '../../components/system/overlays.dart';
@@ -98,10 +98,10 @@ class _AddToSlotSheet extends ConsumerWidget {
             enabled: FeatureFlags.aiPhotoAnalysis && SupabaseConfig.isConfigured,
             disabledNote: 'La estimación con IA necesita servidor configurado',
             onTap: () {
-              ref.read(photoTargetProvider.notifier).state = PhotoTarget(
+              ref.read(photoTargetProvider.notifier).set(PhotoTarget(
                 slot: slot,
                 date: date,
-              );
+              ));
               go(Routes.mealDescribe);
             },
           ),
@@ -115,10 +115,10 @@ class _AddToSlotSheet extends ConsumerWidget {
             enabled: FeatureFlags.aiPhotoAnalysis && SupabaseConfig.isConfigured,
             disabledNote: 'El análisis con IA necesita servidor configurado',
             onTap: () {
-              ref.read(photoTargetProvider.notifier).state = PhotoTarget(
+              ref.read(photoTargetProvider.notifier).set(PhotoTarget(
                 slot: slot,
                 date: date,
-              );
+              ));
               go(Routes.photoCapture);
             },
           ),

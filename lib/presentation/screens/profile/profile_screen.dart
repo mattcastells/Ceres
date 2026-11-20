@@ -1,8 +1,7 @@
 import 'package:collection/collection.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:phosphor_flutter/phosphor_flutter.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../../core/config/feature_flags.dart';
 import '../../../core/error/app_error.dart';
@@ -11,6 +10,7 @@ import '../../../core/theme/nm_theme.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/utils/formats.dart';
+import '../../../core/utils/phosphor_icons.dart';
 import '../../../domain/calculations/goal_presets.dart';
 import '../../../domain/enums/enums.dart';
 import '../../../domain/models/user_profile.dart';
@@ -42,10 +42,10 @@ class ProfileScreen extends ConsumerWidget {
     // Lo de la nutricionista solo se consulta con su flag prendido.
     const care = FeatureFlags.nutritionist;
     final unreadFeedback = care
-        ? ref.watch(careFeedbackProvider).valueOrNull?.unreadCount ?? 0
+        ? ref.watch(careFeedbackProvider).value?.unreadCount ?? 0
         : 0;
     final pendingInvites = care
-        ? ref.watch(careInvitesProvider).valueOrNull?.length ?? 0
+        ? ref.watch(careInvitesProvider).value?.length ?? 0
         : 0;
 
     final preset = goal == null ? null : GoalPreset.of(goal.goalType);

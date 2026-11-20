@@ -1,9 +1,9 @@
-import 'package:flutter/material.dart';
-import 'package:phosphor_flutter/phosphor_flutter.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../../core/theme/nm_theme.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
+import '../../../core/utils/phosphor_icons.dart';
 
 /// Andamiaje de pantalla con los márgenes del sistema (16 px en móvil, 24 px
 /// ≥ 600 px) y el ancho de contenido limitado a 720 px (§3 y §6).
@@ -73,7 +73,7 @@ class NmScreen extends StatelessWidget {
         top: title == null,
         child: Column(
           children: <Widget>[
-            if (banner != null) banner!,
+            ?banner,
             Expanded(child: content),
           ],
         ),

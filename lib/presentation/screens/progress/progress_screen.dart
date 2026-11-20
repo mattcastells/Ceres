@@ -1,7 +1,6 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:phosphor_flutter/phosphor_flutter.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../../core/config/feature_flags.dart';
 import '../../../core/router/routes.dart';
@@ -9,6 +8,7 @@ import '../../../core/theme/nm_theme.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/utils/formats.dart';
+import '../../../core/utils/phosphor_icons.dart';
 import '../../../domain/services/summary_builder.dart';
 import '../../components/activity/activity_cards.dart';
 import '../../components/charts/charts.dart';
@@ -51,7 +51,7 @@ class ProgressScreen extends ConsumerWidget {
             ],
             value: range,
             onChanged: (option) =>
-                ref.read(progressRangeProvider.notifier).state = option,
+                ref.read(progressRangeProvider.notifier).set(option),
           ),
           const SizedBox(height: NmSpace.s6),
 

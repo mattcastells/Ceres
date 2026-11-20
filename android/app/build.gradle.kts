@@ -20,21 +20,20 @@ val hasReleaseSigning = keystoreProperties.getProperty("storeFile") != null &&
 
 android {
     namespace = "io.ceres.ceres"
-    compileSdk = flutter.compileSdkVersion
+    // Flutter 3.50 compila contra 36, pero `flutter_local_notifications` 23 y
+    // `core-ktx` 1.19 piden 37. Solo cambia contra qué API se compila: el
+    // comportamiento en el teléfono lo fija `targetSdk`.
+    compileSdk = 37
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
         // `flutter_local_notifications` usa java.time, que no existe antes de
         // API 26. El desugaring lo traduce; se deja prendido aunque el `minSdk`
         // ya sea 26 porque otras dependencias pueden traer APIs más nuevas, y
         // apagarlo solo se nota cuando una explota en un teléfono viejo.
         isCoreLibraryDesugaringEnabled = true
-    }
-
-    kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_11.toString()
     }
 
     defaultConfig {
@@ -83,6 +82,12 @@ android {
     }
 }
 
+kotlin {
+    compilerOptions {
+        jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
+    }
+}
+
 flutter {
     source = "../.."
 }
@@ -110,7 +115,7 @@ dependencies {
     // `FileProvider`, para entregarle el APK de la actualización al instalador
     // de paquetes como `content://`. Va explícita y no de arrastre: lo que
     // llega transitivamente de un AAR no queda en el classpath de compilación.
-    implementation("androidx.core:core-ktx:1.13.1")
+    implementation("androidx.core:core-ktx:1.19.1")
     // Health Connect: el almacén de datos de salud del teléfono. Samsung Health
     // y el Zepp app escriben ahí, así que con esta sola integración llegan los
     // datos de los relojes Samsung y de los Amazfit — Zepp no tiene API pública
@@ -125,5 +130,5 @@ dependencies {
     implementation("androidx.health.connect:connect-client:1.1.0")
     // Corrutinas: `connect-client` es `suspend` de punta a punta. Va explícita
     // porque lo que llega transitivamente de un AAR no queda en el classpath.
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
 }

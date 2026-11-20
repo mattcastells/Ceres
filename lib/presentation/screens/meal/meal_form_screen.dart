@@ -1,13 +1,13 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:phosphor_flutter/phosphor_flutter.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../../core/router/routes.dart';
 import '../../../core/theme/nm_theme.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/utils/dates.dart';
+import '../../../core/utils/phosphor_icons.dart';
 import '../../../domain/calculations/meal_title.dart';
 import '../../../domain/enums/enums.dart';
 import '../../components/feedback/feedback.dart';
@@ -319,8 +319,9 @@ class _MealFormScreenState extends ConsumerState<MealFormScreen> {
                                   // El slot y el día los manda el borrador, no
                                   // la hora: se limpia el objetivo por si quedó
                                   // uno de otra entrada.
-                                  ref.read(photoTargetProvider.notifier).state =
-                                      null;
+                                  ref
+                                      .read(photoTargetProvider.notifier)
+                                      .set(null);
                                   context.push(Routes.photoCapture);
                                 }
                               : null,

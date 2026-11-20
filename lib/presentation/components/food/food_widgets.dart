@@ -1,6 +1,5 @@
-import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart' show CustomSemanticsAction;
-import 'package:phosphor_flutter/phosphor_flutter.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../../core/theme/nm_theme.dart';
 import '../../../core/theme/text_styles.dart';
@@ -8,6 +7,7 @@ import '../../../core/theme/tokens.dart';
 import '../../../core/utils/dates.dart';
 import '../../../core/utils/formats.dart';
 import '../../../core/utils/icons.dart';
+import '../../../core/utils/phosphor_icons.dart';
 import '../../../domain/enums/enums.dart';
 import '../../../domain/models/food.dart';
 import '../../../domain/models/meal.dart';
@@ -155,10 +155,8 @@ class MealListItem extends StatelessWidget {
           '${meal.title}, $itemsLabel, ${Fmt.integer(meal.totalKcal)} '
           'kilocalorías',
       customSemanticsActions: <CustomSemanticsAction, VoidCallback>{
-        if (onDuplicate != null)
-          const CustomSemanticsAction(label: 'Duplicar'): onDuplicate!,
-        if (onDelete != null)
-          const CustomSemanticsAction(label: 'Eliminar'): onDelete!,
+        const CustomSemanticsAction(label: 'Duplicar'): ?onDuplicate,
+        const CustomSemanticsAction(label: 'Eliminar'): ?onDelete,
       },
       child: ExcludeSemantics(
         child: InkWell(

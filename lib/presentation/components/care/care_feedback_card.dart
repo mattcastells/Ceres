@@ -1,13 +1,13 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:phosphor_flutter/phosphor_flutter.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../../core/router/routes.dart';
 import '../../../core/theme/nm_theme.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/utils/dates.dart';
+import '../../../core/utils/phosphor_icons.dart';
 import '../../../domain/models/care_article.dart';
 import '../../../domain/models/care_feedback.dart';
 import '../../providers/care_providers.dart';
@@ -33,7 +33,7 @@ class CareFeedbackHomeCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final inbox =
-        ref.watch(careFeedbackProvider).valueOrNull ??
+        ref.watch(careFeedbackProvider).value ??
         CareInbox(const <CareFeedback>[]);
     final newArticles = ref.watch(newArticlesProvider);
     if (!inbox.hasSomethingForHome && newArticles.isEmpty) {

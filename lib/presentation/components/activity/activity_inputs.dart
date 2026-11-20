@@ -1,12 +1,12 @@
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:phosphor_flutter/phosphor_flutter.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../../core/theme/nm_theme.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/utils/formats.dart';
 import '../../../core/utils/icons.dart';
+import '../../../core/utils/phosphor_icons.dart';
 import '../../../domain/calculations/met_calories.dart';
 import '../../../domain/enums/enums.dart';
 import '../../../domain/models/activity.dart';

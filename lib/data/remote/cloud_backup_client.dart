@@ -236,7 +236,7 @@ class CloudBackupClient {
   Future<List<CloudBackupInfo>> listVersions(String userId) async {
     final latest = await info(userId);
     final history = await _listHistory(userId);
-    return <CloudBackupInfo>[if (latest != null) latest, ...history];
+    return <CloudBackupInfo>[?latest, ...history];
   }
 
   Future<List<CloudBackupInfo>> _listHistory(String userId) async {

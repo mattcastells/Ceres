@@ -52,7 +52,7 @@ class ArticleSeenController extends AsyncNotifier<ArticleSeen> {
   Future<ArticleSeen> build() => ref.read(articleSeenStoreProvider).load();
 
   Future<void> markOpened(String id) async {
-    final current = state.valueOrNull ?? await future;
+    final current = state.value ?? await future;
     if (current.opened.contains(id)) return;
     final opened = <String>{...current.opened, id};
     state = AsyncData(
@@ -62,7 +62,7 @@ class ArticleSeenController extends AsyncNotifier<ArticleSeen> {
   }
 
   Future<void> markListVisited() async {
-    final current = state.valueOrNull ?? await future;
+    final current = state.value ?? await future;
     final now = DateTime.now();
     state = AsyncData(ArticleSeen(opened: current.opened, listVisitedAt: now));
     await ref.read(articleSeenStoreProvider).saveListVisited(now);
@@ -77,8 +77,8 @@ final articleSeenProvider =
 /// Los artículos que avisa Inicio. Vacío mientras carga o si algo falla: es
 /// información que suma, no una que falte.
 final newArticlesProvider = Provider.autoDispose<List<CareArticle>>((ref) {
-  final articles = ref.watch(careArticlesProvider).valueOrNull;
-  final seen = ref.watch(articleSeenProvider).valueOrNull;
+  final articles = ref.watch(careArticlesProvider).value;
+  final seen = ref.watch(articleSeenProvider).value;
   if (articles == null || seen == null) return const <CareArticle>[];
   return seen.newForHome(articles);
 });

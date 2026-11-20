@@ -15,10 +15,10 @@ import 'package:ceres/presentation/providers/auth_providers.dart';
 import 'package:ceres/presentation/providers/care_providers.dart';
 import 'package:ceres/presentation/screens/home/home_screen.dart';
 import 'package:ceres/presentation/screens/profile/care_articles_screen.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Inicio no muestra nada de la nutricionista con `NM_NUTRITIONIST` apagado.
@@ -71,7 +71,7 @@ Future<_Boot> _boot(
     void Function() notify = () {};
     repository = LocalRepository(store, onChanged: () => notify());
     container = ProviderContainer(
-      overrides: <Override>[
+      overrides: [
         repositoryProvider.overrideWithValue(repository),
         isCloudEnabledProvider.overrideWithValue(true),
         if (articles != null)
@@ -176,7 +176,7 @@ void main() {
         findsOneWidget,
       );
 
-      final seen = boot.container.read(articleSeenProvider).valueOrNull!;
+      final seen = boot.container.read(articleSeenProvider).value!;
       expect(seen.opened, contains('receta'));
       final prefs = await SharedPreferences.getInstance();
       expect(
@@ -219,7 +219,7 @@ void main() {
         final store = await LocalStore.open();
         store.seed();
         container = ProviderContainer(
-          overrides: <Override>[
+          overrides: [
             repositoryProvider.overrideWithValue(
               LocalRepository(store, onChanged: () {}),
             ),

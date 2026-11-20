@@ -22,10 +22,10 @@ String _product({
 }) => jsonEncode(<String, dynamic>{
   'code': code,
   'product_name': name,
-  if (brands != null) 'brands': brands,
-  if (servingSize != null) 'serving_size': servingSize,
+  'brands': ?brands,
+  'serving_size': ?servingSize,
   'nutriments': <String, dynamic>{
-    if (kcal100 != null) 'energy-kcal_100g': kcal100,
+    'energy-kcal_100g': ?kcal100,
     'proteins_100g': proteins,
     'carbohydrates_100g': carbs,
     'fat_100g': fat,

@@ -1,8 +1,7 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:phosphor_flutter/phosphor_flutter.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../../core/error/app_error.dart';
 import '../../../core/theme/nm_theme.dart';
@@ -10,6 +9,7 @@ import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/utils/dates.dart';
 import '../../../core/utils/formats.dart';
+import '../../../core/utils/phosphor_icons.dart';
 import '../../../domain/models/weekly_report.dart';
 import '../../components/activity/activity_cards.dart';
 import '../../components/feedback/feedback.dart';
@@ -133,7 +133,7 @@ class _WeeklyReportScreenState extends ConsumerState<WeeklyReportScreen> {
     }
 
     final latest = ref.watch(latestWeeklyReportProvider);
-    final report = _fresh ?? latest.valueOrNull;
+    final report = _fresh ?? latest.value;
 
     return NmScreen(
       // Sin "Regenerar" en la barra: el botón con nombre está al pie del

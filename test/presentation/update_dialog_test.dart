@@ -16,11 +16,11 @@ import 'package:ceres/domain/models/app_release.dart';
 import 'package:ceres/domain/services/update_service.dart';
 import 'package:ceres/presentation/providers/update_providers.dart';
 import 'package:ceres/presentation/screens/settings/update_dialog.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:material_ui/material_ui.dart';
 
 const String _notas = 'feat: recalcular con IA\nfix: el día manda, no el id';
 
@@ -113,7 +113,7 @@ void main() {
   Future<void> mostrar(WidgetTester tester, UpdateAvailable status) async {
     await tester.pumpWidget(
       ProviderScope(
-        overrides: <Override>[
+        overrides: [
           updateServiceProvider.overrideWithValue(buildService()),
         ],
         child: MaterialApp(

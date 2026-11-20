@@ -2,12 +2,11 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:math' as math;
 
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show PlatformException;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:phosphor_flutter/phosphor_flutter.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../core/error/app_error.dart';
@@ -17,6 +16,7 @@ import '../../../core/theme/nm_theme.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/utils/dates.dart';
+import '../../../core/utils/phosphor_icons.dart';
 import '../../../data/local/photo_normalizer.dart';
 import '../../../data/remote/photo_storage_client.dart';
 import '../../../domain/enums/enums.dart';
@@ -42,8 +42,12 @@ import '../meal/meal_draft.dart';
 const _uuid = Uuid();
 
 /// El análisis en curso, para pasarlo de "Analizando" a "Revisar".
-final analysisProvider = StateProvider<AiAnalysis?>((ref) => null);
-final photoPathProvider = StateProvider<String?>((ref) => null);
+final analysisProvider = NotifierProvider<Settable<AiAnalysis?>, AiAnalysis?>(
+  () => Settable(null),
+);
+final photoPathProvider = NotifierProvider<Settable<String?>, String?>(
+  () => Settable(null),
+);
 
 /// Lo que la persona aclaró sobre la foto antes de analizarla.
 ///
@@ -51,7 +55,9 @@ final photoPathProvider = StateProvider<String?>((ref) => null);
 /// pantallas encadenadas con `pushReplacement` y arrastrar el texto como query
 /// param solo abre lugares donde perderlo. Se limpia al sacar cada foto: una
 /// aclaración vieja aplicada a una comida nueva es peor que ninguna.
-final photoNoteProvider = StateProvider<String>((ref) => '');
+final photoNoteProvider = NotifierProvider<Settable<String>, String>(
+  () => Settable(''),
+);
 
 /// Slot y día a los que va la comida cuando se entró desde una sección
 /// concreta ("+" de Almuerzo, por ejemplo) y no desde el menú general.
@@ -66,7 +72,10 @@ class PhotoTarget {
   final DateTime date;
 }
 
-final photoTargetProvider = StateProvider<PhotoTarget?>((ref) => null);
+final photoTargetProvider =
+    NotifierProvider<Settable<PhotoTarget?>, PhotoTarget?>(
+      () => Settable(null),
+    );
 
 /// S-18 · Cámara.
 class PhotoCaptureScreen extends ConsumerStatefulWidget {
@@ -108,10 +117,10 @@ class _PhotoCaptureScreenState extends ConsumerState<PhotoCaptureScreen> {
       if (!mounted) return;
       setState(() => _busy = false);
       if (path == null) return;
-      ref.read(photoPathProvider.notifier).state = path;
+      ref.read(photoPathProvider.notifier).set(path);
       // Foto nueva, aclaración en blanco: lo que se escribió sobre la comida
       // anterior no tiene nada que ver con esta.
-      ref.read(photoNoteProvider.notifier).state = '';
+      ref.read(photoNoteProvider.notifier).set('');
       if (!mounted) return;
       // Antes de analizar se pregunta qué es: la foto no puede mostrar el
       // relleno de una empanada y la persona sí lo sabe (S-18b).
@@ -290,7 +299,7 @@ class _PhotoDescribeScreenState extends ConsumerState<PhotoDescribeScreen> {
   }
 
   void _analyze() {
-    ref.read(photoNoteProvider.notifier).state = _text.text.trim();
+    ref.read(photoNoteProvider.notifier).set(_text.text.trim());
     context.pushReplacement(Routes.photoAnalyzing);
   }
 
@@ -564,7 +573,7 @@ class _PhotoAnalyzingScreenState extends ConsumerState<PhotoAnalyzingScreen>
       // Llegó bien: la copia del bucket pasa a ser la de la comida, así que ya
       // no hay nada suelto que limpiar.
       _subida = null;
-      ref.read(analysisProvider.notifier).state = analysis;
+      ref.read(analysisProvider.notifier).set(analysis);
 
       // La foto ya está en el bucket: analizarla la subió. Se pasa a apuntar a
       // esa copia y no al archivo del teléfono, así al guardar la comida no se
@@ -573,7 +582,7 @@ class _PhotoAnalyzingScreenState extends ConsumerState<PhotoAnalyzingScreen>
       // mostrar las dos, así que la revisión se ve igual.
       final remote = analysis.photoPath;
       if (remote != null) {
-        ref.read(photoPathProvider.notifier).state = remote;
+        ref.read(photoPathProvider.notifier).set(remote);
       }
 
       context.pushReplacement(Routes.photoReview);
@@ -936,8 +945,8 @@ class _PhotoReviewScreenState extends ConsumerState<PhotoReviewScreen> {
   void _discardIfUnsaved() {
     if (_committed) return;
     ref.read(mealDraftProvider.notifier).restore(_previousDraft);
-    ref.read(analysisProvider.notifier).state = null;
-    ref.read(photoTargetProvider.notifier).state = null;
+    ref.read(analysisProvider.notifier).set(null);
+    ref.read(photoTargetProvider.notifier).set(null);
 
     // Y la foto que subió el análisis se borra del bucket.
     //
@@ -951,7 +960,7 @@ class _PhotoReviewScreenState extends ConsumerState<PhotoReviewScreen> {
     // molesto y no grave; lo que importaba era que dejaran de acumularse una
     // por cada análisis descartado.
     final path = ref.read(photoPathProvider);
-    ref.read(photoPathProvider.notifier).state = null;
+    ref.read(photoPathProvider.notifier).set(null);
     final photos = ref.read(photoSyncProvider);
     if (path != null && photos != null && PhotoSyncService.isRemotePath(path)) {
       unawaited(
@@ -973,8 +982,8 @@ class _PhotoReviewScreenState extends ConsumerState<PhotoReviewScreen> {
     await repo.saveMeal(draft.toMeal(syncStatus: SyncStatus.synced));
     _committed = true;
     ref.read(mealDraftProvider.notifier).clear();
-    ref.read(analysisProvider.notifier).state = null;
-    ref.read(photoTargetProvider.notifier).state = null;
+    ref.read(analysisProvider.notifier).set(null);
+    ref.read(photoTargetProvider.notifier).set(null);
     // Inicio queda parado en el día donde acaba de caer la comida: guardar
     // algo y no verlo en ningún lado se lee como que no se guardó.
     ref.read(selectedDateProvider.notifier).set(date);

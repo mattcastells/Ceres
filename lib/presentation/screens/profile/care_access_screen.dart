@@ -1,9 +1,8 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:phosphor_flutter/phosphor_flutter.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../../core/config/supabase_config.dart';
 import '../../../core/error/app_error.dart';
@@ -12,6 +11,7 @@ import '../../../core/theme/nm_theme.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/utils/dates.dart';
+import '../../../core/utils/phosphor_icons.dart';
 import '../../../domain/models/care_article.dart';
 import '../../../domain/models/care_grant.dart';
 import '../../components/feedback/feedback.dart';
@@ -58,10 +58,10 @@ class CareAccessScreen extends ConsumerWidget {
 
     final grantsAsync = ref.watch(careGrantsProvider);
     final invites =
-        ref.watch(careInvitesProvider).valueOrNull ?? const <CareInvite>[];
+        ref.watch(careInvitesProvider).value ?? const <CareInvite>[];
     final articles =
-        ref.watch(careArticlesProvider).valueOrNull ?? const <CareArticle>[];
-    final seen = ref.watch(articleSeenProvider).valueOrNull;
+        ref.watch(careArticlesProvider).value ?? const <CareArticle>[];
+    final seen = ref.watch(articleSeenProvider).value;
     final unseen = seen == null ? 0 : articles.where(seen.isNew).length;
 
     return NmScreen(
@@ -95,7 +95,7 @@ class CareAccessScreen extends ConsumerWidget {
                     subtitle: _feedbackSubtitle(
                       ref
                               .watch(careFeedbackProvider)
-                              .valueOrNull
+                              .value
                               ?.unreadCount ??
                           0,
                     ),

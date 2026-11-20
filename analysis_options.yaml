@@ -13,6 +13,7 @@ analyzer:
   exclude:
     - build/**
     - "**/*.g.dart"
+    - android/**
   errors:
     # Los tokens generados no se editan a mano; el resto es error real.
     todo: ignore
