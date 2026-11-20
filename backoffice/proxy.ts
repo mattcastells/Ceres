@@ -9,10 +9,10 @@ type CookieToSet = { name: string; value: string; options: CookieOptions };
  * El guard de acá es de **navegación**, no de seguridad: quien tenga sesión
  * válida pero ningún permiso vigente puede llegar a las páginas y no va a ver
  * nada, porque lo que decide qué datos vuelven son las políticas de Postgres.
- * Un middleware que se rompa no filtra nada; solo deja pasar a una pantalla
+ * Un proxy que se rompa no filtra nada; solo deja pasar a una pantalla
  * vacía.
  */
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });
 
   const supabase = createServerClient(

@@ -6,9 +6,9 @@ type CookieToSet = { name: string; value: string; options: CookieOptions };
 /**
  * Cliente para Server Components y Route Handlers.
  *
- * Lee la sesión de las cookies que escribe el middleware. En un Server
+ * Lee la sesión de las cookies que escribe el proxy (`proxy.ts`). En un Server
  * Component las cookies son de solo lectura, así que `setAll` no hace nada: el
- * refresh del token lo hace el middleware, que sí puede escribirlas.
+ * refresh del token lo hace el proxy, que sí puede escribirlas.
  *
  * El cliente del navegador vive en `supabase-browser.ts`, aparte, porque el
  * `next/headers` de acá no se puede resolver en un Client Component.
@@ -34,7 +34,7 @@ export async function serverClient() {
               store.set(name, value, options),
             );
           } catch {
-            // Server Component: lo resuelve el middleware.
+            // Server Component: lo resuelve el proxy.
           }
         },
       },

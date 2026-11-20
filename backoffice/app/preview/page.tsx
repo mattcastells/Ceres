@@ -12,7 +12,7 @@ import { sampleData } from './sample';
  * consulta la base; el problema es que el día que alguien la use para depurar
  * "con datos reales", ya está desplegada y abierta.
  *
- * El guard va acá **y** en el `matcher` del middleware: uno cierra la puerta y
+ * El guard va acá **y** en el `matcher` del proxy: uno cierra la puerta y
  * el otro es el que la deja abierta en desarrollo, y separarlos es lo que
  * permite que sacar el segundo no habilite nada.
  *
