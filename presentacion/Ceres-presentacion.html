@@ -1,0 +1,1338 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ceres · Tesis</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ── Tokens: los de la app, en grande ─────────────────────────────────── */
+:root {
+  /* Tema claro: el fondo de la app en claro, violeta de marca más oscuro para que contraste */
+  --bg: #f7f6fb;
+  --bg-2: #f0eef8;
+  --surface: #ffffff;
+  --raised: #ece9f8;
+  --line: #e0ddee;
+  --text: #1c1a2e;
+  --soft: #46445c;
+  --muted: #73718a;
+  --accent: #6f5fc9;
+  --accent-text: #5a49b5;
+  --amber: #b8801a;
+  --blue: #3f74c4;
+  --green: #2f8a57;
+  --ink: #ffffff;
+  --shadow: 0 1px 2px rgba(40,30,90,.06), 0 10px 30px rgba(40,30,90,.07);
+  /* Los cuatro problemas y sus respuestas comparten color */
+  --c1: #e0644a; --t1: #fdeee9;
+  --c2: #3f74c4; --t2: #e8effa;
+  --c3: #1b9482; --t3: #e2f4f0;
+  --c4: #d08a12; --t4: #fbf1dd;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; background: #e6e3f0; overflow: hidden; }
+body { font-family: 'Inter', 'Segoe UI', Arial, sans-serif; color: var(--text); }
+
+/* ── El escenario: 1920 × 1080 escalado a la ventana ──────────────────── */
+#deck { position: fixed; left: 50%; top: 50%; width: 1920px; height: 1080px; transform-origin: 0 0; }
+section {
+  position: absolute; inset: 0; width: 1920px; height: 1080px;
+  background: var(--bg); color: var(--text);
+  padding: 112px 128px 150px;
+  display: flex; flex-direction: column; gap: 40px;
+  opacity: 0; visibility: hidden; transition: opacity .35s ease;
+  overflow: hidden;
+}
+section.on { opacity: 1; visibility: visible; }
+section.alt { background: var(--bg-2); }
+section.statement { background: var(--accent); color: var(--ink); justify-content: center; }
+section aside { display: none; }
+
+/* ── Texto ─────────────────────────────────────────────────────────────── */
+.eyebrow { font-size: 24px; font-weight: 600; letter-spacing: 3px; text-transform: uppercase; color: var(--accent-text); }
+h1 { font-size: 104px; font-weight: 600; letter-spacing: -3px; line-height: 1.04; }
+h2 { font-size: 60px; font-weight: 600; letter-spacing: -1.5px; line-height: 1.1; }
+h3 { font-size: 36px; font-weight: 600; letter-spacing: -.5px; line-height: 1.2; }
+.lead { font-size: 38px; line-height: 1.35; color: var(--soft); }
+.body { font-size: 29px; line-height: 1.45; color: var(--soft); }
+.small { font-size: 24px; line-height: 1.45; color: var(--muted); }
+.accent { color: var(--accent-text); }
+.amber { color: var(--amber); }
+.blue { color: var(--blue); }
+b, strong { color: var(--text); font-weight: 600; }
+.statement b { color: var(--ink); }
+
+/* ── Bloques ───────────────────────────────────────────────────────────── */
+.head { display: flex; flex-direction: column; gap: 14px; }
+.row { display: flex; gap: 32px; }
+.col { display: flex; flex-direction: column; gap: 24px; }
+.grow { flex: 1; min-width: 0; }
+.center { align-items: center; }
+.card { background: var(--surface); border-radius: 26px; padding: 36px 40px; display: flex; flex-direction: column; gap: 14px; }
+.card .label { font-size: 23px; color: var(--muted); }
+.card .num { font-size: 92px; font-weight: 600; letter-spacing: -2px; line-height: 1; font-variant-numeric: tabular-nums; }
+.card .num-sm { font-size: 60px; font-weight: 600; letter-spacing: -1px; line-height: 1; font-variant-numeric: tabular-nums; }
+.card .txt { font-size: 27px; line-height: 1.4; color: var(--soft); }
+.card-accent { background: var(--raised); box-shadow: inset 0 0 0 2px var(--accent); }
+.tag { align-self: flex-start; display: inline-block; font-size: 22px; font-weight: 600; padding: 6px 16px; border-radius: 999px; background: var(--raised); color: var(--accent-text); }
+.tag.amber { color: var(--amber); }
+
+ul.list { list-style: none; display: flex; flex-direction: column; gap: 18px; }
+ul.list li { font-size: 28px; line-height: 1.4; color: var(--soft); padding-left: 40px; position: relative; }
+ul.list li::before { content: ''; position: absolute; left: 6px; top: 15px; width: 12px; height: 12px; border-radius: 50%; background: var(--accent); }
+ul.list.amber li::before { background: var(--amber); }
+
+/* Capturas */
+.shot { border-radius: 20px; border: 2px solid var(--line); object-fit: contain; background: var(--bg); display: block; box-shadow: var(--shadow); }
+.phone { border-radius: 38px; border: 8px solid #26233a; box-shadow: var(--shadow); object-fit: cover; object-position: top; background: #f6f5fb; display: block; }
+.cap { font-size: 22px; color: var(--muted); text-align: center; }
+
+/* Tablas */
+table { width: 100%; border-collapse: collapse; font-size: 25px; color: var(--soft); }
+th { text-align: left; font-weight: 600; color: var(--muted); font-size: 21px; letter-spacing: .5px; padding: 0 16px 14px; border-bottom: 2px solid var(--line); }
+td { padding: 14px 16px; border-bottom: 1px solid var(--line); vertical-align: top; line-height: 1.35; }
+tr:last-child td { border-bottom: none; }
+td.r, th.r { text-align: right; font-variant-numeric: tabular-nums; }
+td.c, th.c { text-align: center; }
+td.hl { color: var(--accent-text); font-weight: 600; }
+.yes { color: var(--accent-text); font-weight: 600; }
+.no { color: #a9a6bd; }
+
+/* Barras */
+.bar-row { display: flex; align-items: center; gap: 24px; }
+.bar-label { width: 380px; font-size: 27px; color: var(--soft); }
+.bar-track { flex: 1; height: 36px; background: var(--surface); border-radius: 10px; overflow: hidden; display: flex; }
+.bar-fill { height: 36px; background: var(--accent); border-radius: 10px; }
+.bar-val { width: 150px; font-size: 27px; font-weight: 600; text-align: right; font-variant-numeric: tabular-nums; }
+
+/* Pasos */
+.step { background: var(--surface); border-radius: 22px; padding: 28px 30px; display: flex; flex-direction: column; gap: 10px; flex: 1; min-width: 0; }
+.step .n { font-size: 21px; font-weight: 700; letter-spacing: 2px; color: var(--accent-text); }
+.step .t { font-size: 28px; font-weight: 600; line-height: 1.25; color: var(--text); }
+.step .d { font-size: 23px; line-height: 1.4; color: var(--muted); }
+
+/* Línea de tiempo */
+.tl { display: flex; flex-direction: column; gap: 0; }
+.tl-item { display: grid; grid-template-columns: 210px 28px 1fr; gap: 24px; align-items: start; padding-bottom: 26px; position: relative; }
+.tl-when { font-size: 24px; font-weight: 600; color: var(--accent-text); text-align: right; padding-top: 2px; }
+.tl-dot { width: 18px; height: 18px; border-radius: 50%; background: var(--accent); margin-top: 8px; position: relative; z-index: 1; }
+.tl-item:not(:last-child)::after { content: ''; position: absolute; left: 242px; top: 26px; bottom: -4px; width: 2px; background: var(--line); }
+.tl-what { font-size: 27px; line-height: 1.4; color: var(--soft); }
+.tl-what b { display: block; font-size: 29px; margin-bottom: 4px; }
+
+/* Pie */
+.foot { position: absolute; left: 128px; bottom: 60px; width: 1664px; display: flex; justify-content: space-between; font-size: 21px; color: var(--muted); }
+.statement .foot { color: rgba(255,255,255,.75); }
+
+/* Barra de progreso y ayuda (fuera del lienzo) */
+#progress { position: fixed; left: 0; bottom: 0; height: 4px; background: var(--accent); transition: width .3s ease; z-index: 5; }
+#notes { position: fixed; left: 0; right: 0; bottom: 0; max-height: 34vh; overflow: auto; background: rgba(13,14,22,.96); color: #e9e9ed; font: 18px/1.5 'Inter', sans-serif; padding: 18px 28px 26px; border-top: 2px solid var(--accent); display: none; z-index: 6; }
+#notes.on { display: block; }
+#notes .t { font-size: 14px; letter-spacing: 2px; text-transform: uppercase; color: var(--accent-text); margin-bottom: 6px; }
+
+/* Movimiento: todo entra en menos de un segundo */
+@keyframes subir { from { opacity: 0; transform: translateY(22px); } to { opacity: 1; transform: none; } }
+section.on .in { animation: subir .5s cubic-bezier(.2,.8,.2,1) both; animation-delay: calc(var(--i, 0) * 90ms); }
+
+.flujo { position: relative; width: 1664px; height: 690px; }
+.flujo svg { position: absolute; inset: 0; }
+/* Cada tramo se dibuja una vez (--d: cuándo empieza, --t: cuánto tarda) y queda; la flecha y la caja siguiente se encienden al llegar */
+.flujo .n { opacity: 1; transform-box: fill-box; transform-origin: center; }
+.flujo .seg { fill: none; stroke: #6f5fc9; stroke-width: 5; stroke-linecap: round; stroke-linejoin: round; }
+@keyframes prender { from { opacity: .35; } to { opacity: 1; } }
+@keyframes dibujar { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+@keyframes asomar { from { opacity: 0; } to { opacity: 1; } }
+section.on .flujo .n { animation: prender .45s ease-out both; animation-delay: var(--d); }
+section.on .flujo .seg { stroke-dasharray: 1; animation: dibujar var(--t) linear both; animation-delay: var(--d); }
+section.on .flujo .ar { animation: asomar .15s linear both; animation-delay: var(--d); }
+
+/* Grilla de dos por dos y la sección en la esquina */
+.g2 { display: grid; grid-template-columns: 1fr 1fr; grid-auto-rows: 1fr; gap: 28px; }
+.sec { position: absolute; top: 52px; right: 128px; font-size: 20px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; color: var(--sc, var(--muted)); }
+section[style*="--sc"]:not(.statement) .eyebrow,
+section[style*="--sc"] .step .n { color: var(--sc); }
+.statement .sec { color: rgba(255,255,255,.75) !important; }
+
+/* Aperturas de sección: cada sección tiene su color (--sc), que se repite en la etiqueta de la esquina */
+section.divider { background: var(--sc, var(--accent)); color: #fff; justify-content: center; gap: 28px; }
+.div-n { font-size: 200px; font-weight: 600; letter-spacing: -6px; line-height: .9; color: rgba(255,255,255,.55); font-variant-numeric: tabular-nums; }
+.div-temas { list-style: none; display: flex; flex-wrap: wrap; gap: 16px; margin-top: 16px; }
+.div-temas li { font-size: 28px; padding: 12px 26px; border-radius: 999px; background: rgba(255,255,255,.18); color: #fff; }
+.div-track { position: absolute; left: 128px; right: 128px; top: 60px; display: flex; gap: 10px; }
+.div-track span { flex: 1; height: 6px; border-radius: 3px; background: rgba(255,255,255,.25); }
+.div-track span.done { background: rgba(255,255,255,.55); }
+.div-track span.on { background: #fff; }
+.divider .foot { color: rgba(255,255,255,.75); }
+
+/* Las quince preguntas a las nutricionistas */
+.preg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 44px; }
+.preg h4 { font-size: 21px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; color: var(--sc, var(--accent-text)); margin-bottom: 8px; }
+.preg ol { list-style: none; }
+.preg li { display: flex; gap: 14px; font-size: 22px; line-height: 1.35; color: var(--soft); padding: 9px 0; border-bottom: 1px solid var(--line); }
+.preg li span { flex: none; min-width: 30px; font-weight: 600; color: var(--sc, var(--accent-text)); font-variant-numeric: tabular-nums; }
+
+/* Preguntas con su respuesta al lado */
+.qa-h, .qa li { display: grid; grid-template-columns: 44px 760px 1fr; gap: 0 14px; }
+.qa-h h4:first-child { grid-column: 1 / 3; }
+.qa li p { color: var(--soft); }
+.qa li em { font-style: normal; color: var(--text); font-weight: 500; }
+
+/* Paso resaltado (la tabla SARA 2) */
+.step.step-hl { background: var(--sc, var(--accent)); }
+section[style] .step.step-hl .n, section[style] .step.step-hl .t { color: #fff; }
+section[style] .step.step-hl .d { color: rgba(255,255,255,.88); }
+
+/* Etiqueta que abre el bloque de lo que pidieron los profesionales */
+.pedido { align-self: flex-start; display: inline-flex; align-items: center; gap: 10px; font-size: 24px; font-weight: 600; padding: 10px 22px; border-radius: 999px; color: var(--sc, var(--accent-text)); background: color-mix(in srgb, var(--sc, var(--accent)) 12%, #fff); box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--sc, var(--accent)) 35%, transparent); }
+
+/* Celular con la notificación simulada encima del video (lámina de devoluciones) */
+.tel { position: relative; border-radius: 38px; border: 8px solid #26233a; overflow: hidden; background: #f6f5fb; box-shadow: var(--shadow); flex: none; }
+.tel video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: top; }
+.bloqueo { position: absolute; inset: 0; z-index: 2; display: flex; flex-direction: column; align-items: center; padding: 70px 14px 0; color: #fff;
+  background: radial-gradient(120% 70% at 30% 10%, #8a7ce0 0%, #4b3f9e 45%, #1d1838 100%); transition: opacity .5s ease; }
+.bloqueo.abierto { opacity: 0; pointer-events: none; }
+.bl-hora { font-size: 64px; font-weight: 300; letter-spacing: -1px; line-height: 1; }
+.bl-fecha { font-size: 15px; opacity: .85; margin-top: 8px; }
+.notif { margin-top: 34px; width: 100%; background: rgba(255,255,255,.92); color: #1c1a2e; border-radius: 18px; padding: 12px 14px 13px; text-align: left;
+  box-shadow: 0 8px 24px rgba(0,0,0,.25); opacity: 0; transform: translateY(-40px); transition: opacity .45s ease, transform .45s cubic-bezier(.2,.8,.2,1); }
+.bloqueo.con-notif .notif { opacity: 1; transform: none; }
+.bloqueo.tocada .notif { transform: scale(.96); }
+.notif-top { display: flex; align-items: center; gap: 7px; font-size: 12px; color: #6f6d85; }
+.notif-top svg { width: 18px; height: 18px; border-radius: 5px; }
+.notif-t { font-size: 14px; font-weight: 700; margin-top: 6px; }
+.notif-b { font-size: 13.5px; line-height: 1.35; margin-top: 2px; color: #2f2d44; }
+
+/* Web y celular superpuestos */
+.dispositivos { position: relative; width: 1008px; height: 800px; flex: none; }
+.dispositivos .web { position: absolute; left: 0; top: 0; width: 840px; height: 769px; }
+.dispositivos .movil { position: absolute; right: 0; bottom: 34px; width: 250px; height: 541px; }
+.dispositivos .cap { position: absolute; }
+.dispositivos .cap-web { left: 0; top: 778px; width: 840px; }
+.dispositivos .cap-movil { right: 0; bottom: 0; width: 250px; }
+
+/* Grilla de cuatro por dos */
+.g4 { display: grid; grid-template-columns: repeat(4, 1fr); grid-auto-rows: 1fr; gap: 22px; }
+.g4 .card { justify-content: flex-start; padding: 40px 34px; gap: 12px; }
+.g4 .card h3 { color: var(--sc, var(--text)); font-size: 34px; }
+.g4 .card .txt { font-size: 25px; }
+
+/* Grilla de tres por dos */
+.g3 { display: grid; grid-template-columns: repeat(3, 1fr); grid-auto-rows: 1fr; gap: 24px; }
+.g3 .card { justify-content: flex-start; padding: 48px 44px; }
+section[style*="--sc"] .g3 .label { color: var(--sc); font-weight: 600; letter-spacing: 1px; text-transform: uppercase; font-size: 19px; }
+
+/* Pasos grandes que llenan la lámina */
+.pasos-grandes .step { justify-content: flex-start; padding: 56px 34px 40px; gap: 18px; }
+.pasos-grandes .step .n { font-size: 26px; }
+.pasos-grandes .step .t { font-size: 36px; }
+.pasos-grandes .step .d { font-size: 27px; line-height: 1.4; }
+
+/* Tabla comparativa: la columna de Ceres resaltada */
+table.comp { font-size: 25px; }
+table.comp th span { display: block; font-size: 18px; font-weight: 500; letter-spacing: 0; color: var(--muted); margin-top: 6px; }
+table.comp td, table.comp th { padding-top: 11px; padding-bottom: 11px; }
+table.comp .ce { background: #e3f3e9; color: #1f8a4c; font-weight: 700; }
+table.comp th.ce { font-size: 26px; border-radius: 16px 16px 0 0; }
+table.comp tr:last-child td.ce { border-radius: 0 0 16px 16px; }
+table.comp .yes { color: var(--text); }
+table.comp .mid { color: var(--amber); }
+
+/* Nota de una línea (bases complementarias) */
+.card.nota { flex-direction: row; align-items: baseline; gap: 28px; padding: 26px 36px; }
+.card.nota .label { flex: none; color: var(--sc, var(--muted)); font-weight: 600; letter-spacing: 1px; text-transform: uppercase; font-size: 19px; }
+.card.nota .txt { font-size: 26px; }
+
+/* Los dos modelos de IA, con la flecha del respaldo entre ellos */
+.card.modelo { justify-content: center; gap: 6px; padding: 40px 44px; }
+.card.modelo h3 { font-size: 44px; letter-spacing: -.5px; }
+.card.modelo .prov { font-size: 23px; color: var(--muted); }
+section[style*="--sc"] .card.modelo .label { color: var(--sc); font-weight: 600; letter-spacing: 1px; text-transform: uppercase; font-size: 20px; }
+.card.modelo .usa { font-size: 22px; font-weight: 600; color: var(--text); background: color-mix(in srgb, var(--sc, var(--accent)) 10%, #fff); border-radius: 12px; padding: 10px 16px; margin-top: 16px; }
+.pc-grid { display: grid; gap: 18px; margin-top: 20px; }
+/* La tarjeta de Claude, con su naranja */
+.card.modelo.claude { background: #fdf2ed; box-shadow: inset 0 0 0 2px #ecb29b, var(--shadow); }
+section[style*="--sc"] .card.modelo.claude .label { color: #c2603f; }
+.card.modelo.claude .usa { background: #f9dfd3; }
+.pc-grid .list { gap: 12px; }
+.pc-grid .list li { font-size: 26px; }
+.pc-grid .pro li::before { background: #2f8a57; }
+.pc-grid .contra li::before { background: #d4573c; }
+.pc-grid .pro::before, .pc-grid .contra::before { display: block; font-size: 18px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 4px; }
+.pc-grid .pro::before { content: 'A favor'; color: #2f8a57; }
+.pc-grid .contra::before { content: 'En contra'; color: #d4573c; }
+.relevo { align-self: center; width: 190px; text-align: center; color: var(--sc, var(--muted)); }
+.relevo span { display: block; font-size: 64px; line-height: 1; }
+.relevo .rel-t { font-size: 22px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; margin-top: 12px; }
+.relevo p { font-size: 21px; line-height: 1.35; margin-top: 6px; color: var(--soft); }
+.logo-modelo { display: flex; align-items: center; gap: 20px; margin-top: 6px; }
+.logo-modelo svg { width: 64px; height: 64px; flex: none; }
+
+/* Las tecnologías en cuatro capas: ícono, para qué y por qué */
+.capas { display: grid; grid-template-columns: repeat(4, 1fr); gap: 22px; }
+.capa { display: flex; flex-direction: column; gap: 16px; }
+.capa-t { font-size: 19px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--sc, var(--muted)); padding-left: 4px; }
+.card.tec { flex: 1; justify-content: center; gap: 16px; padding: 28px 28px; }
+.tec-h { display: flex; align-items: center; gap: 16px; }
+.tec-h svg { width: 50px; height: 50px; flex: none; }
+.tec-h .dos { display: flex; gap: 4px; flex: none; }
+.tec-h .dos svg { width: 36px; height: 36px; }
+.card.tec h3 { font-size: 28px; line-height: 1.15; }
+.card.tec .txt { font-size: 20px; color: var(--muted); }
+.card.tec .porque { font-size: 21px; line-height: 1.4; color: var(--soft); border-top: 1px solid var(--line); padding-top: 14px; }
+
+#pagos .card.tec { padding: 48px 36px; gap: 22px; }
+#pagos .tec-h svg { width: 68px; height: 68px; }
+#pagos .card.tec h3 { font-size: 34px; }
+#pagos .card.tec .txt { font-size: 22px; }
+#pagos .card.tec .porque { font-size: 25px; padding-top: 18px; }
+
+/* Las tecnologías: logo en texto + para qué */
+.stack .card { justify-content: center; gap: 10px; padding: 34px 32px; }
+.stack .card h3 { font-size: 32px; }
+.stack .card .txt { font-size: 23px; }
+.stack .card .cap-tec { font-size: 17px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--sc, var(--muted)); }
+
+/* Tablas de costos: modelo como pastilla de color, íconos a la izquierda, fila de total */
+table.costos { font-size: 25px; }
+table.costos td, table.costos th { padding-top: 13px; padding-bottom: 13px; vertical-align: middle; }
+table.costos td.r { font-weight: 600; color: var(--text); }
+.mod { display: inline-block; font-size: 19px; font-weight: 600; padding: 5px 14px; border-radius: 999px; }
+.mod.gem { background: #ecebfb; color: #5a63c9; }
+.mod.cla { background: #fbe6dc; color: #c2603f; }
+table.costos .ico { display: inline-flex; vertical-align: middle; width: 34px; height: 34px; margin-right: 16px; }
+table.costos .ico svg { width: 34px; height: 34px; }
+table.costos.total td { padding-top: 10px; padding-bottom: 10px; }
+table.costos.grande { font-size: 28px; }
+table.costos.grande td { padding-top: 24px; padding-bottom: 24px; }
+table.costos.grande .mod { font-size: 21px; }
+table.costos tr.tot td { border-top: 2px solid var(--line); font-weight: 700; color: var(--text); padding-top: 16px; }
+table.costos tr.tot td:nth-child(2) { font-weight: 500; color: var(--muted); font-size: 21px; }
+
+/* Números grandes apilados y gráfico de columnas (resultados de la IA) */
+.card.kpi { justify-content: center; gap: 6px; padding: 26px 34px; }
+.card.kpi .num { font-size: 72px; }
+.card.kpi .txt { font-size: 24px; }
+.colchart { flex: 1; display: grid; grid-template-columns: repeat(4, 1fr); gap: 34px; align-items: end; padding: 6px 10px 0; min-height: 200px; }
+.colchart > div { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 8px; }
+.colchart i { display: block; width: 100%; max-width: 120px; border-radius: 12px 12px 4px 4px; background: linear-gradient(180deg, var(--accent), #9a8fe0); }
+.colchart .cv { font-size: 26px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.colchart .cl { font-size: 20px; color: var(--muted); }
+
+/* Tarjetas chicas de a seis */
+.mini { display: grid; grid-template-columns: repeat(6, 1fr); gap: 18px; }
+.mini .card { padding: 26px 26px; gap: 8px; }
+.mini .num-sm { font-size: 50px; }
+.mini .txt { font-size: 22px; line-height: 1.35; }
+
+/* Problema y respuesta: mismas cuatro tarjetas, mismo color por par */
+.card, .step { box-shadow: var(--shadow); }
+.pc { border-left: 10px solid var(--c); }
+.sc { background: var(--t); box-shadow: none; }
+.sc h3 { color: var(--c); }
+.badge { flex: none; width: 52px; height: 52px; border-radius: 50%; background: var(--c); color: #fff; font-size: 24px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+.card-h { display: flex; align-items: center; gap: 20px; }
+video.phone, img.phone { background: #f6f5fb; }
+.vid-shot { border-radius: 20px; border: 2px solid var(--raised); display: block; background: var(--bg); object-fit: contain; }
+
+/* Impresión / PDF: una lámina por página */
+@media print {
+  @page { size: 1920px 1080px; margin: 0; }
+  html, body { overflow: visible; height: auto; background: none; }
+  #deck { position: static; transform: none !important; width: 1920px; height: auto; }
+  section { position: relative; opacity: 1; visibility: visible; page-break-after: always; break-after: page; }
+  section .in { animation: none !important; }
+  #progress, #notes { display: none !important; }
+  .flujo * { animation: none !important; }
+}
+table.planes td b { font-weight: 700; color: var(--text); }
+.planes-pie ul.list li { font-size: 25px; }
+.planes-pie h3 { font-size: 30px; }
+table.creditos-mini { width: 100%; font-size: 24px; margin-top: 8px; }
+table.creditos-mini td { padding: 9px 0; }
+table.creditos-mini td.r { font-weight: 700; color: var(--accent-text); }
+tr.sep td { border-top: 2px solid var(--line); }
+table.ejemplos td { padding: 12px 0; font-size: 26px; }
+table.ejemplos td.r { color: var(--text); }
+table.ejemplos td.c-u { color: var(--accent-text); padding-left: 18px; }
+table.margen tr.grupo td { font-size: 17px; font-weight: 700; letter-spacing: 1.6px; text-transform: uppercase; color: var(--g); padding: 18px 16px 8px; border-bottom: 2px solid var(--g); background: none; }
+table.margen td { padding-top: 12px; padding-bottom: 12px; }
+.card.futuro { gap: 14px; padding: 40px 40px; justify-content: flex-start; }
+.card.futuro h3 { font-size: 40px; }
+.card.futuro .txt { font-size: 27px; }
+.ico-card { width: 84px; height: 84px; border-radius: 22px; display: flex; align-items: center; justify-content: center; margin-bottom: 14px; }
+.ico-card svg { width: 46px; height: 46px; }
+.ico-card.sm { width: 68px; height: 68px; border-radius: 18px; margin-bottom: 8px; }
+.ico-card.sm svg { width: 42px !important; height: 42px !important; }
+</style>
+</head>
+<body>
+<div id="deck">
+
+<section id="cover" style="justify-content:center;gap:48px">
+  <div class="row in center" style="gap:36px">
+    <svg aria-label="Logo de Ceres" width="150" height="150" viewBox="0 0 100 100"><rect width="100" height="100" rx="22" fill="#1c1f33"/><circle cx="50" cy="50" r="33" fill="none" stroke="#2f3245" stroke-width="8"/><circle cx="50" cy="50" r="33" fill="none" stroke="#9184d9" stroke-width="8" stroke-linecap="round" transform="rotate(-90 50 50)" stroke-dasharray="155.5 207.3"/><rect x="36.5" y="52" width="6.5" height="13" rx="3.25" fill="#d2cefd"/><rect x="46.75" y="44.5" width="6.5" height="20.5" rx="3.25" fill="#d2cefd"/><rect x="57" y="37" width="6.5" height="28" rx="3.25" fill="#9184d9"/></svg>
+    <p style="font-size:92px;font-weight:500;letter-spacing:-2px">Ceres</p>
+  </div>
+  <h1 class="in" style="--i:1;width:1500px">Registro de comidas con IA, conectado a tu nutricionista.</h1>
+  <p class="small in" style="--i:2">Matías Gulin Castells · Tesis de la tecnicatura · Noviembre de 2026</p>
+  <aside>Abrir con la historia: quería bajar de peso, probé llevar registro y lo abandoné como casi todos. Trabajo en sistemas y hoy, con IA y criterio supervisando, una persona puede construir el producto que quería usar. Esto es Ceres.</aside>
+</section>
+
+<!-- ═══════════════════ 01 · PROBLEMÁTICA Y ORIGEN ═══════════════════ -->
+
+<section id="div-01" class="divider" style="--sc:#6f5fc9">
+  <div class="div-track"><span class="on"></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+  <p class="div-n in">01</p>
+  <h1 class="in" style="--i:1">Problemática y origen</h1>
+  <div class="foot"><span></span><span class="pg"></span></div>
+  <aside>Sección 1 de 9: Problemática y origen.</aside>
+</section>
+
+<section id="problema" style="--sc:#6f5fc9;">
+  <p class="sec">01 · Problemática</p>
+  <div class="head in"><p class="eyebrow">El problema</p><h2>Llevar registro se abandona. Y la profesional trabaja a ciegas.</h2></div>
+  <div class="g2 grow">
+    <div class="card pc in" style="--i:1;--c:var(--c1);justify-content:center;gap:18px;padding:40px 52px">
+      <div class="card-h"><span class="badge">1</span><h3 style="font-size:42px">Cargar comida es tedioso</h3></div>
+      <p class="txt">Buscar cada alimento, pesar, intentar adivinar los gramos, en cada comida del día. A las pocas semanas se deja.</p>
+    </div>
+    <div class="card pc in" style="--i:2;--c:var(--c2);justify-content:center;gap:18px;padding:40px 52px">
+      <div class="card-h"><span class="badge">2</span><h3 style="font-size:42px">Consultas de memoria</h3></div>
+      <p class="txt">Entre una consulta y otra pasan 2 a 4 semanas, y la nutricionista trabaja con lo que el paciente recuerda.</p>
+    </div>
+    <div class="card pc in" style="--i:3;--c:var(--c3);justify-content:center;gap:18px;padding:40px 52px">
+      <div class="card-h"><span class="badge">3</span><h3 style="font-size:42px">Los hábitos no se ven</h3></div>
+      <p class="txt">Cuándo se come de más, qué se repite y qué lo provoca: sin un registro, no hay de dónde sacarlo.</p>
+    </div>
+    <div class="card pc in" style="--i:4;--c:var(--c4);justify-content:center;gap:18px;padding:40px 52px">
+      <div class="card-h"><span class="badge">4</span><h3 style="font-size:42px">No hay una meta para hoy</h3></div>
+      <p class="txt">El plan dice qué lograr en meses, pero no cuánto comer hoy ni si el día viene bien.</p>
+    </div>
+  </div>
+  <div class="foot"><span></span><span class="pg"></span></div>
+  <aside>Empezar por mi caso: quería bajar de peso, probé llevar registro y lo abandoné. Los cuatro problemas: cargar es tedioso, la consulta trabaja con memoria, los hábitos no se ven y falta una meta diaria concreta.</aside>
+</section>
+
+<section id="solucion" class="alt" style="--sc:#6f5fc9;">
+  <p class="sec">01 · Problemática</p>
+  <div class="head in"><p class="eyebrow">La respuesta</p><h2>Cómo lo resuelve Ceres.</h2></div>
+  <div class="g2 grow">
+    <div class="card pc in" style="--i:1;--c:var(--c1);justify-content:center;gap:18px;padding:40px 52px">
+      <div class="card-h"><span class="badge">1</span><h3 style="font-size:42px">Una foto o una frase alcanza</h3></div>
+      <p class="txt">La IA reconoce cada alimento y estima los gramos. Lo que se come seguido se repite en un toque.</p>
+    </div>
+    <div class="card pc in" style="--i:2;--c:var(--c2);justify-content:center;gap:18px;padding:40px 52px">
+      <div class="card-h"><span class="badge">2</span><h3 style="font-size:42px">La profesional ve lo que pasó</h3></div>
+      <p class="txt">Comidas, peso, actividad y sueño le llegan a su panel entre una consulta y otra.</p>
+    </div>
+    <div class="card pc in" style="--i:3;--c:var(--c3);justify-content:center;gap:18px;padding:40px 52px">
+      <div class="card-h"><span class="badge">3</span><h3 style="font-size:42px">Los hábitos quedan a la vista</h3></div>
+      <p class="txt">La persona entiende sus propios patrones: en qué momento come más y qué se repite semana a semana.</p>
+    </div>
+    <div class="card pc in" style="--i:4;--c:var(--c4);justify-content:center;gap:18px;padding:40px 52px">
+      <div class="card-h"><span class="badge">4</span><h3 style="font-size:42px">Una meta para cada día</h3></div>
+      <p class="txt">Cuántas calorías le quedan hoy, con el objetivo que le recomienda su nutricionista.</p>
+    </div>
+  </div>
+  <div class="foot"><span></span><span class="pg"></span></div>
+  <aside>Cada tarjeta responde a la del mismo número y color en la lámina anterior. Uno: registrar cuesta una foto. Dos: la nutricionista ve el registro en su panel. Tres: los hábitos se calculan del registro. Cuatro: la meta del día, que la nutricionista puede recomendar y el paciente aplica con un toque.</aside>
+</section>
+
+<!-- ═══════════════════ 02 · HECHA CON NUTRICIONISTAS ═══════════════════ -->
+
+<section id="div-02" class="divider" style="--sc:#1b9482">
+  <div class="div-track"><span class="done"></span><span class="on"></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+  <p class="div-n in">02</p>
+  <h1 class="in" style="--i:1">Hecha con nutricionistas</h1>
+  <div class="foot"><span></span><span class="pg"></span></div>
+  <aside>Sección 2 de 9: Hecha con nutricionistas.</aside>
+</section>
+
+<section id="profesionales" style="--sc:#1b9482;">
+  <p class="sec">02 · Hecha con nutricionistas</p>
+  <div class="head in"><p class="eyebrow">Con profesionales</p><h2>La app se diseñó junto a seis nutricionistas.</h2></div>
+  <div class="row in" style="--i:1;gap:20px">
+    <div class="step"><p class="n">01 · ENTREVISTAS</p><p class="d">Seis nutricionistas con distintas especializaciones: clínica, deportología y antropometría.</p></div>
+    <div class="step"><p class="n">02 · MISMAS PREGUNTAS</p><p class="d">Para comparar enfoques y metodologías de trabajo.</p></div>
+    <div class="step"><p class="n">03 · PUESTA EN COMÚN</p><p class="d">Se juntaron las respuestas y se planificaron las funciones.</p></div>
+    <div class="step"><p class="n">04 · DISEÑO E ITERACIÓN</p><p class="d">Puesta en práctica con población real.</p></div>
+  </div>
+  <div class="preg in" style="--i:2">
+    <div>
+      <h4>La consulta</h4>
+      <ol>
+        <li><span>1</span>¿Cuántos pacientes ves y cada cuánto vuelve cada uno?</li>
+        <li><span>2</span>¿Qué es lo primero que mirás cuando llega un paciente?</li>
+        <li><span>3</span>¿Qué datos te faltan hoy en una consulta?</li>
+        <li><span>4</span>¿Cuánto te lleva preparar una consulta?</li>
+        <li><span>5</span>¿Qué querrías saber de lo que pasó entre consultas?</li>
+      </ol>
+    </div>
+    <div>
+      <h4>El registro</h4>
+      <ol>
+        <li><span>6</span>¿Tus pacientes llevan registro? ¿En qué formato?</li>
+        <li><span>7</span>¿Por qué creés que lo abandonan?</li>
+        <li><span>8</span>¿Qué precisión en las porciones te alcanza?</li>
+        <li><span>9</span>¿Qué tabla de composición de alimentos usás?</li>
+        <li><span>10</span>Además de la comida, ¿qué querés que registren?</li>
+      </ol>
+    </div>
+    <div>
+      <h4>El seguimiento</h4>
+      <ol>
+        <li><span>11</span>¿Cómo le marcás un objetivo diario a un paciente?</li>
+        <li><span>12</span>¿Cómo le hacés llegar indicaciones entre consultas?</li>
+        <li><span>13</span>¿Qué te preocupa de que una app le muestre números?</li>
+        <li><span>14</span>¿Qué te haría recomendar una app a tus pacientes?</li>
+        <li><span>15</span>¿Cuánto pagarías por una herramienta así?</li>
+      </ol>
+    </div>
+  </div>
+  <div class="foot"><span></span><span class="pg"></span></div>
+  <aside>Seis nutricionistas de clínica, deportología y antropometría, entrevistadas por separado con las mismas preguntas y después una puesta en común. No leer las preguntas: contar lo que se repitió. Todas trabajan con lo que el paciente recuerda; casi todas piden ver agua, sueño y actividad además de la comida; usan la tabla SARA; ninguna quiere rojos ni rachas que castiguen; y para recomendar una app necesitan ver el registro sin pedírselo al paciente.</aside>
+</section>
+
+<section id="app" class="alt" style="--sc:#1b9482;">
+  <p class="sec">02 · Hecha con nutricionistas</p>
+  <div class="row grow" style="gap:64px;align-items:center">
+    <div class="col in" style="width:760px;gap:28px">
+      <p class="eyebrow">La app</p>
+      <h2>Registra lo que las nutricionistas necesitan ver en la consulta.</h2>
+      <ul class="list">
+        <li>Comidas por foto, texto o voz, catálogo o código de barras.</li>
+        <li>Actividad, peso, medidas, agua, sueño y alcohol.</li>
+        <li>Días de enfermedad o descanso.</li>
+      </ul>
+    </div>
+    <div class="row in" style="--i:1;gap:36px">
+      <div class="col center" style="gap:12px"><img class="phone" src="img/app-agregar.png" alt="Menú Agregar de la app" style="width:330px;height:733px"><p class="cap">Agregar</p></div>
+      <div class="col center" style="gap:12px"><img class="phone" src="img/app-nueva-comida.png" alt="Nueva comida con foto, texto y catálogo" style="width:330px;height:733px"><p class="cap">Nueva comida</p></div>
+    </div>
+  </div>
+  <div class="foot"><span></span><span class="pg"></span></div>
+  <aside>Qué registrar no lo decidí yo: salió de preguntarles a nutricionistas qué miran en una consulta y qué querrían seguir entre una y otra. Por eso hay agua, sueño, alcohol y medidas, y no solo calorías. El día de enfermedad queda como contexto: explica los números, no cambia el objetivo ni el promedio. Pie que estaba en la lámina: Capturas de la app · escenario de demostración.</aside>
+</section>
+
+<!-- ═══════════════════ 03 · LA IA EN CERES ═══════════════════ -->
+
+<section id="div-03" class="divider" style="--sc:#3f74c4">
+  <div class="div-track"><span class="done"></span><span class="done"></span><span class="on"></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+  <p class="div-n in">03</p>
+  <h1 class="in" style="--i:1">La IA en Ceres</h1>
+  <div class="foot"><span></span><span class="pg"></span></div>
+  <aside>Sección 3 de 9: La IA en Ceres.</aside>
+</section>
+
+<section id="ia-consulta" style="--sc:#3f74c4;">
+  <p class="sec">03 · La IA en Ceres</p>
+  <div class="head in"><p class="eyebrow">IA en la consulta</p><h2>Dónde ayuda la IA en una consulta nutricional.</h2></div>
+  <div class="row in" style="--i:1;gap:20px">
+    <div class="step"><p class="n">ANTES</p><p class="t">Informe de consulta</p><p class="d">Lo que pasó desde la última visita, resumido y listo para leer.</p></div>
+    <div class="step"><p class="n">DURANTE</p><p class="t">Borradores de devolución</p><p class="d">La profesional los revisa, los corrige y recién ahí los envía.</p></div>
+    <div class="step"><p class="n">ENTRE CONSULTAS</p><p class="t">Acompañamiento</p><p class="d">Resumen semanal y qué comer con lo que le queda del día.</p></div>
+    <div class="step"><p class="n">EN EL CONSULTORIO</p><p class="t">Análisis de todos sus pacientes</p><p class="d">Tendencias del grupo: constancia, objetivos cumplidos y evolución del peso.</p></div>
+  </div>
+  <div class="preg qa in" style="--i:2;grid-template-columns:1fr">
+    <div>
+      <div class="qa-h"><h4>Lo que les preguntamos sobre IA</h4><h4>Lo que respondieron</h4></div>
+      <ol>
+        <li><span>16</span><p>¿Usás alguna herramienta de IA hoy en tu trabajo?</p><em>Pocas, y solo para redactar textos o planes. Ninguna con datos de sus pacientes.</em></li>
+        <li><span>17</span><p>¿En qué parte de la consulta te ahorraría más tiempo?</p><em>Al prepararla: revisar qué pasó desde la última visita.</em></li>
+        <li><span>18</span><p>¿Confiarías en una estimación de calorías hecha a partir de una foto?</p><em>Sí, si el paciente puede corregirla y las calorías salen de una tabla oficial.</em></li>
+        <li><span>19</span><p>¿Qué no debería hacer nunca la IA con un paciente?</p><em>Indicar una dieta o sacar conclusiones clínicas sin que la profesional lo revise.</em></li>
+        <li><span>20</span><p>¿Te serviría leer un resumen antes de cada consulta?</p><em>Sí, todas: corto, con números y sin diagnósticos.</em></li>
+      </ol>
+    </div>
+  </div>
+  <div class="foot"><span></span><span class="pg"></span></div>
+  <aside>La IA no se queda en el registro de comidas: también trabaja para la profesional. Respuestas de la puesta en común: dos de las seis ya usaban un chat de IA para redactar planes; todas dijeron que lo que más tiempo les lleva es preparar la consulta; confían en la estimación por foto solo si el paciente puede corregirla; ninguna quiere que la IA indique una dieta sin su revisión; y todas querían el resumen previo. Por eso la IA redacta y la profesional decide: nada le llega al paciente sin que ella lo revise.</aside>
+</section>
+
+<section id="ia-paciente" class="alt" style="--sc:#3f74c4;">
+  <p class="sec">03 · La IA en Ceres</p>
+  <div class="head in"><p class="eyebrow">IA para el paciente</p><h2>Qué le aporta la IA a la persona que registra.</h2></div>
+  <div class="g3 grow in" style="--i:1">
+    <div class="card"><p class="label">1 · Registrar</p><h3>Cargar una comida</h3><p class="txt">Con una foto, con una descripción o buscando en la tabla oficial.</p></div>
+    <div class="card"><p class="label">2 · Analizar</p><h3>Análisis nutricional</h3><p class="txt">Calcula calorías, proteínas, carbohidratos y grasas de cada comida.</p></div>
+    <div class="card"><p class="label">3 · Recomendar</p><h3>¿Qué como?</h3><p class="txt">Platos que entran en las calorías que le quedan, según <b>la devolución de su nutricionista</b>.</p></div>
+    <div class="card"><p class="label">4 · Calcular</p><h3>Actividad y gasto</h3><p class="txt">Estima las calorías que gasta cada actividad que registra.</p></div>
+    <div class="card"><p class="label">5 · Personalizar</p><h3>Alimentos propios</h3><p class="txt">Suma a la base los alimentos que come seguido, para usarlos en un toque.</p></div>
+    <div class="card"><p class="label">6 · Entender</p><h3>Resumen semanal</h3><p class="txt">Cómo le fue en la semana, explicado en pocas líneas.</p></div>
+  </div>
+  <div class="foot"><span></span><span class="pg"></span></div>
+  <aside>El recorrido de la persona con la IA, en orden: registra la comida, la IA calcula sus nutrientes, le sugiere qué comer con lo que le queda del día según lo que indicó su nutricionista, estima el gasto de su actividad y una vez por semana le resume cómo le fue. Todo lo que estima la IA lo confirma la persona.</aside>
+</section>
+
+<section id="ia" style="--sc:#3f74c4;">
+  <p class="sec">03 · La IA en Ceres</p>
+  <div class="head in"><p class="eyebrow">La IA en Ceres</p><h2>¿Cómo se estiman los valores?</h2></div>
+  <div class="row grow pasos-grandes in" style="--i:1;gap:20px">
+    <div class="step"><p class="n">01</p><p class="t">Foto o texto</p><p class="d">«Dos empanadas de carne y una coca cola»</p></div>
+    <div class="step"><p class="n">02</p><p class="t">Reconoce</p><p class="d">Identifica cada alimento y estima los gramos</p></div>
+    <div class="step step-hl"><p class="n">03</p><p class="t">Tabla SARA 2</p><p class="d">Del Ministerio de Salud, basada en alimentos argentinos.</p></div>
+    <div class="step"><p class="n">04</p><p class="t">Cálculo</p><p class="d">El servidor multiplica los gramos por los valores de la tabla</p></div>
+    <div class="step"><p class="n">05</p><p class="t">Confirmación</p><p class="d">La persona revisa, corrige y guarda</p></div>
+  </div>
+  <div class="card nota in" style="--i:2">
+    <p class="label">Complementada con</p>
+    <p class="txt"><b>USDA FoodData Central</b> para alimentos genéricos y <b>Open Food Facts</b> para productos envasados, por código de barras.</p>
+  </div>
+  <div class="foot"><span></span><span class="pg"></span></div>
+  <aside>Ninguna estimación se guarda sin que el paciente la confirme, y ninguna devolución le llega sin que la profesional la escriba o revise. No afirmar un porcentaje de error: todavía no está medido contra comidas pesadas. Pie que estaba en la lámina: Uso real en producción · 670 análisis.</aside>
+</section>
+
+<!-- ═══════════════════ 04 · DIFERENCIACIÓN ═══════════════════ -->
+
+<section id="div-04" class="divider" style="--sc:#c4508a">
+  <div class="div-track"><span class="done"></span><span class="done"></span><span class="done"></span><span class="on"></span><span></span><span></span><span></span><span></span><span></span></div>
+  <p class="div-n in">04</p>
+  <h1 class="in" style="--i:1">Diferenciación</h1>
+  <div class="foot"><span></span><span class="pg"></span></div>
+  <aside>Sección 4 de 9: Diferenciación.</aside>
+</section>
+
+<section id="diferencia" class="alt" style="--sc:#c4508a;">
+  <p class="sec">04 · Diferenciación</p>
+  <div class="head in"><p class="eyebrow">Diferenciación</p><h2>Qué tiene Ceres que las demás no.</h2></div>
+  <table class="comp in" style="--i:1">
+    <tr><th style="width:35%">&#160;</th><th class="c">Apps de calorías con IA<span>Cal AI · Fitia · MyFitnessPal</span></th><th class="c">Software para nutricionistas<span>Nutrium · Dietbox · Avena</span></th><th class="c">Plataformas de EE. UU.<span>Healthie · Practice Better</span></th><th class="c ce">Ceres</th></tr>
+    <tr><td>Registro por foto, texto o voz con IA</td><td class="c yes">Sí</td><td class="c mid">Solo en planes altos</td><td class="c mid">Foto, sin cálculo</td><td class="c ce">Sí</td></tr>
+    <tr><td>Calorías de la tabla oficial argentina</td><td class="c no">No</td><td class="c no">No</td><td class="c no">No</td><td class="c ce">SARA 2</td></tr>
+    <tr><td>Conecta paciente y profesional</td><td class="c no">No</td><td class="c yes">Sí</td><td class="c yes">Sí</td><td class="c ce">Sí</td></tr>
+    <tr><td>La profesional ve cada comida ya analizada</td><td class="c no">No</td><td class="c mid">Parcial</td><td class="c mid">Parcial</td><td class="c ce">Sí</td></tr>
+    <tr><td>Informe de consulta redactado con IA</td><td class="c no">No</td><td class="c no">No</td><td class="c mid">Notas con IA</td><td class="c ce">Sí</td></tr>
+    <tr><td>La app sirve sin nutricionista</td><td class="c yes">Sí</td><td class="c no">No</td><td class="c no">No</td><td class="c ce">Sí</td></tr>
+    <tr><td>La profesional cubre la IA de sus pacientes</td><td class="c no">No</td><td class="c no">No</td><td class="c no">No</td><td class="c ce">Sí</td></tr>
+  </table>
+  <div class="card nota in" style="--i:2">
+    <p class="label">Dónde se ubica Ceres</p>
+    <p class="txt">Junta en una sola herramienta <b>el registro rápido con IA</b> de las apps de calorías y <b>el seguimiento profesional</b> del software para nutricionistas, con datos argentinos.</p>
+  </div>
+  <div class="foot"><span></span><span class="pg"></span></div>
+  <aside>Nadie junta las dos puntas. Las apps de calorías con IA registran rápido, pero no tienen panel para la profesional. El software para nutricionistas tiene app del paciente, pero para ver el plan y chatear; la IA por foto, donde existe, está en el plan más caro. Ninguna calcula con la tabla argentina. Lo más parecido es lutrAI (España, 2026): registra por voz, pero tampoco tiene panel.</aside>
+</section>
+
+<!-- ═══════════════════ 05 · PACIENTE Y NUTRICIONISTA ═══════════════════ -->
+
+<section id="div-05" class="divider" style="--sc:#e0644a">
+  <div class="div-track"><span class="done"></span><span class="done"></span><span class="done"></span><span class="done"></span><span class="on"></span><span></span><span></span><span></span><span></span></div>
+  <p class="div-n in">05</p>
+  <h1 class="in" style="--i:1">Paciente y nutricionista</h1>
+  <div class="foot"><span></span><span class="pg"></span></div>
+  <aside>Sección 5 de 9: Paciente y nutricionista.</aside>
+</section>
+
+<section id="flujo" style="--sc:#e0644a;gap:28px">
+  <p class="sec">05 · Paciente y nutricionista</p>
+  <div class="head in"><p class="eyebrow">Cómo funciona</p><h2>De la foto a la consulta, en siete pasos.</h2></div>
+  <div class="flujo in" style="--i:1">
+    <svg width="1664" height="690" viewBox="0 0 1664 690" aria-label="Diagrama: la foto pasa por la IA y la tabla oficial, el paciente confirma, la nutricionista lo ve y le responde">
+    <!-- Grilla: 5 columnas de 290 px (x = 20, 353, 686, 1019, 1352); carriles de 215 px; cajas de 128 px a 62 px del borde del carril -->
+    <rect x="0" y="0" width="1664" height="215" rx="22" fill="#ebe8f8"/>
+    <text x="22" y="38" font-size="19" font-weight="700" letter-spacing="2" fill="#6f5fc9">APP DEL PACIENTE</text>
+    <rect x="0" y="235" width="1664" height="215" rx="22" fill="#f8efdf"/>
+    <text x="22" y="273" font-size="19" font-weight="700" letter-spacing="2" fill="#b87508">SERVIDOR E IA</text>
+    <rect x="0" y="470" width="1664" height="215" rx="22" fill="#fbe9e4"/>
+    <text x="22" y="508" font-size="19" font-weight="700" letter-spacing="2" fill="#d4573c">PANEL DE LA NUTRICIONISTA</text>
+    <g fill="none" stroke="#cfcae3" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M290 190 V361 H341"/><path d="M643 361 H674"/><path d="M831 297 V126 H1007"/>
+      <path d="M1164 190 V520"/><path d="M1309 596 H1340"/><path d="M1497 532 V202"/>
+    </g>
+    <g class="segs">
+      <path class="seg" pathLength="1" style="--d:.9s;--t:.5s" d="M290 190 V361 H341"/>
+      <path class="seg" pathLength="1" style="--d:2.2s;--t:.3s" d="M643 361 H674"/>
+      <path class="seg" pathLength="1" style="--d:3s;--t:.8s" d="M831 297 V126 H1007"/>
+      <path class="seg" pathLength="1" style="--d:4.3s;--t:.76s" d="M1164 190 V520"/>
+      <path class="seg" pathLength="1" style="--d:5.56s;--t:.3s" d="M1309 596 H1340"/>
+      <path class="seg" pathLength="1" style="--d:6.36s;--t:.76s" d="M1497 532 V202"/>
+    </g>
+    <g fill="#6f5fc9">
+      <path class="ar" style="--d:1.35s" d="M339 352 L353 361 L339 370 Z"/>
+      <path class="ar" style="--d:2.45s" d="M672 352 L686 361 L672 370 Z"/>
+      <path class="ar" style="--d:3.75s" d="M1005 117 L1019 126 L1005 135 Z"/>
+      <path class="ar" style="--d:5s" d="M1155 518 L1164 532 L1173 518 Z"/>
+      <path class="ar" style="--d:5.8s" d="M1338 587 L1352 596 L1338 605 Z"/>
+      <path class="ar" style="--d:7.07s" d="M1488 204 L1497 190 L1506 204 Z"/>
+    </g>
+    </svg>
+    <svg width="1664" height="690" viewBox="0 0 1664 690" aria-hidden="true">
+    <g fill="#ffffff" stroke="#d3cfe4" stroke-width="2.5">
+      <rect x="20" y="62" width="290" height="128" rx="20"/><rect x="353" y="297" width="290" height="128" rx="20"/>
+      <rect x="686" y="297" width="290" height="128" rx="20"/><rect x="1019" y="62" width="290" height="128" rx="20"/>
+      <rect x="1019" y="532" width="290" height="128" rx="20"/><rect x="1352" y="532" width="290" height="128" rx="20"/>
+      <rect x="1352" y="62" width="290" height="128" rx="20"/>
+    </g>
+    <g class="n" style="--d:.7s">
+      <text x="353" y="98" font-size="15" font-weight="700" letter-spacing="1.5" fill="#6f5fc9">TAMBIÉN REGISTRA</text>
+      <g fill="#ffffff" stroke="#cbc4ee" stroke-width="2">
+        <rect x="353" y="112" width="116" height="38" rx="19"/><rect x="479" y="112" width="72" height="38" rx="19"/>
+        <rect x="561" y="112" width="82" height="38" rx="19"/><rect x="653" y="112" width="72" height="38" rx="19"/>
+      </g>
+      <g font-size="18" fill="#46445c" text-anchor="middle">
+        <text x="411" y="137">Actividad</text><text x="515" y="137">Agua</text>
+        <text x="602" y="137">Sueño</text><text x="689" y="137">Peso</text>
+      </g>
+    </g>
+    <g class="n" style="--d:.4s">
+      <rect x="20" y="62" width="290" height="128" rx="20" fill="#ffffff" stroke="#6f5fc9" stroke-width="2.5"/>
+      <text x="165" y="105" text-anchor="middle" font-size="23" font-weight="600" fill="#1c1a2e">Foto o frase</text>
+      <text x="165" y="139" text-anchor="middle" font-size="19" fill="#46445c">«Dos empanadas</text>
+      <text x="165" y="163" text-anchor="middle" font-size="19" fill="#46445c">y una coca cola»</text>
+    </g>
+    <g class="n" style="--d:1.4s">
+      <rect x="353" y="297" width="290" height="128" rx="20" fill="#ffffff" stroke="#d08a12" stroke-width="2.5"/>
+      <text x="498" y="340" text-anchor="middle" font-size="23" font-weight="600" fill="#1c1a2e">Modelo de IA reconoce</text>
+      <text x="498" y="374" text-anchor="middle" font-size="19" fill="#46445c">Cada alimento</text>
+      <text x="498" y="398" text-anchor="middle" font-size="19" fill="#46445c">y estima sus gramos</text>
+    </g>
+    <g class="n" style="--d:2.5s">
+      <rect x="686" y="297" width="290" height="128" rx="20" fill="#ffffff" stroke="#d08a12" stroke-width="2.5"/>
+      <text x="831" y="340" text-anchor="middle" font-size="23" font-weight="600" fill="#1c1a2e">Bases de alimentos</text>
+      <text x="831" y="374" text-anchor="middle" font-size="19" fill="#46445c">Calcula calorías</text>
+      <text x="831" y="398" text-anchor="middle" font-size="19" fill="#46445c">y nutrientes</text>
+    </g>
+    <g class="n" style="--d:3.8s">
+      <rect x="1019" y="62" width="290" height="128" rx="20" fill="#ffffff" stroke="#6f5fc9" stroke-width="2.5"/>
+      <text x="1164" y="105" text-anchor="middle" font-size="23" font-weight="600" fill="#1c1a2e">La persona confirma</text>
+      <text x="1164" y="139" text-anchor="middle" font-size="19" fill="#46445c">Revisa, corrige</text>
+      <text x="1164" y="163" text-anchor="middle" font-size="19" fill="#46445c">y guarda</text>
+    </g>
+    <g class="n" style="--d:5.06s">
+      <rect x="1019" y="532" width="290" height="128" rx="20" fill="#ffffff" stroke="#e0644a" stroke-width="2.5"/>
+      <text x="1164" y="575" text-anchor="middle" font-size="23" font-weight="600" fill="#1c1a2e">Llega a la ficha</text>
+      <text x="1164" y="609" text-anchor="middle" font-size="19" fill="#46445c">Comidas, actividad,</text>
+      <text x="1164" y="633" text-anchor="middle" font-size="19" fill="#46445c">agua y sueño</text>
+    </g>
+    <g class="n" style="--d:5.86s">
+      <rect x="1352" y="532" width="290" height="128" rx="20" fill="#ffffff" stroke="#e0644a" stroke-width="2.5"/>
+      <text x="1497" y="575" text-anchor="middle" font-size="23" font-weight="600" fill="#1c1a2e">Profesional responde</text>
+      <text x="1497" y="609" text-anchor="middle" font-size="19" fill="#46445c">Con una devolución</text>
+      <text x="1497" y="633" text-anchor="middle" font-size="19" fill="#46445c">o un objetivo</text>
+    </g>
+    <g class="n" style="--d:7.12s">
+      <rect x="1352" y="62" width="290" height="128" rx="20" fill="#ffffff" stroke="#6f5fc9" stroke-width="2.5"/>
+      <text x="1497" y="105" text-anchor="middle" font-size="23" font-weight="600" fill="#1c1a2e">Lo ve en la app</text>
+      <text x="1497" y="139" text-anchor="middle" font-size="19" fill="#46445c">En Inicio, marcada</text>
+      <text x="1497" y="163" text-anchor="middle" font-size="19" fill="#46445c">como «Nueva»</text>
+    </g>
+
+    </svg>
+  </div>
+  <div class="foot"><span></span><span class="pg"></span></div>
+  <aside>Recorrer el diagrama mientras se dibuja: arriba el paciente, al medio el servidor, abajo la nutricionista. La IA solo reconoce los alimentos y estima los gramos; el número sale de la tabla SARA 2 o, si el alimento no está, de USDA u Open Food Facts. Nada se guarda sin que la persona lo confirme.</aside>
+</section>
+
+<section id="usuario" class="alt" style="--sc:#e0644a;">
+  <p class="sec">05 · Paciente y nutricionista</p>
+  <div class="head in"><p class="eyebrow">La app del paciente</p><h2>Todo lo que la persona registra y consulta.</h2></div>
+  <div class="g4 grow in" style="--i:1">
+    <div class="card"><span class="ico-card sm" style="background:var(--t1)"><svg viewBox="0 0 24 24" fill="none" stroke="var(--c1)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3v8M5 3v4a2 2 0 0 0 4 0V3M7 11v10M17 3c-2 2-2.5 5-2.5 8H17v10"/></svg></span><h3>Comidas</h3><p class="txt">Por foto, frase, catálogo o código de barras.</p></div>
+    <div class="card"><span class="ico-card sm" style="background:var(--t2)"><svg viewBox="0 0 24 24" fill="none" stroke="var(--c2)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l3-7 4 14 3-7h4"/></svg></span><h3>Actividad</h3><p class="txt">Ejercicio y pasos, con su gasto calórico.</p></div>
+    <div class="card"><span class="ico-card sm" style="background:var(--t3)"><svg viewBox="0 0 24 24" fill="none" stroke="var(--c3)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="4.5" r="2"/><path d="M6 8.5l6 1.5 6-1.5M12 10v4.5M9 21l3-6.5 3 6.5"/></svg></span><h3>Cuerpo</h3><p class="txt">Peso, perímetros y pliegues.</p></div>
+    <div class="card"><span class="ico-card sm" style="background:var(--t4)"><svg viewBox="0 0 24 24" fill="none" stroke="var(--c4)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/></svg></span><h3>Hábitos</h3><p class="txt">Agua, sueño y alcohol.</p></div>
+    <div class="card"><span class="ico-card sm" style="background:var(--t1)"><svg viewBox="0 0 24 24" fill="none" stroke="var(--c1)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg></span><h3>Contexto del día</h3><p class="txt">Enfermedad o descanso, que explican los números.</p></div>
+    <div class="card"><span class="ico-card sm" style="background:var(--t2)"><svg viewBox="0 0 24 24" fill="none" stroke="var(--c2)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8M15 7h6v6"/></svg></span><h3>Progreso</h3><p class="txt">Historial, gráficos y resumen semanal.</p></div>
+    <div class="card"><span class="ico-card sm" style="background:var(--t3)"><svg viewBox="0 0 24 24" fill="none" stroke="var(--c3)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 9.5h8M8 12.5h5"/></svg></span><h3>Su nutricionista</h3><p class="txt">Devoluciones, objetivo recomendado y artículos.</p></div>
+    <div class="card"><span class="ico-card sm" style="background:var(--t4)"><svg viewBox="0 0 24 24" fill="none" stroke="var(--c4)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="6" width="10" height="12" rx="3"/><path d="M9 6l1-3h4l1 3M9 18l1 3h4l1-3M12 10v2.5l1.5 1"/></svg></span><h3>Conectada</h3><p class="txt">Importa del reloj con Health Connect y comparte con amigos.</p></div>
+  </div>
+  <div class="foot"><span></span><span class="pg"></span></div>
+  <aside>Además de las comidas, la persona registra actividad, peso y medidas, agua, sueño y alcohol, y puede marcar un día de enfermedad o descanso para que el número no la castigue. Ve su progreso y el resumen semanal, recibe lo que le manda su nutricionista e importa datos del reloj por Health Connect. Desde acá pasamos al lado de la nutricionista.</aside>
+</section>
+
+<section id="panel-intro" style="--sc:#e0644a;">
+  <p class="sec">05 · Paciente y nutricionista</p>
+  <div class="row grow" style="gap:56px;align-items:center">
+    <div class="col in" style="width:600px;gap:26px">
+      <p class="eyebrow">El panel del profesional</p>
+      <h2>Una plataforma para seguir a todos sus pacientes.</h2>
+      <ul class="list">
+        <li><b>Organización:</b> consultorio virtual, equipo de pacientes y su historial.</li>
+        <li>Cada paciente, con registros en tiempo real.</li>
+        <li>Avisos cuando alguien deja de registrar.</li>
+        <li>Devoluciones y objetivos que le llegan al paciente en la app.</li>
+        <li>En la computadora para la consulta, y también desde el celular.</li>
+      </ul>
+    </div>
+    <div class="dispositivos in" style="--i:1">
+      <img class="shot web" src="img/panel-pacientes-web.png" alt="Panel web: lista de pacientes">
+      <img class="phone movil" src="img/panel-pacientes-movil.png" alt="El mismo panel en el celular">
+      <p class="cap cap-web">Web</p>
+      <p class="cap cap-movil">Celular</p>
+    </div>
+  </div>
+  <div class="foot"><span></span><span class="pg"></span></div>
+  <aside>Es donde trabaja la nutricionista: sus pacientes y el historial de cada uno. Se usa en la computadora durante la consulta y se adapta al celular para revisar entre turnos.</aside>
+</section>
+
+<section id="alta" class="alt" style="--sc:#e0644a;">
+  <p class="sec">05 · Paciente y nutricionista</p>
+  <div class="row grow" style="gap:64px;align-items:center">
+    <div class="col in" style="width:860px;gap:28px">
+      <p class="eyebrow">Dar de alta</p>
+      <h2>Tres formas de sumar un paciente.</h2>
+      <div class="col" style="gap:18px">
+        <div class="step" style="flex:none"><p class="n">1 · CARGAR SUS DATOS</p><p class="t">La nutricionista hace la anamnesis en el panel</p><p class="d">El paciente entra a la app y ya tiene todo configurado: objetivo, calorías y restricciones.</p></div>
+        <div class="step" style="flex:none"><p class="n">2 · INVITAR POR MAIL</p><p class="t">Le llega la invitación en la app</p><p class="d">El paciente completa sus datos y acepta.</p></div>
+        <div class="step" style="flex:none"><p class="n">3 · DARLE EL CÓDIGO</p><p class="t">Para quien ya usa Ceres</p><p class="d">Se asocia al equipo del profesional mediante un código.</p></div>
+      </div>
+    </div>
+    <img class="shot in" style="--i:1;width:700px;height:792px" src="img/panel-alta.png" alt="Modal Dar de alta con datos y anamnesis">
+  </div>
+  <div class="foot"><span></span><span class="pg"></span></div>
+  <aside>El flujo 1 es el que más vende: la consulta de admisión ya queda cargada y el paciente no tiene que configurar nada. Una persona tiene una sola nutricionista a la vez; la baja puede hacerla cualquiera de los dos. Pie que estaba en la lámina: El consentimiento es siempre del paciente: hasta que acepta, la nutricionista no ve nada.</aside>
+</section>
+
+<section id="organizacion" style="--sc:#e0644a;">
+  <p class="sec">05 · Paciente y nutricionista</p>
+  <div class="row grow" style="gap:64px;align-items:center">
+    <div class="col in" style="width:640px;gap:26px">
+      <span class="pedido">Herramientas que pidieron los profesionales</span>
+      <p class="eyebrow">El panel · Organización</p>
+      <h2>El consultorio de un vistazo.</h2>
+      <p class="body">Quién está activo, constancia, quién está dentro del objetivo y cómo viene el peso.</p>
+      <p class="body">Un análisis del equipo con IA y la tabla de pacientes con lo esencial de cada uno.</p>
+    </div>
+    <img class="shot in" style="--i:1;width:900px;height:826px" src="img/panel-organizacion.png" alt="Página Organización del panel">
+  </div>
+  <div class="foot"><span></span><span class="pg"></span></div>
+  <aside>La página de inicio del panel, con los números del consultorio. Cuando algo no cierra aparece un aviso en una frase, por ejemplo «Promedio 44 % bajo el objetivo: ¿registra todo?», sin semáforos ni puntajes. La nutricionista y sus pacientes son un escenario de demostración.</aside>
+</section>
+
+<section id="ficha" style="--sc:#e0644a;">
+  <p class="sec">05 · Paciente y nutricionista</p>
+  <div class="row grow" style="gap:64px;align-items:center">
+    <img class="shot in" style="width:900px;height:826px" src="img/panel-diario.png" alt="Calendario día a día de una paciente">
+    <div class="col in" style="--i:1;width:640px;gap:26px">
+      <p class="eyebrow">El panel · la ficha</p>
+      <h2>Trazabilidad día a día.</h2>
+      <p class="body">Día a día: calorías, comidas, actividad, agua, sueño, enfermedad y descanso.</p>
+      <p class="body">Hábitos, comidas con su foto, medidas y el informe con IA.</p>
+    </div>
+  </div>
+  <div class="foot"><span></span><span class="pg"></span></div>
+  <aside>Ocho pestañas: Resumen, Día a día, Hábitos, Comidas, Fotos, Medidas, Devoluciones e Informe con IA. Cada día se abre con el detalle de sus comidas. Lo que el paciente no comparte se ve apagado. Pie que estaba en la lámina: Escenario de demostración · paciente simulada.</aside>
+</section>
+
+<section id="analisis" class="alt" style="--sc:#e0644a;">
+  <p class="sec">05 · Paciente y nutricionista</p>
+  <div class="row grow" style="gap:56px;align-items:center">
+    <div class="col in" style="width:720px;gap:26px">
+      <p class="eyebrow">Los análisis</p>
+      <h2>Rápida auditoría de los datos.</h2>
+      <ul class="list">
+        <li>Registro contra balanza: ¿lo que come explica lo que pesa?</li>
+        <li>Semana contra semana, horarios y lo que más se repite.</li>
+        <li>Días con alcohol o enfermedad contra días sin.</li>
+        <li><b>La IA no reemplaza el trabajo del profesional:</b> lo complementa.</li>
+      </ul>
+    </div>
+    <div class="col in" style="--i:1;gap:12px;align-items:center">
+      <img class="shot" src="img/panel-balance.png" alt="Registro contra balanza y semana contra semana" style="width:880px;height:523px">
+      <p class="cap">Ficha de una paciente · Resumen</p>
+    </div>
+  </div>
+  <div class="foot"><span></span><span class="pg"></span></div>
+  <aside>La regla: lo que es cuenta se hace con código y tiene test; la IA solo redacta sobre números ya calculados. Por eso el informe es confiable y por eso es barato: el modelo no tiene que leer cada comida. Pie que estaba en la lámina: Los números los calcula Ceres; el texto, la IA.</aside>
+</section>
+
+<section id="devoluciones" style="--sc:#e0644a;">
+  <p class="sec">05 · Paciente y nutricionista</p>
+  <div class="head in"><p class="eyebrow">El circuito, en vivo</p><h2>Feedback asíncrono.</h2></div>
+  <div class="row grow in" style="--i:1;gap:40px;align-items:flex-start;justify-content:center">
+    <div class="col center" style="gap:12px">
+      <img class="vid-shot media-anim" data-src="vid/panel-devolucion.webp" src="vid/panel-devolucion.webp" alt="Video: la nutricionista abre la ficha de Sofía, mira un día y le escribe una devolución" style="width:1080px;height:675px">
+      <p class="cap">Panel · Valentina abre la ficha de Sofía y le escribe</p>
+    </div>
+    <div class="col center" style="gap:12px">
+      <div class="tel" style="width:304px;height:675px">
+        <video src="vid/app-devolucion.mp4" poster="vid/app-devolucion-poster.jpg" data-delay="20500" muted playsinline preload="auto"></video>
+        <!-- Simulación: pantalla bloqueada y la notificación de la devolución (la app todavía no tiene push) -->
+        <div class="bloqueo" data-notif="16400" data-abrir="19600">
+          <p class="bl-hora">1:21</p>
+          <p class="bl-fecha">lunes, 16 de noviembre</p>
+          <div class="notif">
+            <div class="notif-top"><svg viewBox="0 0 100 100" aria-hidden="true"><rect width="100" height="100" rx="22" fill="#1c1f33"/><circle cx="50" cy="50" r="33" fill="none" stroke="#2f3245" stroke-width="8"/><circle cx="50" cy="50" r="33" fill="none" stroke="#9184d9" stroke-width="8" stroke-linecap="round" transform="rotate(-90 50 50)" stroke-dasharray="155.5 207.3"/><rect x="36.5" y="52" width="6.5" height="13" rx="3.25" fill="#d2cefd"/><rect x="46.75" y="44.5" width="6.5" height="20.5" rx="3.25" fill="#d2cefd"/><rect x="57" y="37" width="6.5" height="28" rx="3.25" fill="#9184d9"/></svg><span>Ceres · ahora</span></div>
+            <p class="notif-t">Lic. Valentina Ruiz</p>
+            <p class="notif-b">Sofía, qué bien cerraste la semana: cinco días registrados y dentro del objetivo. ¡Seguí así!</p>
+          </div>
+        </div>
+      </div>
+      <p class="cap">App · le llega a Sofía</p>
+    </div>
+  </div>
+  <div class="foot"><span></span><span class="pg"></span></div>
+  <aside>Valentina abre la ficha de Sofía, mira el jueves y le escribe una devolución. A Sofía le llega la notificación y la ve en Inicio, junto con el objetivo recomendado, que aplica con un toque. La nutricionista también publica artículos y recetas.</aside>
+</section>
+
+<section id="caso" class="alt" style="--sc:#e0644a;">
+  <p class="sec">05 · Paciente y nutricionista</p>
+  <div class="head in"><p class="eyebrow">Prueba piloto</p><h2>Un mes de uso real.</h2></div>
+  <div class="row" style="gap:24px">
+    <div class="card grow in" style="--i:1;padding:28px 34px"><p class="num" style="font-size:76px">5</p><p class="txt">personas</p></div>
+    <div class="card grow in" style="--i:2;padding:28px 34px"><p class="num" style="font-size:76px">31</p><p class="txt">días de prueba</p></div>
+    <div class="card grow in" style="--i:3;padding:28px 34px"><p class="num" style="font-size:76px">694</p><p class="txt">comidas cargadas</p></div>
+    <div class="card card-accent grow in" style="--i:4;padding:28px 34px"><p class="num accent" style="font-size:76px">80 %</p><p class="txt">de las comidas, por IA</p></div>
+  </div>
+  <div class="row grow in" style="--i:6;gap:56px;align-items:flex-start">
+    <table style="width:960px;font-size:24px">
+      <tr><th style="width:50%">Lo que hacían</th><th>Lo que cambiamos</th></tr>
+      <tr><td>Desayunaban casi siempre lo mismo</td><td class="hl">Repetir una comida</td></tr>
+      <tr><td>Faltaba agregar un ingrediente</td><td class="hl">Sumar un ítem a una comida</td></tr>
+      <tr><td>Un día enfermos arruinaba el promedio</td><td class="hl">Marcar el día de enfermedad</td></tr>
+      <tr><td>No sabían qué cenar</td><td class="hl">«¿Qué como?» sugiere platos</td></tr>
+    </table>
+    <div class="col grow" style="gap:16px">
+      <p class="small">Cómo cargaron las comidas</p>
+      <div class="bar-row"><p class="bar-label" style="width:250px;font-size:24px">Análisis con IA</p><div class="bar-track"><div class="bar-fill" style="width:80%"></div></div><p class="bar-val" style="width:90px;font-size:24px">80 %</p></div>
+      <div class="bar-row"><p class="bar-label" style="width:250px;font-size:24px">Búsqueda en la base</p><div class="bar-track"><div class="bar-fill" style="width:14%;background:#b4a9ef"></div></div><p class="bar-val" style="width:90px;font-size:24px">14 %</p></div>
+      <div class="bar-row"><p class="bar-label" style="width:250px;font-size:24px">Carga manual</p><div class="bar-track"><div class="bar-fill" style="width:6%;background:#cdc9de"></div></div><p class="bar-val" style="width:90px;font-size:24px">6 %</p></div>
+    </div>
+  </div>
+  <div class="foot"><span></span><span class="pg"></span></div>
+  <aside>Prueba piloto de un mes: cinco personas cargaron lo que comían todos los días durante 31 días. Mirando cómo lo usaban apareció cada cambio: repetir el desayuno, sumar el ingrediente que faltaba, que un día enfermo no arruine el promedio, y saber qué cenar con lo que quedaba del día. El 80 % de las comidas entró por análisis con IA, el resto por búsqueda en la base de alimentos o carga manual: es lo que justifica que la IA sea lo que se cobra.</aside>
+</section>
+
+<section id="resultados" style="--sc:#e0644a;">
+  <p class="sec">05 · Paciente y nutricionista</p>
+  <div class="head in"><p class="eyebrow">Resultados de la IA</p><h2>Cómo rindió la IA durante el mes.</h2></div>
+  <div class="row grow" style="gap:28px;align-items:stretch">
+    <div class="col in" style="--i:1;width:470px;gap:20px">
+      <div class="card grow kpi"><p class="num accent">670</p><p class="txt">análisis con IA en el mes</p></div>
+      <div class="card grow kpi"><p class="num">~11 s</p><p class="txt">de espera típica por foto</p></div>
+      <div class="card grow kpi"><p class="num">5 de 5</p><p class="txt">personas la usaron todas las semanas</p></div>
+    </div>
+    <div class="col grow in" style="--i:2;gap:20px">
+      <div class="card grow">
+        <p class="label">Análisis por semana</p>
+        <div class="colchart">
+          <div><span class="cv">148</span><i style="height:78%"></i><span class="cl">Semana 1</span></div>
+          <div><span class="cv">162</span><i style="height:86%"></i><span class="cl">Semana 2</span></div>
+          <div><span class="cv">171</span><i style="height:90%"></i><span class="cl">Semana 3</span></div>
+          <div><span class="cv">189</span><i style="height:100%"></i><span class="cl">Semana 4</span></div>
+        </div>
+      </div>
+      <div class="card" style="gap:14px">
+        <p class="label">Qué hicieron con la estimación</p>
+        <div class="bar-row"><p class="bar-label" style="width:300px;font-size:24px">La guardaron tal cual</p><div class="bar-track"><div class="bar-fill" style="width:68%"></div></div><p class="bar-val" style="width:90px;font-size:24px">68 %</p></div>
+        <div class="bar-row"><p class="bar-label" style="width:300px;font-size:24px">Ajustaron los gramos</p><div class="bar-track"><div class="bar-fill" style="width:24%;background:#b4a9ef"></div></div><p class="bar-val" style="width:90px;font-size:24px">24 %</p></div>
+        <div class="bar-row"><p class="bar-label" style="width:300px;font-size:24px">Cambiaron un alimento</p><div class="bar-track"><div class="bar-fill" style="width:8%;background:#cdc9de"></div></div><p class="bar-val" style="width:90px;font-size:24px">8 %</p></div>
+      </div>
+    </div>
+  </div>
+  <div class="foot"><span></span><span class="pg"></span></div>
+  <aside>Durante el mes de prueba hubo 670 análisis con IA, y fueron creciendo semana a semana: la gente lo adopta. La espera típica por foto es de unos 11 segundos. Ninguna estimación se guarda sola: dos de cada tres se guardaron tal cual, una de cada cuatro con los gramos ajustados y pocas con un alimento cambiado. Eso muestra que la persona revisa y que la IA acierta la mayoría de las veces.</aside>
+</section>
+
+<!-- ═══════════════════ 06 · TECNOLOGÍA E INFRAESTRUCTURA ═══════════════════ -->
+
+<section id="div-06" class="divider" style="--sc:#1f86a8">
+  <div class="div-track"><span class="done"></span><span class="done"></span><span class="done"></span><span class="done"></span><span class="done"></span><span class="on"></span><span></span><span></span><span></span></div>
+  <p class="div-n in">06</p>
+  <h1 class="in" style="--i:1">Tecnología e infraestructura</h1>
+  <div class="foot"><span></span><span class="pg"></span></div>
+  <aside>Sección 6 de 9: Tecnología e infraestructura.</aside>
+</section>
+
+<section id="modelos" class="alt" style="--sc:#1f86a8;">
+  <p class="sec">06 · Tecnología</p>
+  <div class="head in"><p class="eyebrow">Qué IA usamos</p><h2>Cada modelo, donde rinde más.</h2></div>
+  <div class="row grow" style="gap:24px;align-items:stretch">
+    <div class="card grow modelo in" style="--i:1">
+      <p class="label">Registros en la app</p>
+      <div class="logo-modelo"><svg viewBox="0 0 24 24" aria-label="Logo de Gemini"><defs><linearGradient id="gem" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4796e3"/><stop offset=".55" stop-color="#9177c7"/><stop offset="1" stop-color="#d96570"/></linearGradient></defs><path d="M12 0C12 6.6 17.4 12 24 12C17.4 12 12 17.4 12 24C12 17.4 6.6 12 0 12C6.6 12 12 6.6 12 0Z" fill="url(#gem)"/></svg><div><h3>Gemini 3.5 Flash-Lite</h3><p class="prov">Google</p></div></div>
+      <p class="usa">Foto, texto o planificación</p>
+      <div class="pc-grid">
+        <ul class="list pro"><li>Modelo rápido: la persona está esperando</li><li>El más económico: es lo que más se usa</li><li>Lee fotos de comida</li></ul>
+        <ul class="list contra"><li>Razonamiento más simple</li><li>Se satura en horas pico</li></ul>
+      </div>
+    </div>
+    <div class="relevo in" style="--i:2" aria-hidden="true"><span>⇄</span><p class="rel-t">Respaldo mutuo</p><p>Si uno no responde, el otro toma el pedido.</p></div>
+    <div class="card grow modelo claude in" style="--i:3">
+      <p class="label">Análisis e informes</p>
+      <div class="logo-modelo"><svg viewBox="-12 -12 24 24" aria-label="Logo de Claude"><g stroke="#d97757" stroke-width="2.4" stroke-linecap="round"><line x1="0" y1="-2.2" x2="0" y2="-10.5"/><line x1="0" y1="-2.2" x2="0" y2="-8.5" transform="rotate(30)"/><line x1="0" y1="-2.2" x2="0" y2="-10.5" transform="rotate(60)"/><line x1="0" y1="-2.2" x2="0" y2="-8.5" transform="rotate(90)"/><line x1="0" y1="-2.2" x2="0" y2="-10.5" transform="rotate(120)"/><line x1="0" y1="-2.2" x2="0" y2="-8.5" transform="rotate(150)"/><line x1="0" y1="-2.2" x2="0" y2="-10.5" transform="rotate(180)"/><line x1="0" y1="-2.2" x2="0" y2="-8.5" transform="rotate(210)"/><line x1="0" y1="-2.2" x2="0" y2="-10.5" transform="rotate(240)"/><line x1="0" y1="-2.2" x2="0" y2="-8.5" transform="rotate(270)"/><line x1="0" y1="-2.2" x2="0" y2="-10.5" transform="rotate(300)"/><line x1="0" y1="-2.2" x2="0" y2="-8.5" transform="rotate(330)"/></g></svg><div><h3>Claude Opus 5.5</h3><p class="prov">Anthropic</p></div></div>
+      <p class="usa">Resumen semanal · informes · análisis de pacientes</p>
+      <div class="pc-grid">
+        <ul class="list pro"><li>Mejor razonamiento y redacción</li><li>Lee mucho contexto: semanas de registros</li><li>Son pocos pedidos: el costo se diluye</li></ul>
+        <ul class="list contra"><li>Más caro por pedido</li></ul>
+      </div>
+    </div>
+  </div>
+  <div class="foot"><span></span><span class="pg"></span></div>
+  <aside>El modelo se elige por tarea, no por plan. Registrar una comida es lo que más se hace y con la persona esperando: Gemini 3.5 Flash-Lite, rápido y el más económico. Resúmenes e informes son pocos pedidos que piden razonar y redactar bien: Claude Opus 5.5. Si uno no responde, el otro toma el pedido. El modelo se cambia en el servidor, sin publicar la app.</aside>
+</section>
+
+<section id="stack" style="--sc:#1f86a8;">
+  <p class="sec">06 · Tecnología</p>
+  <div class="head in"><p class="eyebrow">Con qué está hecha</p><h2>Las tecnologías detrás de Ceres.</h2></div>
+  <div class="capas grow in" style="--i:1">
+    <div class="capa">
+      <p class="capa-t">Lo que se usa</p>
+      <div class="card tec">
+        <div class="tec-h"><svg viewBox="0 0 24 24" aria-label="Flutter"><path d="M14.3 1.5 3.6 12.2l3.3 3.3L20.9 1.5z" fill="#47c5fb"/><path d="M14.3 11.4 8.6 17.1l5.7 5.7h6.6l-5.7-5.7 5.7-5.7z" fill="#00569e"/><path d="m8.6 17.1 3.3-3.3 3.3 3.3-3.3 3.3z" fill="#00b5f8"/></svg><div><h3>Flutter</h3><p class="txt">La app del paciente</p></div></div>
+        <p class="porque">Un solo código para Android e iOS.</p>
+      </div>
+      <div class="card tec">
+        <div class="tec-h"><svg viewBox="0 0 24 24" aria-label="Next.js"><circle cx="12" cy="12" r="12" fill="#111"/><path d="M8.2 7.5v9M8.2 7.5l8 10.5" stroke="#fff" stroke-width="1.8" fill="none" stroke-linecap="round"/><path d="M15.8 7.5v6" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/></svg><div><h3>Next.js · Vercel</h3><p class="txt">El panel del profesional</p></div></div>
+        <p class="porque">Se publica solo y anda en el celular.</p>
+      </div>
+    </div>
+    <div class="capa">
+      <p class="capa-t">El servidor</p>
+      <div class="card tec">
+        <div class="tec-h"><svg viewBox="0 0 24 24" aria-label="Supabase"><path d="M13.6 1.6 3.4 14.3c-.5.6 0 1.4.7 1.4h8l-.9 6.7 10.2-12.7c.5-.6 0-1.4-.7-1.4h-8z" fill="#3ecf8e"/></svg><div><h3>Supabase</h3><p class="txt">Base, cuentas y fotos</p></div></div>
+        <p class="porque">Postgres con seguridad por fila, sin mantener servidores.</p>
+      </div>
+      <div class="card tec">
+        <div class="tec-h"><svg viewBox="0 0 24 24" aria-label="Edge Functions"><rect width="24" height="24" rx="6" fill="#1c2b25"/><path d="M9.5 7 6 12l3.5 5M14.5 7l3.5 5-3.5 5" stroke="#3ecf8e" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg><div><h3>Edge Functions</h3><p class="txt">Las llamadas a la IA</p></div></div>
+        <p class="porque">Las claves de la IA nunca llegan al teléfono.</p>
+      </div>
+    </div>
+    <div class="capa">
+      <p class="capa-t">La inteligencia</p>
+      <div class="card tec">
+        <div class="tec-h"><span class="dos"><svg viewBox="0 0 24 24" aria-label="Gemini"><defs><linearGradient id="gem2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4796e3"/><stop offset=".55" stop-color="#9177c7"/><stop offset="1" stop-color="#d96570"/></linearGradient></defs><path d="M12 0C12 6.6 17.4 12 24 12C17.4 12 12 17.4 12 24C12 17.4 6.6 12 0 12C6.6 12 12 6.6 12 0Z" fill="url(#gem2)"/></svg><svg viewBox="-12 -12 24 24" aria-label="Claude"><g stroke="#d97757" stroke-width="2.4" stroke-linecap="round"><line y1="-2.2" y2="-10.5"/><line y1="-2.2" y2="-8.5" transform="rotate(30)"/><line y1="-2.2" y2="-10.5" transform="rotate(60)"/><line y1="-2.2" y2="-8.5" transform="rotate(90)"/><line y1="-2.2" y2="-10.5" transform="rotate(120)"/><line y1="-2.2" y2="-8.5" transform="rotate(150)"/><line y1="-2.2" y2="-10.5" transform="rotate(180)"/><line y1="-2.2" y2="-8.5" transform="rotate(210)"/><line y1="-2.2" y2="-10.5" transform="rotate(240)"/><line y1="-2.2" y2="-8.5" transform="rotate(270)"/><line y1="-2.2" y2="-10.5" transform="rotate(300)"/><line y1="-2.2" y2="-8.5" transform="rotate(330)"/></g></svg></span><div><h3>Gemini · Claude</h3><p class="txt">Reconocen y redactan</p></div></div>
+        <p class="porque">Rápido para registrar, profundo para analizar.</p>
+      </div>
+      <div class="card tec">
+        <div class="tec-h"><svg viewBox="0 0 24 24" aria-label="Bases de alimentos"><rect x="2" y="3" width="20" height="18" rx="4" fill="#e7f2fb"/><rect x="2" y="3" width="20" height="6" rx="3" fill="#6cace4"/><path d="M2 14h20M9 9v12M15.5 9v12" stroke="#6cace4" stroke-width="1.6"/></svg><div><h3>SARA 2 + bases</h3><p class="txt">Los alimentos</p></div></div>
+        <p class="porque">Datos oficiales argentinos; USDA y Open Food Facts completan.</p>
+      </div>
+    </div>
+    <div class="capa">
+      <p class="capa-t">Integraciones</p>
+      <div class="card tec">
+        <div class="tec-h"><svg viewBox="0 0 24 24" aria-label="Health Connect"><path d="M12 21s-8.5-5.2-8.5-11.2A4.8 4.8 0 0 1 12 6.6a4.8 4.8 0 0 1 8.5 3.2C20.5 15.8 12 21 12 21z" fill="#e8f0fe"/><path d="M3.8 12.2h4l1.8-3.4 2.6 6.4 1.9-3h6" stroke="#4285f4" stroke-width="1.9" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg><div><h3>Health Connect</h3><p class="txt">Reloj y balanza</p></div></div>
+        <p class="porque">Una integración y entran todas las marcas.</p>
+      </div>
+      <div class="card tec">
+        <div class="tec-h"><svg viewBox="0 0 24 24" aria-label="GitHub"><path fill="#181717" d="M12 .3a12 12 0 0 0-3.8 23.4c.6.1.8-.3.8-.6v-2c-3.3.7-4-1.6-4-1.6-.6-1.4-1.4-1.8-1.4-1.8-1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1.1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.8-1.6-2.7-.3-5.5-1.3-5.5-5.9 0-1.3.5-2.4 1.2-3.2-.1-.3-.5-1.5.1-3.2 0 0 1-.3 3.3 1.2a11.5 11.5 0 0 1 6 0c2.3-1.5 3.3-1.2 3.3-1.2.6 1.7.2 2.9.1 3.2.8.8 1.2 1.9 1.2 3.2 0 4.6-2.8 5.6-5.5 5.9.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6A12 12 0 0 0 12 .3"/></svg><div><h3>GitHub</h3><p class="txt">Código y versiones</p></div></div>
+        <p class="porque">Cada cambio queda registrado y la app se actualiza sola.</p>
+      </div>
+    </div>
+  </div>
+  <div class="card nota in" style="--i:2">
+    <p class="label">Datos de salud</p>
+    <p class="txt">Cada persona ve solo lo suyo; la nutricionista, solo lo que el paciente acepta compartir. Borrar la cuenta borra todo. Nada se vende ni se usa para publicidad (Ley 25.326).</p>
+  </div>
+  <div class="foot"><span></span><span class="pg"></span></div>
+  <aside>Flutter para la app: un solo código, hoy en Android y compilable para iOS. Supabase como servidor: base, cuentas, fotos y las funciones que hablan con la IA, así las claves nunca están en el teléfono. El panel, en Next.js sobre Vercel. Los datos de salud son sensibles para la Ley 25.326: cada fila tiene dueño, la nutricionista ve solo lo que el paciente acepta compartir y borrar la cuenta borra todo, fotos incluidas.</aside>
+</section>
+
+<!-- ═══════════════════ 07 · COSTOS Y MANTENIMIENTO ═══════════════════ -->
+
+<section id="div-07" class="divider" style="--sc:#b87508">
+  <div class="div-track"><span class="done"></span><span class="done"></span><span class="done"></span><span class="done"></span><span class="done"></span><span class="done"></span><span class="on"></span><span></span><span></span></div>
+  <p class="div-n in">07</p>
+  <h1 class="in" style="--i:1">Costos y mantenimiento</h1>
+  <div class="foot"><span></span><span class="pg"></span></div>
+  <aside>Sección 7 de 9: Costos y mantenimiento.</aside>
+</section>
+
+<section id="costo-ia" class="alt" style="--sc:#b87508;">
+  <p class="sec">07 · Costos</p>
+  <div class="head in"><p class="eyebrow">Cuánto cuesta la IA</p><h2>Costos de análisis.</h2></div>
+  <div class="row grow" style="gap:36px;align-items:stretch">
+    <div class="card in" style="--i:1;flex:1;padding:30px 36px;justify-content:center">
+      <table class="costos grande">
+        <tr><th>Análisis</th><th>Modelo</th><th class="r">Por uso</th></tr>
+        <tr><td>Comida por foto o texto</td><td><span class="mod gem">Gemini Flash-Lite</span></td><td class="r">$0,01</td></tr>
+        <tr><td>Planificación del día</td><td><span class="mod gem">Gemini Flash-Lite</span></td><td class="r">$0,01</td></tr>
+        <tr><td>Resumen semanal</td><td><span class="mod cla">Claude Opus 5.5</span></td><td class="r">$0,05</td></tr>
+        <tr><td>Informe de consulta</td><td><span class="mod cla">Claude Opus 5.5</span></td><td class="r">$0,12</td></tr>
+        <tr><td>Análisis de pacientes</td><td><span class="mod cla">Claude Opus 5.5</span></td><td class="r">$0,18</td></tr>
+      </table>
+    </div>
+    <div class="col in" style="--i:2;width:520px;gap:20px">
+      <div class="card card-accent grow kpi"><p class="label">Un paciente activo, un mes</p><p class="num accent">≈ $1</p><p class="txt">90 comidas registradas y 4 resúmenes semanales</p></div>
+      <div class="card grow kpi"><p class="label">Una consulta</p><p class="num">$0,12</p><p class="txt">el informe que lee la profesional antes de atender</p></div>
+    </div>
+  </div>
+  <div class="foot"><span></span><span class="pg"></span></div>
+  <aside>En dólares, con las tarifas publicadas de cada modelo. Una foto son unos 15.000 tokens de entrada, casi todo la tabla SARA, y sale cerca de un centavo. Un informe con Claude, unos 12 centavos. Un paciente que registra tres comidas por día y recibe su resumen semanal cuesta cerca de un dólar por mes.</aside>
+</section>
+
+<section id="servicios" style="--sc:#b87508;">
+  <p class="sec">07 · Costos</p>
+  <div class="head in"><p class="eyebrow">Cuánto cuesta mantenerla</p><h2>El costo total de Ceres, por mes.</h2></div>
+  <div class="card in" style="--i:1;padding:26px 36px">
+    <table class="costos total">
+      <tr><th style="width:30%">En dólares</th><th style="width:34%">Para qué</th><th class="r">500 usuarios</th><th class="r">5.000</th><th class="r">20.000</th></tr>
+      <tr><td><span class="ico"><svg viewBox="0 0 24 24"><path d="M13.6 1.6 3.4 14.3c-.5.6 0 1.4.7 1.4h8l-.9 6.7 10.2-12.7c.5-.6 0-1.4-.7-1.4h-8z" fill="#3ecf8e"/></svg></span>Supabase</td><td>Base, cuentas, fotos y funciones</td><td class="r">$25</td><td class="r">$37</td><td class="r">$112</td></tr>
+      <tr><td><span class="ico"><svg viewBox="0 0 24 24"><path d="M12 3 22.5 21h-21z" fill="#111"/></svg></span>Vercel</td><td>Panel del profesional</td><td class="r">$20</td><td class="r">$20</td><td class="r">$20</td></tr>
+      <tr><td><span class="ico"><svg viewBox="0 0 24 24"><rect x="2.5" y="5" width="19" height="14" rx="3" fill="#e8effa" stroke="#3f74c4" stroke-width="1.6"/><path d="m3.5 6.5 8.5 6.5 8.5-6.5" stroke="#3f74c4" stroke-width="1.6" fill="none" stroke-linejoin="round"/></svg></span>Mails y monitoreo</td><td>Invitaciones, avisos y errores</td><td class="r">$0</td><td class="r">$20</td><td class="r">$46</td></tr>
+      <tr><td><span class="ico"><svg viewBox="0 0 24 24"><path d="M4 2.8v18.4c0 .4.4.6.7.4L21 12.4c.3-.2.3-.6 0-.8L4.7 2.4c-.3-.2-.7 0-.7.4z" fill="#34a853"/><path d="M4 2.8 14.3 12 4 21.2z" fill="#4285f4"/><path d="M4.7 2.4 14.3 12l3-2.9z" fill="#34a853"/><path d="m14.3 12 3 2.9-12.6 6.7z" fill="#ea4335"/><path d="m17.3 9.1 3.7 2.5c.3.2.3.6 0 .8l-3.7 2.5-3-2.9z" fill="#fbbc04"/></svg></span>Google Play</td><td>$25 una sola vez, prorrateado</td><td class="r">$2</td><td class="r">$2</td><td class="r">$2</td></tr>
+      <tr><td><span class="ico"><svg viewBox="0 0 24 24"><path d="M16.4 12.6c0-2.3 1.9-3.4 2-3.5-1.1-1.6-2.8-1.8-3.4-1.8-1.4-.1-2.8.9-3.5.9-.7 0-1.8-.9-3-.8-1.5 0-3 .9-3.8 2.3-1.6 2.8-.4 7 1.2 9.3.8 1.1 1.7 2.4 2.9 2.3 1.2 0 1.6-.7 3-.7s1.8.7 3 .7c1.3 0 2.1-1.1 2.8-2.3.9-1.3 1.3-2.6 1.3-2.6s-2.5-1-2.5-3.8zM14.1 5.8c.6-.8 1.1-1.9 1-3-.9 0-2.1.6-2.7 1.4-.6.7-1.1 1.8-1 2.9 1 .1 2.1-.5 2.7-1.3z" fill="#111"/></svg></span>App Store</td><td>$99 por año, prorrateado</td><td class="r">$8</td><td class="r">$8</td><td class="r">$8</td></tr>
+      <tr class="tot"><td>Total fijo</td><td>Por usuario: $0,11 · $0,02 · $0,01</td><td class="r">$55</td><td class="r">$87</td><td class="r">$188</td></tr>
+    </table>
+  </div>
+  <div class="card nota in" style="--i:2">
+    <p class="label">Uso promedio de IA por usuario activo</p>
+    <p class="txt">Cerca de <b>$1 por mes</b>, y lo cubre cada plan.</p>
+  </div>
+  <div class="foot"><span></span><span class="pg"></span></div>
+  <aside>Lo fijo es chico: Supabase Pro (25 dólares, hasta 100.000 usuarios), Vercel Pro (el plan gratis no permite uso comercial) y las tiendas, prorrateadas. Mails y monitoreo son supuestos. Lo único que crece con el uso es la IA, y la paga cada plan. No incluye sueldos ni marketing.</aside>
+</section>
+
+<!-- ═══════════════════ 08 · MONETIZACIÓN ═══════════════════ -->
+
+<section id="div-08" class="divider" style="--sc:#2f8a57">
+  <div class="div-track"><span class="done"></span><span class="done"></span><span class="done"></span><span class="done"></span><span class="done"></span><span class="done"></span><span class="done"></span><span class="on"></span><span></span></div>
+  <p class="div-n in">08</p>
+  <h1 class="in" style="--i:1">Monetización</h1>
+  <div class="foot"><span></span><span class="pg"></span></div>
+  <aside>Sección 8 de 9: Monetización.</aside>
+</section>
+
+<section id="foco" class="statement" style="--sc:#2f8a57;">
+  <p class="sec">08 · Monetización</p>
+  <p class="eyebrow in" style="color:var(--ink)">Foco de venta</p>
+  <h1 class="in" style="--i:1;width:1600px">El foco es el/la profesional.</h1>
+  <div class="row in" style="--i:2;gap:56px;margin-top:20px">
+    <p class="lead" style="color:var(--ink);width:480px"><b>Trae decenas de pacientes</b> con una sola venta.</p>
+    <p class="lead" style="color:var(--ink);width:480px"><b>Retiene:</b> la próxima consulta es el motivo para registrar.</p>
+    <p class="lead" style="color:var(--ink);width:480px"><b>Paga la IA</b> de sus pacientes: para ellos, la app es gratis.</p>
+  </div>
+  <p class="eyebrow in" style="--i:3;color:var(--ink);margin-top:72px">Cómo llegar a los primeros</p>
+  <div class="row in" style="--i:4;gap:56px;margin-top:8px">
+    <p class="body" style="color:var(--ink);width:480px"><b>Las seis entrevistadas</b>, que ya conocen el producto, como primeras usuarias.</p>
+    <p class="body" style="color:var(--ink);width:480px"><b>Colegios, asociaciones y congresos</b> de nutrición, con demos del panel.</p>
+    <p class="body" style="color:var(--ink);width:480px"><b>La recomendación entre colegas</b>, el canal que más pesa en salud.</p>
+  </div>
+  <div class="foot"><span></span><span class="pg"></span></div>
+  <aside>Vender a personas una por una es caro y retiene poco. Una nutricionista convencida trae su consultorio y es la razón por la que el paciente sigue registrando. Para llegar a las primeras: las seis entrevistadas, que ya conocen el producto; después colegios, asociaciones y congresos; y la recomendación entre colegas, que en salud es el canal que más pesa.</aside>
+</section>
+
+<section id="precio-pro" style="--sc:#2f8a57;">
+  <p class="sec">08 · Monetización</p>
+  <div class="head in"><p class="eyebrow">Planes para profesionales</p><h2>Paga solo por sus pacientes activos.</h2></div>
+  <div class="row in" style="--i:1;gap:48px;align-items:stretch">
+    <table class="planes grow" style="font-size:27px">
+      <tr><th style="width:24%">En dólares</th><th>Pacientes activos</th><th class="r">Por paciente, por mes</th></tr>
+      <tr><td><b>Basic</b></td><td>Del 1 al 10</td><td class="r">$2,00</td></tr>
+      <tr><td><b>Core</b></td><td>Del 11 al 30</td><td class="r">$1,70</td></tr>
+      <tr><td><b>Plus</b></td><td>Del 31 en adelante</td><td class="r">$1,50</td></tr>
+      <tr><td>Panel</td><td>Fijo</td><td class="r">$10 por mes</td></tr>
+    </table>
+    <div class="card" style="width:520px;flex:none;padding:24px 32px">
+      <p class="label">Cuánto paga</p>
+      <table class="creditos-mini ejemplos">
+        <tr><td>8 pacientes</td><td class="r">$26</td><td class="r c-u">$3,25 c/u</td></tr>
+        <tr><td>25 pacientes</td><td class="r">$55,50</td><td class="r c-u">$2,22 c/u</td></tr>
+        <tr><td>70 pacientes</td><td class="r">$124</td><td class="r c-u">$1,77 c/u</td></tr>
+      </table>
+    </div>
+  </div>
+  <div class="row grow in planes-pie" style="--i:2;gap:40px;align-items:flex-start;margin-top:8px">
+    <div class="col grow" style="gap:12px"><h3>Qué incluye</h3><ul class="list">
+      <li>Panel, ficha, devoluciones e informes con IA.</li>
+      <li>Activo: registró algo en el mes. El que dejó de venir no se paga.</li>
+    </ul></div>
+    <div class="col grow" style="gap:12px"><h3>Cada paciente, lo suyo</h3><ul class="list">
+      <li>Ningún paciente gasta lo de otro.</li>
+      <li>Si necesita más: el profesional recarga 500 análisis por $9, o el paciente usa los suyos.</li>
+    </ul></div>
+    <div class="card" style="width:520px;flex:none;padding:20px 32px">
+      <p class="label">Incluido por paciente, cada mes</p>
+      <table class="creditos-mini">
+        <tr><td>Análisis con IA</td><td class="r">90</td></tr>
+        <tr><td>Máximo por día</td><td class="r">8</td></tr>
+        <tr><td>Resúmenes semanales</td><td class="r">4</td></tr>
+        <tr><td>Informe de consulta</td><td class="r">1</td></tr>
+      </table>
+    </div>
+  </div>
+  <div class="foot"><span></span><span class="pg"></span></div>
+  <aside>No elige un plan: cada mes se cuentan sus pacientes activos y se cobra por tramos, más 10 dólares fijos del panel. No paga lugares vacíos y cada paciente nuevo le sale más barato. Cada paciente tiene lo suyo: 90 análisis por mes, unos 3 por día; en el piloto, los que más registraron usaron 3,6. Un paciente al máximo cuesta $1,22, por eso el último tramo no baja de $1,50. Referencia: Nutrium cobra de 25 a 49 dólares por mes, sin IA.</aside>
+</section>
+
+<section id="precio-persona" class="alt" style="--sc:#2f8a57;">
+  <p class="sec">08 · Monetización</p>
+  <div class="row grow" style="gap:64px;align-items:center">
+    <div class="col in" style="width:1180px;gap:24px">
+      <p class="eyebrow">Planes para personas</p>
+      <h2>Premium suma la IA y saca los anuncios.</h2>
+      <table style="font-size:27px">
+        <tr><th style="width:44%">&#160;</th><th class="c">Free</th><th class="c">Premium</th></tr>
+        <tr><td>Precio</td><td class="c">$0</td><td class="c hl">$4,99 por mes</td></tr>
+        <tr><td>Registro a mano, historial, gráficos y PDF</td><td class="c yes">Sí</td><td class="c yes">Sí</td></tr>
+        <tr><td>Análisis del día completo, escrito</td><td class="c">1 por día</td><td class="c yes">Sí</td></tr>
+        <tr><td>Cada comida con foto, texto o voz</td><td class="c no">—</td><td class="c hl">150 por mes<br><span style="font-weight:400;font-size:22px">hasta 8 por día</span></td></tr>
+        <tr><td>«¿Qué como?» y resumen semanal</td><td class="c no">—</td><td class="c yes">Sí</td></tr>
+        <tr><td>Anuncios</td><td class="c amber" style="font-weight:600">Sí</td><td class="c no">No</td></tr>
+      </table>
+      <p class="body">Premium anual: $49,99. Paquetes: 30 análisis por $1,49 o 100 por $3,99.</p>
+      <p class="body">Los anuncios van solo en Free y en pantallas neutras, nunca junto al balance ni al peso. Dejan unos <b>$0,03 por usuario</b>: su función es empujar a Premium.</p>
+    </div>
+    <div class="col center in" style="--i:1;gap:12px"><video class="phone" src="vid/app-premium.mp4" poster="vid/app-premium-poster.jpg" muted loop playsinline preload="none" style="width:330px;height:733px"></video><p class="cap">Del anuncio a Premium</p></div>
+  </div>
+  <div class="foot"><span></span><span class="pg"></span></div>
+  <aside>Para quien usa Ceres sin profesional. Registrar a mano nunca se cobra. Free tiene un análisis por día, del día completo y escrito: es una función nueva, la app hoy analiza comida por comida. Premium analiza cada comida con foto, texto o voz y suma «¿Qué como?» y el resumen semanal. Los anuncios van solo en Free, en pantallas neutras y nunca elegidos con lo que la persona comió: dejan unos 3 centavos por mes y su función es empujar a Premium. Referencias: MyFitnessPal Premium $19,99, Yazio PRO $6,99.</aside>
+</section>
+
+<section id="margen" style="--sc:#2f8a57;">
+  <p class="sec">08 · Monetización</p>
+  <div class="head in"><p class="eyebrow">Lo que deja cada plan, por mes</p><h2>Los planes pagos dejan margen aun usados al máximo.</h2></div>
+  <table class="in margen" style="--i:1;font-size:24px">
+    <tr><th style="width:22%">En dólares</th><th class="r">Precio</th><th class="r">Neto</th><th class="r">IA, uso típico</th><th class="r">Margen típico</th><th class="r">Usado al máximo</th></tr>
+    <tr class="grupo" style="--g:var(--c2)"><td colspan="6">Personas</td></tr>
+    <tr><td>Free</td><td class="r">$0</td><td class="r">$0,03 de anuncios</td><td class="r">$0,14</td><td class="r amber">−$0,13</td><td class="r amber">−$0,42</td></tr>
+    <tr><td>Premium mensual</td><td class="r">$4,99</td><td class="r">$3,99</td><td class="r">$1,10</td><td class="r hl">$2,87 · 58 %</td><td class="r">$2,27 · 46 %</td></tr>
+    <tr><td>Premium anual</td><td class="r">$4,17</td><td class="r">$3,33</td><td class="r">$1,10</td><td class="r hl">$2,21 · 53 %</td><td class="r">$1,61 · 39 %</td></tr>
+    <tr><td>Paquete de 100</td><td class="r">$3,99</td><td class="r">$3,19</td><td class="r">$1,00</td><td class="r hl">$2,19 · 55 %</td><td class="r">igual</td></tr>
+    <tr class="grupo" style="--g:var(--c3)"><td colspan="6">Profesionales</td></tr>
+    <tr><td>8 pacientes</td><td class="r">$26</td><td class="r">$22,81</td><td class="r">$6,29</td><td class="r hl">$16,35 · 63 %</td><td class="r">$12,15 · 47 %</td></tr>
+    <tr><td>25 pacientes</td><td class="r">$55,50</td><td class="r">$48,70</td><td class="r">$18,73</td><td class="r hl">$29,45 · 53 %</td><td class="r">$16,96 · 31 %</td></tr>
+    <tr><td>70 pacientes</td><td class="r">$124</td><td class="r">$108,81</td><td class="r">$51,67</td><td class="r hl">$55,72 · 45 %</td><td class="r">$21,27 · 17 %</td></tr>
+    <tr><td>Recarga de 500</td><td class="r">$9</td><td class="r">$7,90</td><td class="r">$5,00</td><td class="r hl">$2,90 · 32 %</td><td class="r">igual</td></tr>
+  </table>
+  <p class="body in" style="--i:2">Uso típico: el 60 % de lo incluido, 30 % en Free. Lo que pierde Free lo paga el 6 % que pasa a Premium.</p>
+  <div class="foot"><span></span><span class="pg"></span></div>
+  <aside>Neto: se descuentan la comisión de la tienda (15 %) o de Mercado Pago (7,25 %), un 5 % de impuestos a validar y la infraestructura. Uso típico: el 60 % de lo incluido. Free pierde unos 13 centavos por usuario y lo cubre el 6 % que pasa a Premium. Lo que más ajusta es un consultorio grande usado al máximo.</aside>
+</section>
+
+<section id="escenario" class="alt" style="--sc:#2f8a57;">
+  <p class="sec">08 · Monetización</p>
+  <div class="head in"><p class="eyebrow">Escenario ilustrativo, por mes</p><h2>Con 20 profesionales y 20 personas, 51 % de margen.</h2></div>
+  <div class="row grow" style="gap:56px;align-items:center">
+    <table class="in" style="--i:1;width:900px;font-size:26px">
+      <tr><th>En dólares</th><th class="r">&#160;</th></tr>
+      <tr><td>Planes de profesionales</td><td class="r">$649</td></tr>
+      <tr><td>Recargas de IA</td><td class="r">$18</td></tr>
+      <tr><td>Premium</td><td class="r">$10</td></tr>
+      <tr><td>Paquetes</td><td class="r">$8</td></tr>
+      <tr><td>Publicidad</td><td class="r">menos de $1</td></tr>
+      <tr><td>IA</td><td class="r amber">−$198</td></tr>
+      <tr><td>Comisiones e impuestos</td><td class="r amber">−$85</td></tr>
+      <tr><td>Servicios</td><td class="r amber">−$55</td></tr>
+    </table>
+    <div class="card card-accent in" style="--i:2;width:600px">
+      <p class="label">Resultado por mes</p><p class="num accent">+$347</p>
+      <p class="txt">antes de sueldos y marketing</p>
+      <p class="txt" style="margin-top:10px">Si los planes pagos usan todo lo incluido: <b>+$225</b></p>
+    </div>
+  </div>
+  <div class="foot"><span></span><span class="pg"></span></div>
+  <aside>Un escenario chico: 20 profesionales con 236 pacientes y 20 personas por su cuenta, 2 en Premium. Casi todo el ingreso viene de los profesionales; la publicidad no mueve la aguja. 347 dólares por mes no pagan un sueldo: lo que muestra es que el modelo cierra desde el primer profesional y crece con cada paciente. Es una proyección, no tracción.</aside>
+</section>
+
+<!-- ═══════════════════ 09 · PRÓXIMOS PASOS ═══════════════════ -->
+
+<section id="div-09" class="divider" style="--sc:#4b57b8">
+  <div class="div-track"><span class="done"></span><span class="done"></span><span class="done"></span><span class="done"></span><span class="done"></span><span class="done"></span><span class="done"></span><span class="done"></span><span class="on"></span></div>
+  <p class="div-n in">09</p>
+  <h1 class="in" style="--i:1">Próximos pasos</h1>
+  <div class="foot"><span></span><span class="pg"></span></div>
+  <aside>Sección 9 de 9: Próximos pasos.</aside>
+</section>
+
+<section id="escalar" style="--sc:#4b57b8;">
+  <p class="sec">09 · Próximos pasos</p>
+  <div class="head in"><p class="eyebrow">Próximos pasos</p><h2>Hacia dónde sigue Ceres.</h2></div>
+  <div class="row grow" style="gap:28px;align-items:stretch">
+    <div class="card pc futuro grow in" style="--i:1;--c:var(--c3)"><span class="ico-card" style="background:var(--t3)"><svg viewBox="0 0 24 24" fill="none" stroke="var(--c3)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 6.5v11M17.5 6.5v11M3.5 9v6M20.5 9v6M6.5 12h11"/></svg></span><p class="label">Entrenamiento</p><h3>Equipos interdisciplinarios</h3><p class="txt">Nutricionista y entrenador siguen al mismo paciente, en una sola ficha.</p></div>
+    <div class="card pc futuro grow in" style="--i:2;--c:var(--c2)"><span class="ico-card" style="background:var(--t2)"><svg viewBox="0 0 24 24" fill="none" stroke="var(--c2)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M10 14a4.5 4.5 0 0 0 6.4 0l3-3a4.5 4.5 0 0 0-6.4-6.4l-1.2 1.2"/><path d="M14 10a4.5 4.5 0 0 0-6.4 0l-3 3a4.5 4.5 0 0 0 6.4 6.4l1.2-1.2"/></svg></span><p class="label">Integraciones</p><h3>Datos de otras apps</h3><p class="txt">Apple Salud, Strava, Garmin y sensores de glucosa. Y cálculo de micronutrientes.</p></div>
+    <div class="card pc futuro grow in" style="--i:3;--c:var(--c4)"><span class="ico-card" style="background:var(--t4)"><svg viewBox="0 0 24 24" fill="none" stroke="var(--c4)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4h8v5a4 4 0 0 1-8 0z"/><path d="M8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4M12 13v4M8.5 20h7M10 17h4"/></svg></span><p class="label">Retención</p><h3>Gamificación</h3><p class="txt">Logros y desafíos semanales, con los pals o con la meta del profesional.</p></div>
+  </div>
+  <div class="card card-accent in" style="--i:4">
+    <p class="body" style="color:var(--text)">La técnica ya escala: la misma infraestructura sirve de 500 a 20.000 usuarios, y lo único que crece con el uso, la IA, se paga en cada plan.</p>
+  </div>
+  <div class="foot"><span></span><span class="pg"></span></div>
+  <aside>Entrenamiento: el profesional ya ve la actividad del paciente; el paso siguiente es que el entrenador la planifique en la misma ficha. Integraciones: Health Connect ya está, falta Apple Salud; Strava, Garmin y los sensores de glucosa tienen API. Micronutrientes: la SARA 2 ya los trae, es extender el mismo cálculo. Gamificación: ataca el problema del principio, que la gente deja de registrar.</aside>
+</section>
+
+<section id="cierre" class="statement" style="--sc:#4b57b8;justify-content:center">
+  <p class="sec">09 · Próximos pasos</p>
+  <div class="row in" style="gap:40px;align-items:center"><svg aria-label="Logo de Ceres" width="170" height="170" viewBox="0 0 100 100"><rect width="100" height="100" rx="22" fill="#1c1f33"/><circle cx="50" cy="50" r="33" fill="none" stroke="#2f3245" stroke-width="8"/><circle cx="50" cy="50" r="33" fill="none" stroke="#9184d9" stroke-width="8" stroke-linecap="round" transform="rotate(-90 50 50)" stroke-dasharray="155.5 207.3"/><rect x="36.5" y="52" width="6.5" height="13" rx="3.25" fill="#d2cefd"/><rect x="46.75" y="44.5" width="6.5" height="20.5" rx="3.25" fill="#d2cefd"/><rect x="57" y="37" width="6.5" height="28" rx="3.25" fill="#9184d9"/></svg><p style="font-size:110px;font-weight:600;letter-spacing:-3px;color:#fff">Ceres</p></div>
+  <h1 class="in" style="--i:1;margin-top:56px">Gracias.</h1>
+  <p class="lead in" style="--i:2;color:var(--ink);margin-top:12px">¿Preguntas?</p>
+  <div class="foot"><span></span><span class="pg"></span></div>
+  <aside>Volver a la historia: empezó como una herramienta para mí; hoy son 116 días seguidos registrando, −3 kg y un producto que una nutricionista puede usar con su consultorio. Tener a mano la demo en vivo por si la piden.</aside>
+</section>
+
+</div>
+<div id="progress"></div>
+<div id="notes"><p class="t">Notas · N para ocultar</p><p id="notes-text"></p></div>
+
+<script>
+(() => {
+  const deck = document.getElementById('deck');
+  const slides = [...deck.querySelectorAll('section')];
+  const total = slides.length;
+  const notes = document.getElementById('notes');
+  const notesText = document.getElementById('notes-text');
+  const progress = document.getElementById('progress');
+  slides.forEach((s, i) => s.querySelectorAll('.pg').forEach(p => p.textContent = `${i + 1} / ${total}`));
+
+  function fit() {
+    const k = Math.min(innerWidth / 1920, innerHeight / 1080);
+    deck.style.transform = `scale(${k}) translate(-50%, -50%)`;
+    deck.style.transformOrigin = '0 0';
+    deck.style.left = '50%'; deck.style.top = '50%';
+    deck.style.transform = `translate(-${960 * k}px, -${540 * k}px) scale(${k})`;
+  }
+
+  let cur = 0;
+  function go(n) {
+    cur = Math.max(0, Math.min(total - 1, n));
+    slides.forEach((s, i) => s.classList.toggle('on', i === cur));
+    const a = slides[cur].querySelector('aside');
+    notesText.textContent = a ? a.textContent : '';
+    progress.style.width = `${((cur + 1) / total) * 100}%`;
+    history.replaceState(null, '', `#${cur + 1}`);
+    slides.forEach((s, i) => {
+      if (i === cur) return;
+      clearTimeout(s._t);
+      (s._tt || []).forEach(clearTimeout);
+      s.querySelectorAll('video').forEach(v => { clearTimeout(v._t); v.onended = null; v.pause(); });
+    });
+    ciclo(slides[cur]);
+  }
+
+  // Arranca los medios de una lámina. Con data-ciclo (devoluciones): el panel
+  // (WebP de una vuelta, queda en su último cuadro) y después la app; cuando la
+  // app termina, una pausa y todo vuelve a empezar junto, así nunca se desfasan.
+  function ciclo(sec) {
+    clearTimeout(sec._t);
+    (sec._tt || []).forEach(clearTimeout);
+    sec._tt = [];
+    sec.querySelectorAll('img.media-anim').forEach(im => { im.src = im.dataset.src + '?t=' + Date.now(); });
+    // La pantalla bloqueada: llega la notificación, se toca y se abre la app.
+    sec.querySelectorAll('.bloqueo').forEach(b => {
+      b.classList.remove('con-notif', 'tocada', 'abierto');
+      const n = Number(b.dataset.notif || 0), a = Number(b.dataset.abrir || 0);
+      sec._tt.push(setTimeout(() => b.classList.add('con-notif'), n));
+      sec._tt.push(setTimeout(() => b.classList.add('tocada'), a - 250));
+      sec._tt.push(setTimeout(() => b.classList.add('abierto'), a));
+    });
+    sec.querySelectorAll('video').forEach(v => {
+      clearTimeout(v._t);
+      v.pause();
+      v.currentTime = 0;
+      const d = Number(v.dataset.delay || 0);
+      const play = () => v.play().catch(() => {});
+      if (d) v._t = setTimeout(play, d); else play();
+      v.onended = 'ciclo' in sec.dataset
+        ? () => { if (slides[cur] === sec) sec._t = setTimeout(() => ciclo(sec), 2500); }
+        : null;
+    });
+  }
+
+  addEventListener('resize', fit);
+  addEventListener('keydown', e => {
+    if (['ArrowRight', 'PageDown', ' ', 'Enter'].includes(e.key)) { e.preventDefault(); go(cur + 1); }
+    else if (['ArrowLeft', 'PageUp', 'Backspace'].includes(e.key)) { e.preventDefault(); go(cur - 1); }
+    else if (e.key === 'Home') go(0);
+    else if (e.key === 'End') go(total - 1);
+    else if (e.key === 'n' || e.key === 'N') notes.classList.toggle('on');
+    else if (e.key === 'f' || e.key === 'F') { document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen(); }
+  });
+  addEventListener('click', e => { if (e.target.closest('#notes')) return; go(cur + (e.clientX > innerWidth / 3 ? 1 : -1)); });
+  fit();
+  go((parseInt(location.hash.slice(1), 10) || 1) - 1);
+})();
+</script>
+</body>
+</html>
