@@ -18,20 +18,20 @@ permissions:
   contents: write
 
 env:
-  FLUTTER_VERSION: 3.35.7
+  FLUTTER_VERSION: 3.50.1
 
 jobs:
   release:
     name: Compilar y publicar
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       # El JDK fijo, no el que trae la imagen: en noviembre de 2026
       # ubuntu-latest pasó a Java 25, Kotlin 2.1 no lo reconoce y Gradle se
       # caía con un "What went wrong: 25.0.5" sin más. El 21 es el mismo con el
       # que se compila local.
-      - uses: actions/setup-java@dded0888837ed1f317902acf8a20df0ad188d165 # v5.0.0
+      - uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6.3.0
         with:
           distribution: temurin
           java-version: '21'
@@ -80,7 +80,7 @@ jobs:
             name=$(basename "$dir")
             [ -f "$dir/index.ts" ] || continue
             echo "· $name"
-            if ! npx --yes esbuild@0.24.0 --bundle "$dir/index.ts" \
+            if ! npx --yes esbuild@0.28.2 --bundle "$dir/index.ts" \
               --format=esm --platform=neutral --external:jsr:* \
               --outfile=/dev/null; then
               echo "::error::La función $name no compila."
@@ -89,9 +89,9 @@ jobs:
           done
           exit $fallo
 
-      - uses: supabase/setup-cli@ab058987d8d6c725971f6cf9d0b5c98467e30bd1 # v1.7.1
+      - uses: supabase/setup-cli@689adcfb80d947100a1eab127289b97d1fb07b13 # v3.2.0
         with:
-          version: 2.110.0
+          version: 3.2.0
 
       - name: Migraciones y suite pgTAP desde cero
         run: |

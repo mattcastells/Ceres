@@ -163,7 +163,7 @@ función.
 Antes de desplegar, parsear (CI ya lo hace, pero acá es instantáneo):
 
 ```bash
-npx esbuild@0.24.0 --bundle supabase/functions/<f>/index.ts \
+npx esbuild@0.28.2 --bundle supabase/functions/<f>/index.ts \
   --format=esm --platform=neutral --external:jsr:* --outfile=/dev/null
 ```
 
