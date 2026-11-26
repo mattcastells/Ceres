@@ -35,9 +35,8 @@ FoodData Central and Open Food Facts for the food catalog.
 
 ## Status
 
-Actively developed and in daily use. [`ESTADO.md`](./ESTADO.md) (Spanish)
-tracks current state and what's next; [`docs/estado-de-la-app.md`](./docs/estado-de-la-app.md)
-has the detailed feature-by-feature status.
+In daily use. [`docs/estado-de-la-app.md`](./docs/estado-de-la-app.md)
+(Spanish) has the detailed feature-by-feature status.
 
 ## Running it
 

@@ -9,7 +9,7 @@ import '../../../core/theme/tokens.dart';
 /// La marca: un anillo que se cierra y tres barras que suben.
 ///
 /// El anillo es el presupuesto del día — el mismo que la app dibuja en Inicio.
-/// Geometría exacta de `Ceres Logo.dc.html`: círculo r=36 sobre una caja de
+/// Geometría exacta del logo de diseño: círculo r=36 sobre una caja de
 /// 100, trazo 9, apertura de 270° arrancando arriba, y tres barras de 7 de
 /// ancho con radio completo.
 ///

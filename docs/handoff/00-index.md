@@ -19,8 +19,7 @@ producto. Todo lo ambiguo fue decidido, documentado y justificado en
 >
 > - **El esquema**: `supabase/migrations/`, en orden. Cada migración explica qué
 >   cambia y por qué.
-> - **El estado del producto**: [`../estado-de-la-app.md`](../estado-de-la-app.md)
->   y [`../../ESTADO.md`](../../ESTADO.md).
+> - **El estado del producto**: [`../estado-de-la-app.md`](../estado-de-la-app.md).
 > - **Las decisiones posteriores**: los `docs/*.md` sueltos, como
 >   [`../contexto-diario.md`](../contexto-diario.md).
 >
@@ -53,8 +52,7 @@ producto. Todo lo ambiguo fue decidido, documentado y justificado en
 | 19 | [`19-project-structure.md`](./19-project-structure.md) | Estructura de carpetas Flutter y React Native |
 | 20 | [`20-environment-variables.md`](./20-environment-variables.md) | Variables de entorno y dónde vive cada una |
 | 21 | [`21-motion-and-loading.md`](./21-motion-and-loading.md) | **Movimiento, spinners, skeletons y entrada de gráficos** — qué se anima, cuánto dura y qué se muestra mientras se espera |
-| 22 | [`22-widget-redesign-brief.md`](./22-widget-redesign-brief.md) | **Brief para rediseñar el widget de la pantalla de inicio** — va en la dirección contraria a los demás: es un pedido *hacia* diseño, con los datos disponibles y los límites duros de RemoteViews |
-| 23 | [`23-widget-redesign-implementacion.md`](./23-widget-redesign-implementacion.md) | **La respuesta al 22**: las cuatro formas del widget con sus cajas en dp, el orden de prioridad de la información y por qué no hay anillo. Implementado en la 1.11.0, con dos números corregidos contra el teléfono (§ del propio documento y `CaloriesWidget.ONEUI_DP`) |
+| 23 | [`23-widget-redesign-implementacion.md`](./23-widget-redesign-implementacion.md) | **Widget de la pantalla de inicio**: las cuatro formas del widget con sus cajas en dp, el orden de prioridad de la información y por qué no hay anillo. Implementado en la 1.11.0, con dos números corregidos contra el teléfono (§ del propio documento y `CaloriesWidget.ONEUI_DP`) |
 
 Anexos:
 
@@ -66,10 +64,8 @@ Anexos:
 
 ## Prototipo de referencia
 
-`Ceres.dc.html` en la raíz del proyecto es un **prototipo navegable de alta fidelidad**
-que muestra las pantallas principales con datos simulados. Es la fuente de verdad visual;
-esta carpeta es la fuente de verdad funcional. Ante una discrepancia, gana la
-documentación (y hay que corregir el prototipo).
+El prototipo navegable (`Ceres.dc.html`) sirvió de referencia visual antes de que
+existiera la app y ya no está en el repositorio: hoy la referencia visual es la app.
 
 ## Convenciones del handoff
 

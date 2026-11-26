@@ -206,7 +206,7 @@ Salieron de un día perdiendo datos de un usuario real.
 
 | Qué | Dónde |
 | --- | --- |
-| Estado del proyecto y las mordidas | `ESTADO.md` |
+| Estado del proyecto | `docs/estado-de-la-app.md` |
 | Procedimiento de release | `docs/releases.md` |
 | Backend, migraciones, funciones | `supabase/README.md` |
 | Fuente de verdad funcional | `docs/handoff/` |

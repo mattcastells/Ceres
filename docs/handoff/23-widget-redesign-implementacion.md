@@ -1,6 +1,6 @@
 # Widget de pantalla de inicio — especificación de implementación
 
-Respuesta al brief `22-widget-redesign-brief.md`, con las variantes ya elegidas.
+Respuesta al brief de rediseño del widget, con las variantes ya elegidas.
 Esto reemplaza al documento de decisiones anterior: acá está todo lo que hace
 falta para escribir el código, con las cajas en dp y sin nada por adivinar.
 
