@@ -110,6 +110,13 @@ class SettingsScreen extends ConsumerWidget {
                 ),
                 const NmDivider(indent: NmSpace.s6),
                 NmListRow(
+                  title: 'Importar datos',
+                  subtitle: 'Tu historial de otra app, a través de tu IA',
+                  leading: Icon(PhosphorIcons.cloudArrowDown()),
+                  onTap: () => context.push(Routes.externalImport),
+                ),
+                const NmDivider(indent: NmSpace.s6),
+                NmListRow(
                   title: 'Actualizaciones',
                   subtitle: 'Buscar una versión nueva',
                   leading: Icon(PhosphorIcons.downloadSimple()),

@@ -205,17 +205,9 @@ class MealListItem extends StatelessWidget {
                             color: nm.textMuted,
                           ).tnum,
                         ),
-                        if (meal.source == MealSource.aiPhoto ||
-                            meal.syncStatus != SyncStatus.synced) ...<Widget>[
+                        if (meal.syncStatus != SyncStatus.synced) ...<Widget>[
                           const SizedBox(height: NmSpace.s1),
-                          Wrap(
-                            spacing: NmSpace.s2,
-                            children: <Widget>[
-                              if (meal.source == MealSource.aiPhoto)
-                                const DataOriginBadge(origin: DataOrigin.ai),
-                              SyncStatusBadge(status: meal.syncStatus),
-                            ],
-                          ),
+                          SyncStatusBadge(status: meal.syncStatus),
                         ],
                       ],
                     ),

@@ -1073,17 +1073,14 @@ class _PhotoReviewScreenState extends ConsumerState<PhotoReviewScreen> {
                             ),
                           ),
                           const SizedBox(height: NmSpace.s2),
-                          Wrap(
-                            spacing: NmSpace.s2,
-                            children: <Widget>[
-                              for (final slot in MealSlot.values)
-                                NmChip(
-                                  label: slot.label,
-                                  selected: slot == draft.slot,
-                                  semanticsInRadioGroup: true,
-                                  onTap: () => controller.setSlot(slot),
-                                ),
+                          // Una sola fila, como el resto de los selectores de la app: con
+                          // chips sueltos, "Snacks" se caía a una segunda línea.
+                          NmSegmentedControl<MealSlot>(
+                            options: <(MealSlot, String)>[
+                              for (final slot in MealSlot.values) (slot, slot.label),
                             ],
+                            value: draft.slot,
+                            onChanged: controller.setSlot,
                           ),
                           const SizedBox(height: NmSpace.s6),
                           const NmSectionHeader(title: 'Ítems detectados'),

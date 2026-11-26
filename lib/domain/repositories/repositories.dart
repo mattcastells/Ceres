@@ -559,4 +559,12 @@ abstract interface class BackupRepository {
   /// Aplica un documento ya armado. Lo usa la lectura desde las tablas, que
   /// devuelve la misma forma que el documento del respaldo.
   Future<void> importDocument(Map<String, dynamic> document);
+
+  /// Corre [body] guardando una sola vez, al final.
+  ///
+  /// Cada alta guarda el documento entero y avisa a la sincronización: para
+  /// cientos de registros juntos —una importación— eso son cientos de
+  /// escrituras del mismo archivo. Adentro de [body] las altas solo cambian
+  /// la memoria.
+  Future<T> inBatch<T>(Future<T> Function() body);
 }

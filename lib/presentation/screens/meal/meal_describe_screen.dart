@@ -13,7 +13,6 @@ import '../../components/system/buttons.dart';
 import '../../components/system/dictation.dart';
 import '../../components/system/inputs.dart';
 import '../../components/system/nm_screen.dart';
-import '../../components/system/surfaces.dart';
 import '../../providers/app_providers.dart';
 import '../photo/photo_screens.dart';
 
@@ -38,12 +37,6 @@ class _MealDescribeScreenState extends ConsumerState<MealDescribeScreen> {
   final TextEditingController _text = TextEditingController();
   bool _busy = false;
   AppError? _error;
-
-  /// Un solo ejemplo, y distinto del que ya muestra el campo vacío.
-  ///
-  /// Cuatro chips ocupaban media pantalla y empujaban el botón de estimar fuera
-  /// de la vista: para entender cómo se escribe alcanza con uno.
-  static const String _ejemplo = 'milanesa con puré y una ensalada chica';
 
   @override
   void dispose() {
@@ -116,8 +109,7 @@ class _MealDescribeScreenState extends ConsumerState<MealDescribeScreen> {
         children: <Widget>[
           const SizedBox(height: NmSpace.s4),
           Text(
-            'Escribilo como se lo contarías a alguien. Revisás los ítems '
-            'antes de guardar.',
+            'Escribilo como se lo contarías a alguien.',
             style: NmTextStyles.from(NmType.bodySm, color: nm.textMuted),
           ),
           const SizedBox(height: NmSpace.s6),
@@ -142,16 +134,6 @@ class _MealDescribeScreenState extends ConsumerState<MealDescribeScreen> {
             ),
           ),
 
-          const SizedBox(height: NmSpace.s3),
-          NmChip(
-            label: _ejemplo,
-            selected: false,
-            onTap: () => setState(() {
-              _text.text = _ejemplo;
-              _error = null;
-            }),
-          ),
-
           if (_error != null) ...<Widget>[
             const SizedBox(height: NmSpace.s5),
             ErrorState(message: _error!.message, code: _error!.code.wire),
@@ -166,11 +148,6 @@ class _MealDescribeScreenState extends ConsumerState<MealDescribeScreen> {
             // La cuota la cuenta el servidor: si se llegó al límite, el error
             // que devuelve se muestra arriba con su mensaje.
             onPressed: _estimate,
-          ),
-          const SizedBox(height: NmSpace.s3),
-          Text(
-            'Es una estimación, no una medición.',
-            style: NmTextStyles.from(NmType.caption, color: nm.textMuted),
           ),
         ],
       ),

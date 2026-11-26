@@ -82,6 +82,9 @@ abstract final class Routes {
   static const String report = '/settings/report';
 
   static const String cloudBackup = '/settings/cloud-backup';
+
+  /// Importar el historial de otra app a través de la IA de la persona.
+  static const String externalImport = '/settings/external-import';
   static const String water = '/settings/water';
   static const String updates = '/settings/updates';
   static const String about = '/settings/about';

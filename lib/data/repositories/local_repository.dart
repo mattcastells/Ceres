@@ -111,8 +111,24 @@ class LocalRepository
   final UsdaFoodClient? usdaFoods;
 
   Future<void> _commit() async {
+    if (_batching) return;
     await store.persist();
     onChanged();
+  }
+
+  /// Ver [inBatch].
+  bool _batching = false;
+
+  @override
+  Future<T> inBatch<T>(Future<T> Function() body) async {
+    if (_batching) return body();
+    _batching = true;
+    try {
+      return await body();
+    } finally {
+      _batching = false;
+      await _commit();
+    }
   }
 
   // ── Perfil ─────────────────────────────────────────────────────────────

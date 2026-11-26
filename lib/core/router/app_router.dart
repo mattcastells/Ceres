@@ -32,6 +32,7 @@ import '../../presentation/screens/progress/progress_detail_screens.dart';
 import '../../presentation/screens/progress/progress_screen.dart';
 import '../../presentation/screens/progress/weekly_report_screen.dart';
 import '../../presentation/screens/settings/cloud_backup_screen.dart';
+import '../../presentation/screens/settings/external_import_screen.dart';
 import '../../presentation/screens/settings/notifications_screen.dart';
 import '../../presentation/screens/settings/report_screen.dart';
 import '../../presentation/screens/settings/settings_screens.dart';
@@ -301,6 +302,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: Routes.cloudBackup,
         builder: (context, state) => const CloudBackupScreen(),
+      ),
+      GoRoute(
+        path: Routes.externalImport,
+        builder: (context, state) => const ExternalImportScreen(),
       ),
       GoRoute(
         path: Routes.water,
